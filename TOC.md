@@ -1,0 +1,25 @@
+# Master Textbook Architecture (Parts I–VII)
+
+- **Part I: Foundations — Smooth Manifolds & Matrix Lie Groups**
+  - Ch. 1: Why Coordinate-Free Geometry? Singularities, Unwinding & Global Topology
+  - Ch. 2: Core Manifolds (`S¹/SO(2)`, `S²`, `SO(3)`, `S³`, `SE(3)`) & Product Spaces
+  - Ch. 3: Variations, Configuration Errors & Transport Maps
+- **Part II: Modeling & Symbolic Derivation**
+  - Ch. 4: Global Lagrangian, Newton-Euler & Lagrange-d'Alembert Mechanics on Manifolds
+  - Ch. 5: Symbolic Derivation with `PyGeomech` & Modular Multi-Body Formulations
+- **Part III: Geometric Control & Stability Proofs**
+  - Ch. 6: Geometric Tracking Control & Almost-Global Lyapunov Stability
+  - Ch. 7: Variation-Based Linearization, State-Constrained Controllability & LTV-LQR
+  - Ch. 8: Robust, Adaptive (`L₁`) & Safety-Critical (`CLF-CBF-QP`) Geometric Control
+- **Part IV: Complexity Reduction via Symmetry, Flatness & Zero Dynamics**
+  - Ch. 9: Symmetries, Principal Fiber Bundles & Local Connections (Choset's Framework)
+  - Ch. 10: Differential Flatness & Differentially-Flat Hybrid Systems
+  - Ch. 11: Hybrid Zero Dynamics (HZD) & Virtual Constraints on Manifolds (`SO(2)`/`SO(3)`)
+- **Part V: Trajectory Optimization & Variational Integrators**
+  - Ch. 12: Lie Group Variational Integrators (LGVI) & Direct Collocation
+  - Ch. 13: Error-State MPC & On-Manifold Interior Point Methods (`RIPM`, `LieIPM`)
+- **Part VI: State Estimation & Physical AI on Manifolds**
+  - Ch. 14: Filtering on Lie Groups (`InEKF`, `S²`-EKF, `UKF-M`)
+  - Ch. 15: Symmetry-Equivariant RL, Residual Geometric Control (`ResGAC`), & Continuous Neural Embeddings (`CHyLL`)
+- **Part VII: Integrated Robotic Case Studies**
+  - Ch. 16: Aerial Manipulation, Legged Locomotion, Limbless Robots & Whole-Body Humanoids
