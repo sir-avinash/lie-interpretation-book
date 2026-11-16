@@ -1,0 +1,11 @@
+title: A Lie-Interpretation of Robotics and Control
+description: Coordinate-free geometric mechanics, control, optimization, and physical AI on manifolds.
+theme: minima
+markdown: kramdown
+kramdown:
+  math_engine: mathjax
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: true
