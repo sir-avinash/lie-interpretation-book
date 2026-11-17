@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-ROOT = Path("/tmp/lie_textbook_repo")
+ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 
 def read_text(rel_path: str) -> str:
