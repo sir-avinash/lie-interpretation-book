@@ -3,13 +3,14 @@ if (window.mermaid) {
     startOnLoad: false,
     theme: 'base',
     themeVariables: {
-      primaryColor: '#eef0f9',
+      background: '#fdfcf8',
+      primaryColor: '#f4f6fb',
       primaryTextColor: '#1e242b',
       primaryBorderColor: '#1b1f8a',
-      lineColor: '#525d6a',
-      secondaryColor: '#f6f4ee',
-      tertiaryColor: '#fdfcf8',
-      fontFamily: 'Source Sans 3, sans-serif'
+      lineColor: '#2b2b2b',
+      secondaryColor: '#fbf7ef',
+      tertiaryColor: '#f3f8f8',
+      fontFamily: '"Source Sans 3", system-ui, sans-serif'
     }
   });
 }
@@ -35,6 +36,25 @@ function renderMarkdownWithMath(md) {
   return html;
 }
 
+function decorateCallouts(container) {
+  container.querySelectorAll('p').forEach((p) => {
+    const firstStrong = p.querySelector('strong:first-child');
+    if (!firstStrong) return;
+    const txt = firstStrong.textContent.trim();
+    let cls = null;
+    if (/^(Def\.|Prop\.|Thm\.|Lemma|Corollary)/i.test(txt)) cls = 'callout';
+    else if (/^(Example|Exercise)/i.test(txt)) cls = 'callout example';
+    else if (/^(Remark|Note)/i.test(txt)) cls = 'callout remark';
+    else if (/^(Coding|Algorithm)/i.test(txt)) cls = 'callout coding';
+    if (cls) {
+      const div = document.createElement('div');
+      div.className = cls;
+      p.parentNode.insertBefore(div, p);
+      div.appendChild(p);
+    }
+  });
+}
+
 function buildNav() {
   let currentPart = '';
   BOOK_SECTIONS.forEach((sec, idx) => {
@@ -55,7 +75,10 @@ function buildNav() {
 }
 
 async function selectSection(id) {
-  const sec = BOOK_SECTIONS.find(s => s.id === id) || BOOK_SECTIONS[0];
+  const idx = BOOK_SECTIONS.findIndex(s => s.id === id);
+  const sec = idx >= 0 ? BOOK_SECTIONS[idx] : BOOK_SECTIONS[0];
+  const activeIdx = idx >= 0 ? idx : 0;
+
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.id === sec.id));
   window.location.hash = sec.id;
 
@@ -71,11 +94,22 @@ async function selectSection(id) {
   }
   assetBarEl.innerHTML = barHtml;
 
+  const runningHead = `<div class="running-head">${sec.part} &middot; ${sec.label}</div>`;
   let html = renderMarkdownWithMath(sec.markdown);
   if (sec.diagramKey && window.KC_DIAGRAMS[sec.diagramKey]) {
     html = window.KC_DIAGRAMS[sec.diagramKey] + html;
   }
-  contentEl.innerHTML = html;
+
+  const prevSec = activeIdx > 0 ? BOOK_SECTIONS[activeIdx - 1] : null;
+  const nextSec = activeIdx < BOOK_SECTIONS.length - 1 ? BOOK_SECTIONS[activeIdx + 1] : null;
+  const footerNav = `
+    <div class="chapter-nav-footer">
+      <div>${prevSec ? `<button class="chapter-nav-btn" onclick="selectSection('${prevSec.id}')">&larr; ${prevSec.label}</button>` : ''}</div>
+      <div>${nextSec ? `<button class="chapter-nav-btn" onclick="selectSection('${nextSec.id}')">${nextSec.label} &rarr;</button>` : ''}</div>
+    </div>`;
+
+  contentEl.innerHTML = runningHead + html + footerNav;
+  decorateCallouts(contentEl);
 
   if (window.mermaid) {
     await mermaid.run({ nodes: contentEl.querySelectorAll('.mermaid') });

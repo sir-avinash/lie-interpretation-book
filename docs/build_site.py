@@ -35,7 +35,8 @@ sections = [
         "chapterFile": "ch02_core_manifolds.md",
         "notebook": "ch02_lie_groups_product_manifolds.ipynb",
         "skill": "ch02-manifold-kinematics",
-        "markdown": read_text("chapters/ch02_core_manifolds.md")
+        "diagramKey": "se3_s2_manifold",
+        "markdown": read_text("chapters/ch02_core_manifolds.md") + "\n\n```mermaid\nflowchart LR\n  G[Lie Group G] -->|\"log / hat\"| g[\"Lie Algebra g\"]\n  g -->|\"exp\"| G\n  G -->|\"Product\"| Q[\"Q = SE(3) x S^2\"]\n```\n"
     },
     {
         "id": "ch03",
@@ -46,7 +47,7 @@ sections = [
         "notebook": "ch03_variations_transport_maps.ipynb",
         "skill": "ch03-geometric-error-design",
         "diagramKey": "transport_map",
-        "markdown": read_text("chapters/ch03_variations_errors_transport.md")
+        "markdown": read_text("chapters/ch03_variations_errors_transport.md") + "\n\n```mermaid\nflowchart LR\n  QD[\"T_{q_d} M\"] -->|\"Transport Map T(q, q_d)\"| Q[\"T_q M\"]\n  Q -->|\"Error e_qdot = qdot - T qdot_d\"| L[\"Lyapunov Descent\"]\n```\n"
     },
     {
         "id": "ch04",
@@ -56,6 +57,7 @@ sections = [
         "chapterFile": "ch04_coordinate_free_dynamics.md",
         "notebook": "ch04_lagrange_dalembert_sim.ipynb",
         "skill": "ch04-manifold-dynamics-modeling",
+        "diagramKey": "lagrange_dalembert_variation",
         "markdown": read_text("chapters/ch04_coordinate_free_dynamics.md") + "\n\n```mermaid\nstateDiagram-v2\n  [*] --> TautMode: \"T > 0 on SE(3) x S^2\"\n  TautMode --> SlackMode: \"Guard S_z: T = 0\"\n  SlackMode --> TautMode: \"Guard S_n: ||x_Q - x_L|| = l\"\n```\n"
     },
     {
@@ -66,7 +68,8 @@ sections = [
         "chapterFile": "ch07_variation_linearization_lqr.md",
         "notebook": "ch07_variation_lqr_sim.ipynb",
         "skill": "ch07-variation-lqr-design",
-        "markdown": read_text("chapters/ch07_variation_linearization_lqr.md")
+        "diagramKey": "variation_lqr_tube",
+        "markdown": read_text("chapters/ch07_variation_linearization_lqr.md") + "\n\n```mermaid\nflowchart LR\n  NOM[\"Nominal x_d(t) on M\"] -->|\"Symbolic Variations\"| LTV[\"LTV (A(t), B(t)) on T_{x_d}M\"]\n  LTV -->|\"Projected Riccati P(t)\"| LQR[\"Feedback du = -K(t) dx\"]\n```\n"
     },
 ]
 
