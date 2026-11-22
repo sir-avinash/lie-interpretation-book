@@ -61,6 +61,17 @@ sections = [
         "markdown": read_text("chapters/ch04_coordinate_free_dynamics.md") + "\n\n```mermaid\nstateDiagram-v2\n  [*] --> TautMode: \"T > 0 on SE(3) x S^2\"\n  TautMode --> SlackMode: \"Guard S_z: T = 0\"\n  SlackMode --> TautMode: \"Guard S_n: ||x_Q - x_L|| = l\"\n```\n"
     },
     {
+        "id": "ch05",
+        "part": "Part II: Modeling",
+        "label": "Ch 5. Symbolic Derivation (geomech)",
+        "verified": True,
+        "chapterFile": "ch05_symbolic_derivation_geomech.md",
+        "notebook": "ch05_geomech_symbolic_pipeline.ipynb",
+        "skill": "ch05-geomech-symbolic-derivation",
+        "diagramKey": "geomech_symbolic_tree",
+        "markdown": read_text("chapters/ch05_symbolic_derivation_geomech.md") + "\n\n```mermaid\nflowchart LR\n  L[\"Lagrangian L & dW\"] -->|\"compute_eom\"| EOM[\"Coordinate-Free E = 0\"]\n  EOM -->|\"check_eom < 1e-5\"| VER[\"Verified Model\"]\n  VER -->|\"to_standard_form / linearize\"| SIM[\"Codegen + RKMK4 / LQR\"]\n```\n"
+    },
+    {
         "id": "ch07",
         "part": "Part III: Geometric Control",
         "label": "Ch 7. Variation Linearization & LQR",
