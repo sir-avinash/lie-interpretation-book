@@ -276,5 +276,66 @@ window.KC_DIAGRAMS = {
         <text x="90" y="238" font-family="Source Sans 3, sans-serif" font-size="12" fill="#525d6a">Tangent-space Riccati P(t) projected onto constraint manifold ξ · q_d = 0</text>
       </svg>
       <figcaption class="kc-caption"><strong>Fig. 7.1:</strong> Symbolic variation-based linearization and LTV-LQR feedback along a nominal trajectory $x_d(t)$ on $SO(3) \\times S^2$. State variations $\\delta x(t) \\in T_{x_d(t)}M$ obey linear time-varying dynamics $\\delta\\dot{x} = A(t)\\delta x + B(t)\\delta u$ while respecting the orthogonal constraint $\\xi \\cdot q_d = 0$.</figcaption>
+    </figure>`,
+
+  geomech_symbolic_tree: `
+    <figure class="kc-figure">
+      <svg viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Frozen Expression Tree and 6-Stage geomech Pipeline">
+        <defs>
+          <radialGradient id="astShadow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#1b1f8a" stop-opacity="0.16"/>
+            <stop offset="100%" stop-color="#1b1f8a" stop-opacity="0"/>
+          </radialGradient>
+          <marker id="arr5Indigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#1b1f8a"/>
+          </marker>
+        </defs>
+
+        <ellipse cx="165" cy="252" rx="135" ry="14" fill="url(#astShadow)"/>
+
+        <text x="50" y="34" font-family="Source Sans 3, sans-serif" font-weight="700" font-size="13" fill="#1b1f8a">1. Frozen Expression Tree (Expr)</text>
+
+        <line x1="165" y1="68" x2="105" y2="118" stroke="#1e242b" stroke-width="1.8"/>
+        <line x1="165" y1="68" x2="225" y2="118" stroke="#1e242b" stroke-width="1.8"/>
+        <line x1="225" y1="118" x2="175" y2="174" stroke="#1e242b" stroke-width="1.8"/>
+        <line x1="225" y1="118" x2="275" y2="174" stroke="#1e242b" stroke-width="1.8"/>
+        <line x1="275" y1="174" x2="242" y2="224" stroke="#525d6a" stroke-width="1.4"/>
+        <line x1="275" y1="174" x2="306" y2="224" stroke="#525d6a" stroke-width="1.4"/>
+
+        <rect x="135" y="52" width="60" height="28" rx="5" fill="#f4f6fb" stroke="#1b1f8a" stroke-width="2.0"/>
+        <text x="165" y="71" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#1b1f8a">Mul</text>
+
+        <rect x="75" y="104" width="60" height="28" rx="5" fill="#fbf7ef" stroke="#b07322" stroke-width="1.6"/>
+        <text x="105" y="123" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#1e242b">0.5</text>
+
+        <rect x="195" y="104" width="60" height="28" rx="5" fill="#f4f6fb" stroke="#1b1f8a" stroke-width="2.0"/>
+        <text x="225" y="123" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#1b1f8a">Dot</text>
+
+        <rect x="145" y="160" width="60" height="28" rx="5" fill="#f3f8f8" stroke="#2a6f73" stroke-width="1.8"/>
+        <text x="175" y="179" text-anchor="middle" font-family="EB Garamond, serif" font-style="italic" font-size="15" fill="#2a6f73">Ω</text>
+
+        <rect x="242" y="160" width="66" height="28" rx="5" fill="#f4f6fb" stroke="#1b1f8a" stroke-width="1.8"/>
+        <text x="275" y="179" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#1b1f8a">MVMul</text>
+
+        <rect x="218" y="210" width="46" height="26" rx="4" fill="#fdfcf8" stroke="#1e242b" stroke-width="1.5"/>
+        <text x="241" y="228" text-anchor="middle" font-family="EB Garamond, serif" font-style="italic" font-size="14" fill="#1e242b">J*</text>
+
+        <rect x="282" y="210" width="46" height="26" rx="4" fill="#f3f8f8" stroke="#2a6f73" stroke-width="1.5"/>
+        <text x="305" y="228" text-anchor="middle" font-family="EB Garamond, serif" font-style="italic" font-size="14" fill="#2a6f73">Ω</text>
+
+        <line x1="336" y1="142" x2="386" y2="142" stroke="#1b1f8a" stroke-width="2.2" marker-end="url(#arr5Indigo)"/>
+        <text x="361" y="130" text-anchor="middle" font-family="Source Sans 3, sans-serif" font-size="11" font-weight="700" fill="#1b1f8a">δ, IBP</text>
+
+        <rect x="402" y="34" width="252" height="218" rx="6" fill="#f4f6fb" stroke="#1b1f8a" stroke-width="2.0"/>
+        <text x="420" y="60" font-family="Source Sans 3, sans-serif" font-weight="700" font-size="13.5" fill="#1b1f8a">2. Pure Tree-Rewrite Pipeline</text>
+        <text x="420" y="88" font-family="Source Sans 3, sans-serif" font-size="12.5" fill="#1e242b">① δS = δL + δW (product rule)</text>
+        <text x="420" y="112" font-family="Source Sans 3, sans-serif" font-size="12.5" fill="#c4512d">② Manifold rules: δω, δΩ</text>
+        <text x="420" y="136" font-family="Source Sans 3, sans-serif" font-size="12.5" fill="#1e242b">③ full_simplify (pull, vector, elim)</text>
+        <text x="420" y="160" font-family="Source Sans 3, sans-serif" font-size="12.5" fill="#2a6f73">④ collect + integrate_by_parts</text>
+        <text x="420" y="184" font-family="Source Sans 3, sans-serif" font-size="12.5" fill="#1e242b">⑤ expand + extract_linear_coeff</text>
+        <text x="420" y="212" font-family="EB Garamond, serif" font-size="15" fill="#1b1f8a">⇒ −J Ω̇ − Ω × JΩ + M = 0</text>
+        <text x="420" y="236" font-family="Source Sans 3, sans-serif" font-size="12" font-weight="600" fill="#2a6f73">✓ check_eom residual &lt; 10⁻⁷</text>
+      </svg>
+      <figcaption class="kc-caption"><strong>Fig. 5.1:</strong> Frozen symbolic expression tree in <code>geomech</code> for rigid-body kinetic energy $\\frac{1}{2}\\Omega \\cdot J\\Omega$ and the 6-stage pure tree-rewrite pipeline (<code>compute_eom</code>) yielding coordinate-free Euler–Poincaré equations verified by <code>check_eom</code>.</figcaption>
     </figure>`
 };
