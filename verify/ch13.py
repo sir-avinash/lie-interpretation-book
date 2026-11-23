@@ -861,6 +861,12 @@ def main():
     Ra, Rb = Rz(0.9), Rx(1.2)
     ck.record("midpoint_det", float(np.linalg.det(0.5 * (Ra + Rb))))
     ck.true("the midpoint of two rotation matrices is not a rotation", abs(np.linalg.det(0.5 * (Ra + Rb)) - 1) > 0.1)
+    ck.record("midpoint_angle_deg", float(np.degrees(np.linalg.norm(log_so3(Ra.T @ Rb)))))
+    lon = np.radians([-78.5, 36.8, 103.8])               # Quito, Nairobi, Singapore, all near the equator
+    cities = np.array([[np.cos(a_), np.sin(a_), 0.0] for a_ in lon])
+    depth = (1 - np.linalg.norm(cities.mean(axis=0))) * 6371.0
+    ck.true("the average of three points on the equator is far underground", depth > 1000, f"{depth:.0f} km")
+    ck.record("cities_average_depth_km", float(depth))
     ck.record("puzzle_vars", 9 * N_MPC)
     ck.record("puzzle_constraints", 6 * N_MPC)
 
@@ -924,13 +930,13 @@ def main():
     ck.close("SO3: sym(dexp_inv(chi)) = (th/2) cot(th/2) I + (1 - (th/2) cot(th/2)) a a^T",
              0.5 * (dexp_inv(chi) + dexp_inv(chi).T), so3_mean_hess(R, [Rs[1]]), tol=1e-12)
 
-    R_start = Rs[0]
-    R_star = so3_mean_iterate(R_start, Rs, "newton", 12)[-1]
-    ck.close("SO3 mean: the gradient vanishes at the Newton limit", so3_mean_grad(R_star, Rs), 0, tol=1e-13)
-    dist = lambda Rk: float(np.linalg.norm(log_so3(R_star.T @ project_so3(Rk))))   # noqa: E731
-    errs = {m: [dist(Rk) for Rk in so3_mean_iterate(R_start, Rs, m, 10)] for m in
+    R_meant = Rs[0]
+    R_mean = so3_mean_iterate(R_meant, Rs, "newton", 12)[-1]
+    ck.close("SO3 mean: the gradient vanishes at the Newton limit", so3_mean_grad(R_mean, Rs), 0, tol=1e-13)
+    dist = lambda Rk: float(np.linalg.norm(log_so3(R_mean.T @ project_so3(Rk))))   # noqa: E731
+    errs = {m: [dist(Rk) for Rk in so3_mean_iterate(R_meant, Rs, m, 10)] for m in
             ("newton", "project", "gradient", "additive")}
-    on_group = max(np.abs(Rk.T @ Rk - I3).max() for Rk in so3_mean_iterate(R_start, Rs, "newton", 10))
+    on_group = max(np.abs(Rk.T @ Rk - I3).max() for Rk in so3_mean_iterate(R_meant, Rs, "newton", 10))
     ck.close("SO3 Newton: every iterate is a rotation", on_group, 0, tol=1e-14)
     en = [v for v in errs["newton"] if v > 1e-13]
     od = order(en)
@@ -943,14 +949,14 @@ def main():
     ratios = [eg[i + 1] / eg[i] for i in range(3, 7)]
     ck.true("SO3 gradient steps: linear convergence (constant ratio)", max(ratios) / min(ratios) < 1.6 and max(ratios) < 0.2,
             f"ratios {[round(v, 4) for v in ratios]}")
-    add = so3_mean_iterate(R_start, Rs, "additive", 10)
+    add = so3_mean_iterate(R_meant, Rs, "additive", 10)
     off = [float(np.linalg.norm(Rk.T @ Rk - I3)) for Rk in add]
     ck.true("additive update R + R eta^: the iterate leaves the group and never returns", off[1] > 0.1 and off[-1] > 0.1,
             f"|R^T R - I| = {off[1]:.2f} after one step")
     M_avg = sum(Rs) / len(Rs)
     ck.record("so3_average_det", float(np.linalg.det(M_avg)))
     ck.record("so3_average_vs_mean_deg", float(np.degrees(dist(project_so3(M_avg)))))
-    ck.record("so3_spread_deg", float(max(np.degrees(np.linalg.norm(log_so3(R_star.T @ Ri))) for Ri in Rs)))
+    ck.record("so3_spread_deg", float(max(np.degrees(np.linalg.norm(log_so3(R_mean.T @ Ri))) for Ri in Rs)))
     ck.record("so3_newton_err_deg", [float(np.degrees(v)) for v in errs["newton"][:6]])
     ck.record("so3_newton_order", od[-1])
     ck.record("so3_gradient_err_deg", [float(np.degrees(v)) for v in eg[:6]])
@@ -1205,6 +1211,10 @@ def main():
         ck.record(f"flip_{w}_qp_iters_max", int(max(c.iters)))
         ck.record(f"flip_{w}_solve_ms_median", float(1e3 * np.median(c.times)))
         ck.record(f"flip_{w}_solve_ms_max", float(1e3 * max(c.times)))
+    sat_l = np.nonzero(np.abs(runs["lqr"]["tau"]).max(axis=1) >= 0.6 - 1e-9)[0]
+    ck.record("flip_lqr_last_saturated_s", float((sat_l[-1] + 1) * H_MPC))
+    sat_m = np.nonzero(np.abs(runs["mpc"]["tau"]).max(axis=1) >= 0.6 - 1e-9)[0]
+    ck.record("flip_mpc_last_saturated_s", float((sat_m[-1] + 1) * H_MPC))
     ck.true("flip: the QP is solved well inside the 20 ms sampling period", 1e3 * max(runs["mpc"]["ctrl"].times) < 20.0,
             f"median {1e3 * np.median(runs['mpc']['ctrl'].times):.2f} ms, max {1e3 * max(runs['mpc']['ctrl'].times):.2f} ms")
     # closed-loop QPs once more against SciPy
@@ -1333,6 +1343,8 @@ def main():
     geo = prob.initial_guess(0.0)
     ck.true("the geodesic initial guess passes through the cone", prob.ineq(geo)[6 * prob.N:].max() > 0,
             f"deepest {np.degrees(np.arccos(prob.ineq(geo)[6 * prob.N:].max() + prob.cos_c)):.1f} deg from the cone axis")
+    ck.record("ipm_guess_violations", int(np.sum(prob.ineq(geo)[6 * prob.N:] > 0)))
+    ck.record("ipm_slsqp_cost_gap", float(abs(chk.fun - prob.cost(xs))))
     ck.record("ipm_iters", sol["iters"])
     ck.record("ipm_cost", prob.cost(xs))
     ck.record("ipm_active_torque", n_tau_act)

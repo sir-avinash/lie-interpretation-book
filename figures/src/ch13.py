@@ -72,8 +72,8 @@ def opening():
 def newton():
     Rs, _ = V.mean_data()
     R0 = Rs[0]
-    R_star = V.so3_mean_iterate(R0, Rs, "newton", 12)[-1]
-    dist = lambda R: np.degrees(np.linalg.norm(V.log_so3(R_star.T @ V.project_so3(R))))        # noqa: E731
+    R_mean = V.so3_mean_iterate(R0, Rs, "newton", 12)[-1]
+    dist = lambda R: np.degrees(np.linalg.norm(V.log_so3(R_mean.T @ V.project_so3(R))))        # noqa: E731
     fig, (ax0, ax1) = new_plot(6.6, 2.9, ncols=2, gridspec_kw={"width_ratios": [1.35, 1]})
     fig.subplots_adjust(left=0.1, right=0.985, bottom=0.17, top=0.93, wspace=0.3)
     floor = 3e-13

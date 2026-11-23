@@ -86,7 +86,7 @@ def ref_hover(t):
 
 
 class ConingReference:
-    """R_d(t) integrated from a smooth body rate. Call in increasing t with a fixed step."""
+    """Rd(t) integrated from a smooth body rate. Call in increasing t with a fixed step."""
 
     def __init__(self, h, amp=0.9, rate=1.5, spin=0.3):
         self.h, self.amp, self.rate, self.spin = h, amp, rate, spin
@@ -340,7 +340,7 @@ def e_omega(q, om, omd):
 
 
 class CircleReference:
-    """q_d moves at constant rate on a small circle about the axis c."""
+    """qd moves at constant rate on a small circle about the axis c."""
 
     def __init__(self, c, q0, rate):
         self.c, self.q0, self.rate = unit(c), unit(q0), rate
