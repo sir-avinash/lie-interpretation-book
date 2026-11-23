@@ -61,32 +61,34 @@ def arc_arrow(s, center, axis, start, angle, radius, color, n=40, head=0.1, lw=1
 # -------------------------------------------------- tangent plane to S2
 def tangent():
     s = Scene(width=6.4, height=3.7, azim=-34, elev=20)
-    q = unit([0.30, -0.02, 0.92])
+    q = unit([0.35, -0.10, 0.93])
     s.shadow((0, 0, -1.1), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     s.sphere_curve(great_circle(E3), color=INK, lw=0.6, alpha=0.5)
-    # A curve on the sphere through q: a small circle about a tilted axis.
-    axis = unit([0.75, -0.6, 0.25])
-    polar = np.arccos(q @ axis)
-    ts = np.linspace(-1.3, 1.3, 160)
+    # In-plane direction chosen so that q_dot, omega and the normal project well apart.
+    a0 = unit(np.cross(q, E3))
+    phi = np.radians(120)
+    d = np.cos(phi) * a0 + np.sin(phi) * np.cross(q, a0)
+    qdot = 0.62 * d
+    omega = np.cross(q, qdot)
+    # A curve on the sphere through q with that velocity: a small circle about a tilted axis.
+    axis = unit(unit(omega) + 0.45 * q)
+    ts = np.linspace(-1.5, 1.2, 160)
     path = np.array([rot(axis, t) @ q for t in ts])
     s.sphere_curve(path, color=TEAL, lw=1.9, zorder=16)
-    qdot = np.cross(axis, q)                 # velocity of that curve at q, with unit turn rate
-    qdot = 0.62 * qdot / np.linalg.norm(qdot)
-    omega = np.cross(q, qdot)
-    a, b = s.tangent_plane(1.002 * q, size=0.62, color=SAND, alpha=0.82, spin=np.arctan2(qdot @ np.cross(q, unit(np.cross(q, E3))), qdot @ unit(np.cross(q, E3))))
+    a, b = s.tangent_plane(1.002 * q, size=0.72, color=SAND, alpha=0.82, spin=phi)
     s.curve(np.array([[0, 0, 0], q]), color=MUTED, hidden=True)
     s.dot((0, 0, 0), color=MUTED, size=3)
     s.arrow(q, q + qdot, color=INDIGO, zorder=31)
     s.arrow(q, q + omega, color=TERRACOTTA, zorder=31)
     s.arrow(q, q + 0.45 * q, color=INK, lw=1.1, head=0.09, zorder=31)
     s.dot(q, color=INK, size=5)
-    s.label(q, r"$q$", dx=-10, dy=-9, size=12)
-    s.label(q + qdot, r"$\dot q$", dx=10, dy=5, color=INDIGO, size=12)
-    s.label(q + omega, r"$\omega = q \times \dot q$", dx=-40, dy=4, color=TERRACOTTA)
-    s.label(q + 0.45 * q, "normal", dx=20, dy=4, size=9.5, **SANS)
-    s.label(path[18], r"$q(t)$", dx=-13, dy=8, color=TEAL)
-    s.label(q + 0.62 * (a - b), r"$T_qS^2$", dx=22, dy=-2, size=11)
+    s.label(q, r"$q$", dx=-11, dy=-5, size=12)
+    s.label(q + qdot, r"$\dot q$", dx=9, dy=-7, color=INDIGO, size=12)
+    s.label(q + omega, r"$\omega = q \times \dot q$", dx=40, dy=4, color=TERRACOTTA)
+    s.label(q + 0.45 * q, "normal", dx=-22, dy=3, size=9.5, **SANS)
+    s.label(path[14], r"$q(t)$", dx=-14, dy=8, color=TEAL)
+    s.label(q - 0.72 * (a + b), r"$T_qS^2$", dx=-22, dy=0, size=11)
     s.project(-2.9 * s.right)
     s.text2d(-2.0, 0.35, "every velocity of a curve\nthrough $q$ lies in this plane", fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
     s.text2d(-2.0, -0.55, r"$q\cdot\dot q = 0$", fontsize=11.5)
@@ -119,8 +121,8 @@ def expmap():
     s.dot(P(0, 1), color=INK, size=5)
     s.label(P(0, 1), "identity", dy=12, size=9.5, **SANS)
     s.label(P(1.3, 1.0), r"$\theta$", dx=4, dy=11, color=INDIGO, size=12)
-    s.label(P(np.sin(1.3), np.cos(1.3)), r"$\exp(\theta J)$", dx=30, dy=-4, color=INDIGO)
-    s.label(P(-1.55, 1), "tangent line", dx=6, dy=11, size=9.5, color=MUTED, **SANS)
+    s.label(P(np.sin(1.3), np.cos(1.3)), r"$\exp(\theta J)$", dx=-32, dy=-6, color=INDIGO)
+    s.label(P(-1.1, 1), "tangent line", dx=0, dy=11, size=9.5, color=MUTED, **SANS)
     s.label(P(0, 0), r"$\mathrm{SO}(2)$", size=12)
     s.label(P(0, -1.32), "equal lengths, wrapped", size=9.5, color=MUTED, **SANS)
 
@@ -129,7 +131,7 @@ def expmap():
     s.shadow((0, 0, -1.1), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     a, b = s.tangent_plane(1.002 * q, size=0.9, color=SAND, alpha=0.6)
-    for ang, length, col, name, off in [(0.35, 1.15, INDIGO, r"$v$", (8, 8)), (2.55, 0.95, TEAL, None, None)]:
+    for ang, length, col, name, off in [(3.5, 1.2, INDIGO, r"$v$", (9, 7)), (1.2, 0.75, TEAL, None, None)]:
         d = np.cos(ang) * a + np.sin(ang) * b
         v = length * d
         end = np.cos(length) * q + np.sin(length) * d
@@ -142,9 +144,9 @@ def expmap():
         s.curve(wrap, color=col, lw=0.8, hidden=True, zorder=25)
         if name:
             s.label(q + v, name, dx=off[0], dy=off[1], color=col, size=12)
-            s.label(end, r"$\exp_q(v)$", dx=26, dy=-6, color=col)
+            s.label(end, r"$\exp_q(v)$", dx=-30, dy=-8, color=col)
     s.dot(q, color=INK, size=5)
-    s.label(q, r"$q$", dx=-2, dy=12, size=12)
+    s.label(q, r"$q$", dx=-4, dy=12, size=12)
     s.label(q - 0.9 * (a - b), r"$T_qS^2$", dx=-18, dy=4, size=10.5)
     s.text2d(1.2, -1.02, r"$S^2$", fontsize=13)
     s.save(OUT / "ch02-expmap.svg", pad=0.08)
@@ -228,7 +230,7 @@ def quadload():
     s.label(xQ + 0.62 * q, r"$q \in S^2$", dx=30, dy=2, color=TEAL, size=12)
     s.label(xL, r"$x_L \in \mathbb{R}^3$", dx=36, dy=-6, color=TERRACOTTA, size=12)
     s.label(xQ + arm * R[:, 0], r"$R \in \mathrm{SO}(3)$", dx=44, dy=6, color=INDIGO, size=12)
-    s.label(xQ - arm * R[:, 0], r"$x_Q = x_L - l\,q$", dx=-46, dy=14, size=11)
+    s.label(xQ - arm * R[:, 0], r"$x_Q = x_L - l\,q$", dx=-46, dy=24, size=11)
     mid = xQ + 0.5 * L * q
     s.label(xQ + 0.8 * L * q, r"$l$", dx=-9, dy=2, size=11.5)
     s.text2d(2.75, 1.05, "attitude: 3", fontsize=9.5, color=INDIGO, **SANS)
@@ -246,7 +248,7 @@ def steps():
     fig.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
     ax.set_aspect("equal")
     ax.axis("off")
-    t = np.linspace(-0.25, np.pi / 2 + 0.75, 300)
+    t = np.linspace(-0.25, np.pi / 2 + 0.5, 300)
     ax.plot(np.cos(t), np.sin(t), color=INK, lw=1.7, zorder=3)
     J = np.array([[0.0, -1.0], [1.0, 0.0]])
     hw, n = 0.42, 4                           # h * omega, exaggerated so the drift is visible
@@ -273,7 +275,7 @@ def steps():
     ax.text(qe[1][0] + 0.07, qe[1][1] + 0.03, r"$q_0 + h\,\dot q_0$", fontsize=11, color=TERRACOTTA, ha="left", va="center", **kw)
     ax.text(qe[-1][0] - 0.1, qe[-1][1] + 0.07, f"Euler: radius {np.linalg.norm(qe[-1]):.2f} after four steps", fontsize=9.5, color=TERRACOTTA,
             ha="right", va="center", fontfamily="Source Sans 3", **kw)
-    ax.text(qx[-1][0] - 0.16, qx[-1][1] - 0.17, "exponential step:\nradius 1.00", fontsize=9.5, color=INDIGO,
+    ax.text(qx[-1][0] - 0.34, qx[-1][1] - 0.2, "exponential step:\nradius 1.00", fontsize=9.5, color=INDIGO,
             ha="right", va="center", fontfamily="Source Sans 3", linespacing=1.3, **kw)
     ax.text(1.25, 1.2, "each Euler step runs along\nthe tangent, so it always\nlands outside the circle", fontsize=9.5, color=MUTED,
             ha="left", va="center", fontfamily="Source Sans 3", linespacing=1.3, **kw)
