@@ -161,9 +161,10 @@ $$
 with **adaptation gain** $\gamma > 0$. Without $\operatorname{Proj}$ this is an integrator of the prediction error with a very large gain, and an integrator can wind up without limit when the motors saturate or a sensor drops out. The projection keeps the estimate inside a ball of radius $\Delta_{\max}$:
 
 $$
-\operatorname{Proj}(\hat\Delta, y) = \begin{cases} y - \dfrac{\nabla\!f\,(\nabla\!f\cdot y)}{\|\nabla\!f\|^2}\,f & \text{if } f > 0 \text{ and } y\cdot\nabla\!f > 0,\\[6pt] y & \text{otherwise,} \end{cases}
-\qquad f(\hat\Delta) = \frac{1.1\,\|\hat\Delta\|^2 - \Delta_{\max}^2}{0.1\,\Delta_{\max}^2} . \label{eq8-proj}
+\operatorname{Proj}(\hat\Delta, y) = \begin{cases} y - \dfrac{\nabla\!f\,(\nabla\!f\cdot y)}{\|\nabla\!f\|^2}\,f & \text{if } f > 0 \text{ and } y\cdot\nabla\!f > 0,\\[6pt] y & \text{otherwise,} \end{cases} \label{eq8-proj}
 $$
+
+where $f(\hat\Delta) = \big(1.1\,\|\hat\Delta\|^2 - \Delta_{\max}^2\big)/\big(0.1\,\Delta_{\max}^2\big)$ is zero at radius $0.95\,\Delta_{\max}$ and one at $\Delta_{\max}$.
 
 Inside radius $0.95\,\Delta_{\max}$ it does nothing. In the thin shell beyond, it scales down the outward part of $y$, to zero at the surface. It never makes the analysis worse: $\tilde\Delta\cdot\big(\operatorname{Proj}(\hat\Delta, y) - y\big) \le 0$ whenever the true uncertainty lies within $0.95\,\Delta_{\max}$. The ball is a statement of how much uncertainty you are prepared to cancel. Make it too small and the estimate is clipped: with $\Delta_{\max} = 1$ N·m against the 2.16 N·m torque of [](#ex8-camera), the simulated body settles 35° off. In a sampled implementation, follow each step of [](#eq8-adapt) by pulling the estimate back onto the ball, because a finite step can overshoot it.
 

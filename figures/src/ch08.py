@@ -95,7 +95,7 @@ def l1():
     ax0.set_yticks([0.01, 0.1, 1, 10])
     ax0.set_yticklabels(["0.01°", "0.1°", "1°", "10°"])
     ax0.text(9.8, 24, "geometric PD", color=TERRACOTTA, ha="right", fontsize=10, **SANS)
-    ax0.text(9.8, 0.062, r"with $L_1$ adaptation", color=INDIGO, ha="right", fontsize=10, **SANS, path_effects=halo())
+    ax0.text(9.8, 0.062, "with L1 adaptation", color=INDIGO, ha="right", fontsize=10, **SANS, path_effects=halo())
     ax0.set_title("attitude error, camera and gusts", fontsize=10, loc="left", color=INK, **SANS)
     ax0.set_xlabel("time (s)", fontsize=9.5, **SANS)
 
