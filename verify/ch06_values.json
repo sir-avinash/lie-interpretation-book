@@ -204,5 +204,110 @@
     "cable_wn": 5.0,
     "attitude_slowest_pole_eps1": 3.9798478243286155,
     "attitude_slowest_pole_eps05": 7.959695648657231
+  },
+  "fl_params": {
+    "m": 1.0,
+    "J_diag": [
+      0.1625,
+      0.1625,
+      0.01
+    ],
+    "rho": [
+      0.0,
+      0.0,
+      -0.5
+    ],
+    "K_p": 100.0,
+    "K_d": 20.0
+  },
+  "fl_grid": {
+    "labels": 729,
+    "attitudes": 208,
+    "half_turns": 29,
+    "singular": 16,
+    "rest": {
+      "geo_converged": 179,
+      "euler_converged": 192,
+      "euler_undefined": 16,
+      "geo_stuck_are_half_turns": true,
+      "geo_peak_median": 7.541820490435427,
+      "euler_peak_median": 28.67320344627234,
+      "geo_peak_max": 11.345,
+      "euler_peak_max": 88.67572384078056,
+      "effort_ratio_median": 4.291333358824166,
+      "geo_t5_median": 0.678,
+      "euler_t5_median": 0.518,
+      "geo_t5_max": 0.972,
+      "euler_t5_max": 0.588,
+      "n_both": 164
+    },
+    "moving": {
+      "geo_converged": 205,
+      "euler_converged": 192,
+      "euler_undefined": 16,
+      "geo_stuck_are_half_turns": null,
+      "geo_peak_median": 7.590133038142178,
+      "euler_peak_median": 32.19731797522884,
+      "geo_peak_max": 15.943907335509008,
+      "euler_peak_max": 85.68165419896181,
+      "effort_ratio_median": 4.0991242674932815,
+      "geo_t5_median": 0.728,
+      "euler_t5_median": 0.522,
+      "geo_t5_max": 1.742,
+      "euler_t5_max": 0.588,
+      "n_both": 189
+    }
+  },
+  "fl_late": 3,
+  "fl_near_singularity": {
+    "0": {
+      "euler_Nm": 7.3186617934511835,
+      "geo_Nm": 7.295326331716013
+    },
+    "60": {
+      "euler_Nm": 10.848770194652342,
+      "geo_Nm": 8.544569366754308
+    },
+    "85": {
+      "euler_Nm": 15.035838862639197,
+      "geo_Nm": 9.37950177888709
+    },
+    "89": {
+      "euler_Nm": 10.702893844658382,
+      "geo_Nm": 9.372586645335575
+    },
+    "89.9": {
+      "euler_Nm": 69.23402097569716,
+      "geo_Nm": 9.365139354411228
+    }
+  },
+  "fl_blowup_ratio_89_to_899": 6.468719766874133,
+  "fl_error_ranges": {
+    "max_norm_e_R": 1.0,
+    "max_norm_Theta": 4.71238898038469
+  },
+  "leg_step": {
+    "step_s": 0.35,
+    "angle_left_deg": {
+      "10": 1.3599177915189573,
+      "60": 11.31650306611363,
+      "150": 99.90795005594917
+    },
+    "wn": 7.385489458759964,
+    "peak_torque_150_Nm": 60.0,
+    "peak_torque_10_Nm": 10.418890660015819
+  },
+  "saturation_settle_s": {
+    "inf": 1.2475,
+    "1": 1.2725,
+    "0.2": 2.99
+  },
+  "trace_vs_log_150deg_s": {
+    "trace": 1.2475,
+    "log": 0.8825000000000001
+  },
+  "peak_torque_demand": {
+    "trace_max_Nm": 8.81,
+    "log_at_179deg_Nm": 27.52366777102538
   }
 }
