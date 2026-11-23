@@ -270,12 +270,12 @@ For the sphere, show that $\omega = -k\, e_q$ gives $\dot\theta = -k \sin\theta$
 
 The comparison of Euler-angle and geometric formulations follows Siravuru (2019, ch. 4), who carries it out for a 3D pendulum over a grid of initial attitudes. Chaturvedi, Sanyal and McClamroch (2011) is the best single survey of rigid-body attitude control and of the pitfalls described here. The error functions [](#eq-error-so3) are those of Bullo and Lewis (2005) and Lee, Leok and McClamroch (2010).
 
-- S. P. Bhat and D. S. Bernstein, "A topological obstruction to continuous global stabilization of rotational motion and the unwinding phenomenon," *Systems & Control Letters* 39(1), 2000.
-- F. Bullo and A. D. Lewis, *Geometric Control of Mechanical Systems*, Springer, 2005.
-- N. A. Chaturvedi, A. K. Sanyal and N. H. McClamroch, "Rigid-body attitude control," *IEEE Control Systems Magazine* 31(3), 2011.
-- D. E. Koditschek, "The application of total energy as a Lyapunov function for mechanical control systems," *Contemporary Mathematics* 97, 1989.
-- T. Lee, M. Leok and N. H. McClamroch, "Geometric tracking control of a quadrotor UAV on SE(3)," *IEEE Conference on Decision and Control*, 2010.
-- C. G. Mayhew, R. G. Sanfelice and A. R. Teel, "Quaternion-based hybrid control for robust global attitude tracking," *IEEE Transactions on Automatic Control* 56(11), 2011.
-- M. W. Mueller, "Multicopter attitude control for recovery from large disturbances," arXiv:1802.09143, 2018.
-- A. Siravuru, *Geometric Control and Learning for Dynamic Legged Robots*, PhD thesis, Carnegie Mellon University, 2019.
-- J. Stuelpnagel, "On the parametrization of the three-dimensional rotation group," *SIAM Review* 6(4), 1964.
+- S. P. Bhat and D. S. Bernstein, ["A topological obstruction to continuous global stabilization of rotational motion and the unwinding phenomenon"](https://doi.org/10.1016/S0167-6911%2899%2900090-0), *Systems & Control Letters* 39(1), 2000.
+- F. Bullo and A. D. Lewis, [*Geometric Control of Mechanical Systems*](https://doi.org/10.1007/978-1-4899-7276-7), Springer, 2005.
+- N. A. Chaturvedi, A. K. Sanyal and N. H. McClamroch, ["Rigid-body attitude control"](https://doi.org/10.1109/MCS.2011.940459), *IEEE Control Systems Magazine* 31(3), 2011.
+- D. E. Koditschek, ["The application of total energy as a Lyapunov function for mechanical control systems"](https://repository.upenn.edu/ese_papers/672/), *Contemporary Mathematics* 97, 1989.
+- T. Lee, M. Leok and N. H. McClamroch, ["Geometric tracking control of a quadrotor UAV on SE(3)"](https://doi.org/10.1109/CDC.2010.5717652), *IEEE Conference on Decision and Control*, 2010.
+- C. G. Mayhew, R. G. Sanfelice and A. R. Teel, ["Quaternion-based hybrid control for robust global attitude tracking"](https://doi.org/10.1109/TAC.2011.2108490), *IEEE Transactions on Automatic Control* 56(11), 2011.
+- M. W. Mueller, ["Multicopter attitude control for recovery from large disturbances"](https://arxiv.org/abs/1802.09143), arXiv:1802.09143, 2018.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- J. Stuelpnagel, ["On the parametrization of the three-dimensional rotation group"](https://doi.org/10.1137/1006093), *SIAM Review* 6(4), 1964.

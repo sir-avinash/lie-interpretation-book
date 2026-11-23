@@ -434,6 +434,15 @@ def main():
     w = np.r_[sym.ravel(), ZERO3]
     ck.close("off-manifold directions of dR are unreachable (left null vector of the controllability matrix)",
              w @ ctrb(A12, B12), 0, tol=1e-6)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            solve_continuous_are(A12, B12, np.eye(12), np.eye(3))
+            failed12 = False
+        except Exception:
+            failed12 = True
+    ck.true("nine-entry linearization: the Riccati solver fails (six uncontrollable modes at zero)",
+            failed12 and np.abs(np.linalg.eigvals(A12)).max() < 1e-6)
     ck.record("euler_inv_cos_85", float(1 / np.cos(np.radians(85))))
     ck.record("euler_inv_cos_89p5", float(1 / np.cos(np.radians(89.5))))
     ck.close("det E = -cos(theta)", np.linalg.det(euler_E(0.7, -0.4)), -np.cos(0.7))
@@ -809,7 +818,8 @@ def main():
             f"final {finalE:.4f} deg")
     ck.record("flip_euler_final_error_deg", float(finalE))
     near = np.abs(np.degrees(fe["euler"][:, 1])) > 80
-    ck.record("flip_time_within_10deg_of_pole", float(near.sum() * (fe["tg"][1] - fe["tg"][0])))
+    ck.record("flip_time_within_10deg_of_pole_per_pass", float(near.sum() * (fe["tg"][1] - fe["tg"][0]) / 2))
+    ck.true("flip: each pass spends less than 0.05 s within 10 deg of the pole", near.sum() * (fe["tg"][1] - fe["tg"][0]) / 2 < 0.05)
 
     h0 = hold_compare(0.0, 20.0, (1, 1, 1))
     h85 = hold_compare(85.0, 20.0, (1, 1, 1))

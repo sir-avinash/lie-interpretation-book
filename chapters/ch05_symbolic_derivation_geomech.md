@@ -26,7 +26,7 @@ So one sign can pass every bench test and fail in the first aggressive manoeuvre
 
 ## Seventeen lines {#sec5-seventeen}
 
-The program is `geomech`, a Python library. You give it a Lagrangian and the virtual work of the inputs. It returns the equations of motion. Here is the whole quadrotor with its load.
+The program is [`geomech`](https://github.com/vkotaru/geomech), a Python library. You give it a Lagrangian and the virtual work of the inputs. It returns the equations of motion. Here is the whole quadrotor with its load.
 
 ```python
 from geomech import *
@@ -381,10 +381,10 @@ The variational method that the pipeline automates, the rules of [](#tbl5-leaves
 
 The quadrotor with a suspended load, [](#eq5-wu), and the multi-quadrotor rigid-payload model are taken from Wu (2017, ch. 3). The single-quadrotor model was first derived by Sreenath, Lee and Kumar (2013). For a sense of what the automation replaces, see the reaction mass biped of Siravuru (2019, ch. 5): thirteen degrees of freedom, with three attitudes on $\SO(3)$, leg lengths and sliding reaction masses, derived by hand from a variational principle over several pages. The integrator is due to Munthe-Kaas (1999).
 
-- B. Bittner and K. Sreenath, "Symbolic computation of dynamics on smooth manifolds," *Workshop on the Algorithmic Foundations of Robotics (WAFR)*, 2016.
-- P. Kotaru, *geomech: symbolic equations of motion on smooth manifolds*, version 1.1.0, 2026. https://github.com/vkotaru/geomech
-- T. Lee, M. Leok and N. H. McClamroch, *Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*, Springer, 2018.
-- H. Munthe-Kaas, "High order Runge–Kutta methods on manifolds," *Applied Numerical Mathematics* 29(1), 1999.
-- A. Siravuru, *Geometric Control and Learning for Dynamic Legged Robots*, PhD thesis, Carnegie Mellon University, 2019.
-- K. Sreenath, T. Lee and V. Kumar, "Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load," *IEEE Conference on Decision and Control*, 2013.
-- G. Wu, *Safety-critical Geometric Control Design with Application to Aerial Transportation*, PhD thesis, Carnegie Mellon University, 2017.
+- B. Bittner and K. Sreenath, ["Symbolic computation of dynamics on smooth manifolds"](https://doi.org/10.1007/978-3-030-43089-4_22), *Workshop on the Algorithmic Foundations of Robotics (WAFR)*, 2016.
+- P. Kotaru, [*geomech: symbolic equations of motion on smooth manifolds*](https://github.com/vkotaru/geomech), version 1.1.0, 2026. https://github.com/vkotaru/geomech
+- T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
+- H. Munthe-Kaas, ["High order Runge–Kutta methods on manifolds"](https://doi.org/10.1016/S0168-9274%2898%2900030-0), *Applied Numerical Mathematics* 29(1), 1999.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- K. Sreenath, T. Lee and V. Kumar, ["Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load"](https://doi.org/10.1109/CDC.2013.6760219), *IEEE Conference on Decision and Control*, 2013.
+- G. Wu, [*Safety-critical Geometric Control Design with Application to Aerial Transportation*](https://kilthub.cmu.edu/articles/thesis/Safety-critical_Geometric_Control_Design_with_Application_to_Aerial_Transportation/6721382), PhD thesis, Carnegie Mellon University, 2017.

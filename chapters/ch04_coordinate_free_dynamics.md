@@ -216,7 +216,7 @@ $$
 \ddt\big(R J\Omega\big) = R\big(J\dot\Omega + \Omega\times J\Omega\big) = R\,\tau . \label{eq4-newton-euler}
 $$
 
-The same equation, and the same origin for the gyroscopic term: it comes from differentiating $R$. The two methods always agree. Newton-Euler is quicker when the free-body diagram is simple. Lagrange-d'Alembert is safer when constraint forces are many, because it never introduces them. We use each where it is shorter.^[[](#ch-symbolic) automates the variational route with the `geomech` library. Every equation of motion in this chapter was derived a second time that way and compared numerically.]
+The same equation, and the same origin for the gyroscopic term: it comes from differentiating $R$. The two methods always agree. Newton-Euler is quicker when the free-body diagram is simple. Lagrange-d'Alembert is safer when constraint forces are many, because it never introduces them. We use each where it is shorter.^[[](#ch-symbolic) automates the variational route with the [`geomech`](https://github.com/vkotaru/geomech) library. Every equation of motion in this chapter was derived a second time that way and compared numerically.]
 
 ## A sanity check you can throw in the air {#sec4-conservation}
 
@@ -382,10 +382,10 @@ Implement both first-order steps, the naive one and [](#eq4-lie-euler), for the 
 
 Variations on $S^2$ and $\SO(3)$ are treated as in Lee, Leok and McClamroch (2018), which works through pendulums, rigid bodies and multibody systems in this style. The comparison of Euler-angle and $\SO(3)$ models of the 3D pendulum, with the conditioning of the Euler mass matrix, is from Siravuru (2019, ch. 4). He uses the ZXY angle order, singular at 90° of roll; we used the ZYX order of [](#ch-why). The Reaction Mass Biped is his chapter 5, which also carries out the derivation in discrete time. Sreenath, Lee and Kumar (2013) derived the quadrotor with a cable-suspended load on $\SE(3)\times S^2$. The form [](#eq4-load), the tension [](#eq4-load-tension) and the multi-quadrotor payload models are in Wu (2017, ch. 3). Teng et al. (2026) write rigid-body dynamics on $\SE(3)$ in Euler-Poincaré form for trajectory optimization. Marsden and Ratiu (1999) is the standard reference for the free rigid body and the stability of its steady spins.
 
-- T. Lee, M. Leok and N. H. McClamroch, *Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*, Springer, 2018.
-- T. Lee, M. Leok and N. H. McClamroch, "Geometric tracking control of a quadrotor UAV on SE(3)," *IEEE Conference on Decision and Control*, 2010.
-- J. E. Marsden and T. S. Ratiu, *Introduction to Mechanics and Symmetry*, 2nd ed., Springer, 1999.
-- A. Siravuru, *Geometric Control and Learning for Dynamic Legged Robots*, PhD thesis, Carnegie Mellon University, 2019.
-- K. Sreenath, T. Lee and V. Kumar, "Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load," *IEEE Conference on Decision and Control*, 2013.
-- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, "LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies," arXiv:2606.10579, 2026.
-- G. Wu, *Safety-critical Geometric Control Design with Application to Aerial Transportation*, PhD thesis, Carnegie Mellon University, 2017.
+- T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
+- T. Lee, M. Leok and N. H. McClamroch, ["Geometric tracking control of a quadrotor UAV on SE(3)"](https://doi.org/10.1109/CDC.2010.5717652), *IEEE Conference on Decision and Control*, 2010.
+- J. E. Marsden and T. S. Ratiu, [*Introduction to Mechanics and Symmetry*](https://doi.org/10.1007/978-0-387-21792-5), 2nd ed., Springer, 1999.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- K. Sreenath, T. Lee and V. Kumar, ["Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load"](https://doi.org/10.1109/CDC.2013.6760219), *IEEE Conference on Decision and Control*, 2013.
+- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, ["LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies"](https://arxiv.org/abs/2606.10579), arXiv:2606.10579, 2026.
+- G. Wu, [*Safety-critical Geometric Control Design with Application to Aerial Transportation*](https://kilthub.cmu.edu/articles/thesis/Safety-critical_Geometric_Control_Design_with_Application_to_Aerial_Transportation/6721382), PhD thesis, Carnegie Mellon University, 2017.

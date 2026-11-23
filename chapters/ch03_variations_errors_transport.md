@@ -387,15 +387,15 @@ Derive [](#eq3-first-order). Then take a reference that spins at constant $\Omeg
 
 Variations on $\SO(3)$ and $S^2$ in the form used here, including [](#eq3-delta-Omega) and the expression for $\delta\omega$, are developed by Lee, Leok and McClamroch (2018). Error functions, compatible transport maps and the weighted trace function come from Bullo and Lewis (2005). Lee, Leok and McClamroch (2010) brought $e_R$ and $e_\Omega$ to quadrotors, and [](#eq3-eR-dot) appears there and in Siravuru (2019). The sphere errors [](#eq3-e-omega) and the general statement of compatibility follow Wu (2017). The first-order link between errors and variations is the basis of Wu and Sreenath (2015). The comparison of attitude errors, the lingering of the trace error and tilt prioritisation are from Mueller (2018). Left- and right-invariant errors and their autonomous dynamics are due to Barrau and Bonnabel (2017). Their use for legged robots is from Hartley et al. (2018). The Lie-algebraic tracking error [](#eq3-lie-algebra-error) is from Teng et al. (2022). Teng et al. (2026) use the same variations as search directions for trajectory optimisation on Lie groups.
 
-- A. Barrau and S. Bonnabel, "The invariant extended Kalman filter as a stable observer," *IEEE Transactions on Automatic Control* 62(4), 2017.
-- F. Bullo and A. D. Lewis, *Geometric Control of Mechanical Systems*, Springer, 2005.
-- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, "Contact-aided invariant extended Kalman filtering for legged robot state estimation," arXiv:1805.10410, 2018.
-- J. Jang, S. Teng and M. Ghaffari, "Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles," arXiv:2305.09009, 2023.
-- T. Lee, M. Leok and N. H. McClamroch, "Geometric tracking control of a quadrotor UAV on SE(3)," *IEEE Conference on Decision and Control*, 2010.
-- T. Lee, M. Leok and N. H. McClamroch, *Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*, Springer, 2018.
-- M. W. Mueller, "Multicopter attitude control for recovery from large disturbances," arXiv:1802.09143, 2018.
-- A. Siravuru, *Geometric Control and Learning for Dynamic Legged Robots*, PhD thesis, Carnegie Mellon University, 2019.
-- S. Teng, W. Clark, A. Bloch, R. Vasudevan and M. Ghaffari, "Lie algebraic cost function design for control on Lie groups," arXiv:2204.09177, 2022.
-- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, "LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies," arXiv:2606.10579, 2026.
-- G. Wu, *Safety-critical Geometric Control Design with Application to Aerial Transportation*, PhD thesis, Carnegie Mellon University, 2017.
-- G. Wu and K. Sreenath, "Variation-based linearization of nonlinear systems evolving on SO(3) and S²," *IEEE Access* 3, 2015.
+- A. Barrau and S. Bonnabel, ["The invariant extended Kalman filter as a stable observer"](https://doi.org/10.1109/TAC.2016.2594085), *IEEE Transactions on Automatic Control* 62(4), 2017.
+- F. Bullo and A. D. Lewis, [*Geometric Control of Mechanical Systems*](https://doi.org/10.1007/978-1-4899-7276-7), Springer, 2005.
+- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, ["Contact-aided invariant extended Kalman filtering for legged robot state estimation"](https://arxiv.org/abs/1805.10410), arXiv:1805.10410, 2018.
+- J. Jang, S. Teng and M. Ghaffari, ["Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles"](https://arxiv.org/abs/2305.09009), arXiv:2305.09009, 2023.
+- T. Lee, M. Leok and N. H. McClamroch, ["Geometric tracking control of a quadrotor UAV on SE(3)"](https://doi.org/10.1109/CDC.2010.5717652), *IEEE Conference on Decision and Control*, 2010.
+- T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
+- M. W. Mueller, ["Multicopter attitude control for recovery from large disturbances"](https://arxiv.org/abs/1802.09143), arXiv:1802.09143, 2018.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- S. Teng, W. Clark, A. Bloch, R. Vasudevan and M. Ghaffari, ["Lie algebraic cost function design for control on Lie groups"](https://arxiv.org/abs/2204.09177), arXiv:2204.09177, 2022.
+- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, ["LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies"](https://arxiv.org/abs/2606.10579), arXiv:2606.10579, 2026.
+- G. Wu, [*Safety-critical Geometric Control Design with Application to Aerial Transportation*](https://kilthub.cmu.edu/articles/thesis/Safety-critical_Geometric_Control_Design_with_Application_to_Aerial_Transportation/6721382), PhD thesis, Carnegie Mellon University, 2017.
+- G. Wu and K. Sreenath, ["Variation-based linearization of nonlinear systems evolving on SO(3) and S²"](https://doi.org/10.1109/ACCESS.2015.2477880), *IEEE Access* 3, 2015.

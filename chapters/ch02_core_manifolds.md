@@ -390,13 +390,13 @@ In the notebook, measure the attitude error of the exponential step in [](#ex2-d
 
 The treatment of $\SO(3)$ and $\SE(3)$, their exponentials and adjoints follows Murray, Li and Sastry (1994) and Solà, Deray and Atchuthan (2018). Teng et al. (2022, 2026) and Jang, Teng and Ghaffari (2023) summarise the same preliminaries as used in control and trajectory optimization. $S^2$ as a configuration manifold, and multi-body systems as products of $S^2$ and $\SO(3)$, follow Lee, Leok and McClamroch (2018). The cable-suspended load and multi-quadrotor models are from Wu (2017, ch. 3). The 3D pendulum, Reaction Mass Biped and Cassie models are from Siravuru (2019, ch. 4 to 6). $\SE_2(3)$ is due to Barrau and Bonnabel (2017) and was applied to legged robots by Hartley et al. (2018).
 
-- A. Barrau and S. Bonnabel, "The invariant extended Kalman filter as a stable observer," *IEEE Transactions on Automatic Control* 62(4), 2017.
-- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, "Contact-aided invariant extended Kalman filtering for legged robot state estimation," *Robotics: Science and Systems*, 2018. arXiv:1805.10410.
-- J. Jang, S. Teng and M. Ghaffari, "Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles," *IEEE Robotics and Automation Letters*, 2023. arXiv:2305.09009.
-- T. Lee, M. Leok and N. H. McClamroch, *Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*, Springer, 2018.
-- R. M. Murray, Z. Li and S. S. Sastry, *A Mathematical Introduction to Robotic Manipulation*, CRC Press, 1994.
-- A. Siravuru, *Geometric Control and Learning for Dynamic Legged Robots*, PhD thesis, Carnegie Mellon University, 2019.
-- J. Solà, J. Deray and D. Atchuthan, "A micro Lie theory for state estimation in robotics," arXiv:1812.01537, 2018.
-- S. Teng, W. Clark, A. Bloch, R. Vasudevan and M. Ghaffari, "Lie algebraic cost function design for control on Lie groups," arXiv:2204.09177, 2022.
-- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, "LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies," arXiv:2606.10579, 2026.
-- G. Wu, *Safety-critical Geometric Control Design with Application to Aerial Transportation*, PhD thesis, Carnegie Mellon University, 2017.
+- A. Barrau and S. Bonnabel, ["The invariant extended Kalman filter as a stable observer"](https://doi.org/10.1109/TAC.2016.2594085), *IEEE Transactions on Automatic Control* 62(4), 2017.
+- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, ["Contact-aided invariant extended Kalman filtering for legged robot state estimation"](https://doi.org/10.15607/RSS.2018.XIV.050), *Robotics: Science and Systems*, 2018. arXiv:1805.10410.
+- J. Jang, S. Teng and M. Ghaffari, ["Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles"](https://doi.org/10.1109/LRA.2023.3328450), *IEEE Robotics and Automation Letters* 8(12), 2023. arXiv:2305.09009.
+- T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
+- R. M. Murray, Z. Li and S. S. Sastry, [*A Mathematical Introduction to Robotic Manipulation*](https://doi.org/10.1201/9781315136370), CRC Press, 1994.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- J. Solà, J. Deray and D. Atchuthan, ["A micro Lie theory for state estimation in robotics"](https://arxiv.org/abs/1812.01537), arXiv:1812.01537, 2018.
+- S. Teng, W. Clark, A. Bloch, R. Vasudevan and M. Ghaffari, ["Lie algebraic cost function design for control on Lie groups"](https://arxiv.org/abs/2204.09177), arXiv:2204.09177, 2022.
+- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, ["LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies"](https://arxiv.org/abs/2606.10579), arXiv:2606.10579, 2026.
+- G. Wu, [*Safety-critical Geometric Control Design with Application to Aerial Transportation*](https://kilthub.cmu.edu/articles/thesis/Safety-critical_Geometric_Control_Design_with_Application_to_Aerial_Transportation/6721382), PhD thesis, Carnegie Mellon University, 2017.
