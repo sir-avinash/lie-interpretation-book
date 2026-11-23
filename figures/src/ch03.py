@@ -286,7 +286,7 @@ def linger_frame(t):
                  zorder=8 if far else 9, clip_on=False)
         ax1.plot(ts, np.degrees(sol(ts)[0]), color=col, lw=1.8, ls=(0, (4, 2.5)) if far else "-", zorder=3)
         ax1.plot([now], [np.degrees(a_now)], "o", ms=5.5, mfc=PAPER if far else col, mec=col, mew=1.2, zorder=8, clip_on=False)
-    # legend that fills in as each run comes inside 5 degrees for good
+    # legend that fills in as each run comes inside 5° for good
     rows = [("log", 179.0, r"logarithm  $\frac{1}{2}\theta^2$"), ("quat", 179.0, r"quaternion  $4(1-\cos\frac{\theta}{2})$"),
             ("trace", 179.0, r"trace  $1-\cos\theta$"), ("trace", 179.9, "trace, from 179.9°")]
     ax0.text(6, 5.25, "inside 5° for good after", fontsize=9, color=MUTED, ha="left", **SANS)
@@ -308,7 +308,7 @@ def linger_frame(t):
     ax1.text(9.95, 11, "5°", fontsize=8.5, color=MUTED, ha="right", **SANS)
     ax1.text(9.95, 181, f"t = {now:.1f} s", fontsize=10, ha="right", **SANS)
     t_a, t_b = runs["trace", 179.0][1], runs["trace", 179.9][1]
-    if now >= t_b:                                                # the gap between the two trace runs, measured at 60 degrees
+    if now >= t_b:                                                # the gap between the two trace runs, measured at 60°
         grid = np.linspace(0, 10, 10001)
         c_a, c_b = (grid[np.argmax(np.degrees(runs["trace", s0][0](grid)[0]) < 60)] for s0 in (179.0, 179.9))
         ax1.annotate("", (c_b, 60), xytext=(c_a, 60), arrowprops=dict(arrowstyle="<|-|>", color=MUTED, lw=0.8, mutation_scale=8,

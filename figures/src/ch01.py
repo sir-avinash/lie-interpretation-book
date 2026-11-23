@@ -297,7 +297,7 @@ def plate_frame(t):
             poly(s, quad, col, z)
             for a, b in ((quad[0], quad[3]), (quad[1], quad[2])):
                 xy = s.project([a, b])
-                s.ax.plot(xy[:, 0], xy[:, 1], color=INK, lw=0.9, solid_capstyle="round", zorder=z + 5e-4)
+                s.ax.plot(xy[:, 0], xy[:, 1], color=INK, lw=0.9, solid_capstyle="round", zorder=z + 1.5e-3)
         pieces.append((depth, draw))
 
     # the plate: level, turned by `turn` about the vertical, carried by the end of the ribbon
@@ -499,8 +499,8 @@ def gimbal_frame(t):
         reach = bump(p_roll) if p_roll < 0.5 else 1.0
         arc = [c + tip * gimbal_body(yaw0, locked, roll0 + GIMBAL_SWEEP * u) @ E2 for u in np.linspace(0, reach, 40)]
         s.curve(np.array(arc), color=TERRACOTTA, lw=1.6, alpha=1.0, zorder=42)
-    if t >= 0.90:
-        lost = rot(E3, yaw0) @ E1                      # at 90 degrees of pitch no axle has a component along this
+    if t >= 0.36:
+        lost = rot(E3, yaw) @ E1                      # at 90 degrees of pitch no axle has a component along this
         s.curve(np.array([c - 1.5 * lost, c + 1.5 * lost]), color=TERRACOTTA, hidden=True, alpha=0.95, lw=1.1, zorder=44)
         s.text2d(2.45, -0.62, "dashed: no ring turns\nthe body about this axis", fontsize=9.5, color=TERRACOTTA,
                  linespacing=1.25, **SANS)
@@ -515,8 +515,10 @@ def gimbal_frame(t):
         s.text2d(x0, 0.08, "roll command", fontsize=10, color=TERRACOTTA, **SANS)
     if t < 0.10:
         msg = "three rings, three axles: yaw, pitch, roll"
-    elif t < 0.40:
+    elif t < 0.36:
         msg = "pitch the middle ring up: the roll axle swings toward the yaw axle"
+    elif t < 0.42:
+        msg = "at 90° of pitch the roll axle lies along the yaw axle"
     elif t < 0.66:
         msg = "at 90° of pitch, command yaw: the body turns about the vertical"
     elif t < 0.90:
@@ -529,7 +531,7 @@ def gimbal_frame(t):
 
 def gimbals():
     animate(gimbal_frame, OUT / "ch01-gimbals.gif", OUT / "ch01-gimbals-strip.png", n=110, fps=14,
-            width_px=720, stills=(0.0, 0.40, 0.53, 1.0), strip_px=900, strip_cols=2)
+            width_px=720, stills=(0.0, 0.39, 0.53, 0.79), strip_px=900, strip_cols=2)
 
 
 # ------------------------------------------------------ animation: unwinding
@@ -572,7 +574,7 @@ def unwinding_runs():
 def unwinding_frame(t):
     runs = unwinding_runs()
     time = UNWIND_T * phase(t, 0.07, 0.93)
-    s = Scene(width=6.6, height=3.7, azim=-62, elev=34, xlim=(-3.3, 3.3), ylim=(-1.9, 1.8))
+    s = Scene(width=6.6, height=3.4, azim=-62, elev=34, xlim=(-3.3, 3.3), ylim=(-1.87, 1.53))
 
     def cam(x, y):
         return x * s.right + y * s.up
@@ -640,7 +642,7 @@ def unwinding():
 def flow_frame(t):
     s = Scene(width=6.4, height=3.6, azim=-30, elev=20, xlim=(-2.9, 2.9), ylim=(-1.75, 1.5))
     qd = unit([0.1, -0.55, 0.83])
-    k_tau = 4.6 * ease(phase(t, 0.06, 0.94))                    # k times the elapsed time
+    k_tau = 7.0 * ease(phase(t, 0.06, 0.94))                    # k times the elapsed time
     s.shadow((0, 0, -1.1), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     side = unit(np.cross(qd, E1))
@@ -656,9 +658,9 @@ def flow_frame(t):
             tail = np.array([np.cos(a) * qd + np.sin(a) * start
                              for a in angle(np.linspace(max(k_tau - 0.3, 0.0), k_tau, 10))])
             head = tail[-1]
-            if k_tau > 0:
+            if k_tau > 0 and tail[0] @ qd < np.cos(0.05):
                 s.sphere_curve(1.003 * tail, color=INDIGO, lw=1.5, show_hidden=False, zorder=24)
-            if s.point_visible(head):
+            if s.point_visible(head) and head @ qd < np.cos(0.05):
                 s.dot(1.003 * head, color=INDIGO, size=3.6, zorder=31)
     s.dot(qd, color=INK, size=6, zorder=45)
     s.dot(-qd, color=TERRACOTTA, size=6, hollow=True, zorder=45)

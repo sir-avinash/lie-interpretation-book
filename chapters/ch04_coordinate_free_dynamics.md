@@ -21,11 +21,13 @@ $$
 
 where $\rho$ is the body-frame vector from the pivot to the center of mass. One line. The mass matrix is $J$, a constant.
 
+![The puzzle of this chapter. A 3D pendulum is released and swings twice to within about a degree of the attitude where its pitch is 90°, with the body axis $R\,e_1$ vertical. The body does nothing special there. The condition number of the Euler-angle mass matrix $E\T J E$ spikes at each pass. That of $J$ stays at 2.5.](figures/ch04-pendulum-strip.png){#fig4-pendulum anim="figures/ch04-pendulum.gif"}
+
 Where both work they give the same motion. But take a body with $J = \operatorname{diag}(0.20, 0.25, 0.10)$ kg·m² and look at how hard each mass matrix is to invert ([](#fig4-euler-cond)). The condition number of $J$ is 2.5 at every attitude. The condition number of $E\T J E$ is 2.5 when the body is level, 25 at 60° of pitch, 974 at 85°, and $2.4\times10^4$ at 89°. At 90° the matrix is singular and cannot be inverted at all.
 
 ![Condition number of the mass matrix of a 3D pendulum against pitch angle, at 20° of roll. In Euler angles it grows like $1/\cos^2\theta$. In the body frame it is the constant 2.5.](figures/ch04-euler-cond.svg){#fig4-euler-cond}
 
-Nothing happens to the pendulum at 90° of pitch. So where did the hundred terms go, and why does the short equation never blow up? To answer, we need to derive equations of motion without ever choosing a chart.
+Nothing happens to the pendulum at 90° of pitch ([](#fig4-pendulum)). So where did the hundred terms go, and why does the short equation never blow up? To answer, we need to derive equations of motion without ever choosing a chart.
 
 ## Hamilton's principle, on flat ground {#sec4-hamilton}
 
@@ -83,7 +85,7 @@ $$
 
 This is the variation on the sphere of [](#def3-variation), with the velocity rule [](#eq3-delta-qdot). Each $q_\epsilon(t)$ is $q(t)$ turned by the angle $\epsilon\|\xi\|$ about $\xi$, so its length is still one ([](#fig4-variation)). A component of $\xi$ along $q$ turns $q$ about itself and does nothing, so we take $\xi\cdot q = 0$. The fixed endpoints become $\xi(0) = \xi(t_f) = 0$.
 
-![Hamilton's principle on the sphere. The path $q(t)$ is a computed pendulum swing. Each neighboring curve is $q(t)$ rotated about $\xi(t)$, so it stays on the sphere. The arrows are the variation $\delta q = \xi\times q$, tangent to the sphere and zero at both ends.](figures/ch04-variation-s2.svg){#fig4-variation}
+![Hamilton's principle on the sphere. The indigo path $q(t)$ is a computed swing of a 1 kg bob on a 1 m rod. The teal path is $q(t)$ turned about $\xi(t)$ by the angle $\epsilon\|\xi\|$, so it stays on the sphere and keeps its endpoints. The arrows show how far five of its points have moved. Right: the action of the varied path, computed for each $\epsilon$. It is stationary at $\epsilon = 0$.](figures/ch04-variation-strip.png){#fig4-variation anim="figures/ch04-variation.gif"}
 
 Now the three moves. Varying and integrating by parts work exactly as before and give
 
@@ -227,8 +229,10 @@ Before trusting a model, ask what it must conserve. With no torque, [](#eq4-newt
 ::: {.thought #thought4-book name="Toss a book"}
 Put a rubber band round a paperback so it stays shut. It has three natural axes: through the covers, along the spine, and across the width. Toss it spinning about the axis through the covers. It spins cleanly. Toss it spinning along the spine. Clean again. Now toss it spinning about the axis across the width. However carefully you throw, it comes down having flipped over.
 
-Nothing pushed it. There is no torque in the air. Euler's equation [](#eq4-euler-free) is doing this by itself.
+Nothing pushed it. There is no torque in the air. Euler's equation [](#eq4-euler-free) is doing this by itself ([](#fig4-book)).
 :::
+
+![The three tosses, computed from Euler's equation for the book of [](#ex4-book) at two revolutions per second. Left: the book in the world frame. The dashed arrow is its angular momentum $R J\Omega$, which never moves. Right: the body angular momentum $J\Omega$ on its sphere. Spun about $e_3$ or $e_1$ the book keeps its axis. Spun about $e_2$ it turns over, and then comes back.](figures/ch04-book-strip.png){#fig4-book anim="figures/ch04-book.gif"}
 
 Here is the reason. In the body frame, $J\Omega$ moves on a sphere, since its length is conserved. It must also stay on a level set of the energy. Draw those level sets on the sphere ([](#fig4-polhodes), left). Around the axes of smallest and largest inertia they are closed loops: a spin that starts near those axes stays near. At the intermediate axis the level sets cross. A spin that starts there is carried along the crossing to the opposite side of the sphere, and back.
 
@@ -284,7 +288,7 @@ Read three things off. First, the right side of the load equation is a multiple 
 ::: {.thought #thought4-cut name="Cut the motors"}
 The quadrotor is flying with the load swinging beneath it. Cut the thrust to zero. What does the cable do?
 
-Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its center of mass on a parabola. A pendulum needs something to hang from, and a falling quadrotor is not it.
+Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its center of mass on a parabola ([](#fig4-cut)). A pendulum needs something to hang from, and a falling quadrotor is not it.
 :::
 
 The tension is still available. From the load's free-body equation,
@@ -294,6 +298,8 @@ T = \frac{m_L}{m_Q + m_L}\big(m_Q l\,\|\dot q\|^2 - q\cdot f R e_3\big) . \label
 $$
 
 For $m_Q = 1.5$ kg and $m_L = 0.3$ kg in hover, $q = -e_3$, $R = I$ and $f = (m_Q + m_L)g = 17.7$ N, which gives $T = m_L g = 2.94$ N as it should.
+
+![Cut the motors, simulated with [](#eq4-load) for the same two masses and $l = 1$ m. The quadrotor flies level at hover thrust with the load swinging, and the thrust is cut as the cable passes the vertical. The cable keeps turning at a constant rate: the gray lines show it every 0.14 s. The center of mass leaves its level line for a parabola. The tension drops from 4.3 N to 1.4 N and stays there, positive because the cable is still turning.](figures/ch04-cut-strip.png){#fig4-cut anim="figures/ch04-cut.gif"}
 
 ::: {.warning #warn4-slack name="A cable cannot push"}
 Equations [](#eq4-load) assume a taut cable. They stay smooth when [](#eq4-load-tension) goes negative, and will then simulate a cable that pushes. Monitor the sign of $T$. When it reaches zero the load is in free fall, and the model must switch to two separate bodies until the cable snaps taut again.

@@ -110,7 +110,7 @@ Lee, Leok and McClamroch (2018) write $\delta\omega = -\omega \times \xi + (I - 
 
 Wu and Sreenath (2015) keep $\delta\omega$ as a variable of its own and impose $q \cdot \delta\omega = -(\xi \times q)\cdot\omega$. That constraint is exactly the component along $q$ above.
 
-The trap is $\delta\omega = \dot\xi - \omega \times \xi$. It is only the tangential part. It gives correct equations whenever $\delta\omega$ is dotted with something tangent, which covers every simple pendulum. It gives gyroscopescopic terms at half strength otherwise. The symbolic library of [](#ch-symbolic) applies the full rule $\dot\xi - 2\,\omega\times\xi$ ([](#tbl5-leaves)).
+The trap is $\delta\omega = \dot\xi - \omega \times \xi$. It is only the tangential part. It gives correct equations whenever $\delta\omega$ is dotted with something tangent, which covers every simple pendulum. It gives gyroscopic terms at half strength otherwise. The symbolic library of [](#ch-symbolic) applies the full rule $\dot\xi - 2\,\omega\times\xi$ ([](#tbl5-leaves)).
 
 Do not borrow the sign from $\SO(3)$ either. There $\Omega$ and $\eta$ are body-frame vectors and the cross term enters with a plus. On the sphere $\omega$ and $\xi$ are world-frame axes, and the sign flips ([](#exr3-world-frame)).
 :::
