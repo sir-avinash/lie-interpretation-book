@@ -309,6 +309,7 @@ def plate_frame(t):
     mark = np.vstack([c + 0.2 * Rp[:, 0], c + 0.56 * (np.outer(np.cos(wedge), Rp[:, 0]) + np.outer(np.sin(wedge), Rp[:, 1]))])
 
     def draw_plate(z):
+        z = z + 1.6e-3                                         # above the edge lines of the ribbon piece just behind
         poly(s, rim(0.56, -0.05), tint(SAND, 0.2), z, ec=INK, lw=1.0)
         poly(s, rim(0.56), tint(SAND, 1.0), z + 1e-4, ec=INK, lw=1.2)
         xy = s.project(rim(0.36))
@@ -500,7 +501,7 @@ def gimbal_frame(t):
         arc = [c + tip * gimbal_body(yaw0, locked, roll0 + GIMBAL_SWEEP * u) @ E2 for u in np.linspace(0, reach, 40)]
         s.curve(np.array(arc), color=TERRACOTTA, lw=1.6, alpha=1.0, zorder=42)
     if t >= 0.36:
-        lost = rot(E3, yaw) @ E1                      # at 90 degrees of pitch no axle has a component along this
+        lost = rot(E3, yaw) @ E1                      # at 90° of pitch no axle has a component along this
         s.curve(np.array([c - 1.5 * lost, c + 1.5 * lost]), color=TERRACOTTA, hidden=True, alpha=0.95, lw=1.1, zorder=44)
         s.text2d(2.45, -0.62, "dashed: no ring turns\nthe body about this axis", fontsize=9.5, color=TERRACOTTA,
                  linespacing=1.25, **SANS)

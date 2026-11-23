@@ -11,9 +11,11 @@ epigraph_source: "Alfred Korzybski, *Science and Sanity* (1933)"
 
 Here is a question that sounds too easy. Your robot's heading is 350°. You want it at 10°. What is the error?
 
-Subtract and you get 340°, so the controller swings the robot almost all the way round. The sensible answer is 20° the other way. You already know the patch: wrap the difference into $(-180^\circ, 180^\circ]$. But notice what the patch admits. Headings do not live on a line. They live on a circle, and subtraction is an operation for lines.
+Subtract and you get 340°, so the controller swings the robot almost all the way round ([](#fig-heading)). The sensible answer is 20° the other way. You already know the patch: wrap the difference into $(-180^\circ, 180^\circ]$. But notice what the patch admits. Headings do not live on a line. They live on a circle, and subtraction is an operation for lines.
 
 That was one angle. A drone has three, tangled together, and the patches stop working. This chapter shows three ways the tangle bites, proves that one of them cannot be patched by anyone, and then shows the way out that the rest of the book follows.
+
+![The heading puzzle. Start at 350°, target at 10°. Watch the marker on the line and the robot on the circle together. Subtracting the two numbers treats headings as points on a line, and the robot turns 340° the long way round. On the circle the target is 20° away through north, because the two ends of the line are one heading.](figures/ch01-heading-strip.png){#fig-heading anim="figures/ch01-heading.gif"}
 
 ## The space a rotation lives in {#sec-rotation-space}
 
@@ -76,7 +78,7 @@ Picture three nested rings ([](#fig-gimbals)). The outer ring swivels about a ve
 Now pitch the middle ring by 90°. The roll axle, which rides on the middle ring, swings up until it points along the yaw axle. You now have two rings that do the same thing and no ring that does the third thing. One direction of rotation has become impossible to command. Nothing is wrong with the body. The *rings* have run out of directions.
 :::
 
-![Three nested gimbals realize yaw, pitch and roll. (a) At a generic attitude the three axles span all directions. (b) At 90° of pitch the roll axle has rotated onto the yaw axle. The mechanism has lost a degree of freedom, and $\det E = -\cos\theta$ has reached zero.](figures/ch01-gimbals.svg){#fig-gimbals}
+![Three nested gimbals realize yaw, pitch and roll. Watch the roll axle as the middle ring pitches up: at 90° it lies along the yaw axle, and $\det E = -\cos\theta$ has reached zero. A yaw command and a roll command then carry the arrow on the body along the same arc. No ring is left to turn the body about the dashed axis.](figures/ch01-gimbals-strip.png){#fig-gimbals anim="figures/ch01-gimbals.gif"}
 
 This is **gimbal lock**, and it is not a historical curiosity. Apollo's inertial platform had three gimbals. During Apollo 11, after Houston warned that a maneuver had come close to lock, Michael Collins asked mission control to send him a fourth gimbal for Christmas.^[The exchange is in the Apollo 11 air-to-ground record at about 105 hours mission time, and is discussed in the *Apollo Lunar Surface Journal*.]
 
@@ -126,8 +128,10 @@ Every attitude has two quaternion names. $S^3$ wraps around $\SO(3)$ twice, a **
 ::: {.thought #thought-plate name="The plate trick"}
 Balance a plate on your upturned palm. Rotate it a full turn about the vertical, keeping it level, by passing your hand under your armpit. The plate is back where it started. Your arm is not: it is twisted. Now do a second full turn in the same direction, this time swinging your hand over your head. The plate is back again, and your arm has untwisted.
 
-Your arm is keeping track of the quaternion. One turn takes $\quat$ to $-\quat$: same plate, different arm. Two turns bring it home. The plate cannot tell the difference. A controller that works with $\quat$ can.
+Your arm is keeping track of the quaternion. One turn takes $\quat$ to $-\quat$: same plate, different arm. Two turns bring it home ([](#fig-plate)). The plate cannot tell the difference. A controller that works with $\quat$ can.
 :::
+
+![The plate trick with a ribbon in place of the arm. The plate stays level and only turns about the vertical. The lower dial shows its quaternion, which moves at half the speed of the plate. After one turn the plate is back and the ribbon holds a full twist, with the quaternion at $-\mathbf{1}$. No motion of the ribbon removes that twist while the plate keeps this attitude. During the second turn in the same direction the plate swings wide and the ribbon comes out flat, with the quaternion back at $+\mathbf{1}$.](figures/ch01-plate-strip.png){#fig-plate anim="figures/ch01-plate.gif"}
 
 Here is how that becomes a failure. To hold the attitude at the identity, the natural quaternion law is
 
@@ -147,7 +151,7 @@ $$
 Apply [](#eq-quat-pd) with $k_p = 2$, $k_d = 0.6$. From $\quat$ the body turns 10° and stops. From $-\quat$ it turns 350° the other way to reach the same place ([](#fig-unwinding)), and spends 48 times the control effort $\int \|\tau\|^2\,\dd t$ doing it. Same robot, same physical state, same controller. Only the sign the estimator happened to choose differs.
 :::
 
-![Unwinding. Left: for rotations about one fixed axis, the quaternion lives on a circle that the attitude traverses at half speed, so $+\mathbf{1}$ and $-\mathbf{1}$ are the same attitude. The law [](#eq-quat-pd) only accepts $+\mathbf{1}$. Right: the two simulated responses of [](#ex-unwinding).](figures/ch01-unwinding.svg){#fig-unwinding}
+![Unwinding: the two simulated responses of [](#ex-unwinding). Both bodies start in the same attitude, 10° from the target. For rotations about one fixed axis the quaternion lives on a circle that the attitude traverses at half speed, so $+\mathbf{1}$ and $-\mathbf{1}$ are the same attitude. The law [](#eq-quat-pd) only accepts $+\mathbf{1}$. Watch the two dots on the circle: one is already next to $+\mathbf{1}$, the other starts next to $-\mathbf{1}$ and drags its body through 350°.](figures/ch01-unwinding-strip.png){#fig-unwinding anim="figures/ch01-unwinding.gif"}
 
 This is **unwinding**, named and analyzed by Bhat and Bernstein (2000). The obvious patch is $\tau = -k_p \operatorname{sgn}(q_0)\, q_v - k_d\Omega$, which always takes the short way. It also makes the torque jump when $q_0$ crosses zero, at 180° of error. Sensor noise there flips the sign back and forth and the motors chatter. Fixing *that* needs memory: a hysteresis switch, which makes the controller hybrid (Mayhew, Sanfelice and Teel, 2011).
 
@@ -228,9 +232,11 @@ $$
 $$
 :::
 
-Again $\Psi_q = 1 - \cos\theta$ for the angle $\theta$ between the two directions, and $\|e_q\| = \sin\theta$. The vector $e_q$ lies in the tangent plane at $q$, and the feedback $\omega = -k\,e_q$ moves $q$ straight along the great circle toward $q_d$ ([](#fig-s2-error)). The one equilibrium besides the target is the antipode $-q_d$, and it is unstable: in terms of the angle, the closed loop is $\dot\theta = -k\sin\theta$.
+Again $\Psi_q = 1 - \cos\theta$ for the angle $\theta$ between the two directions, and $\|e_q\| = \sin\theta$. The vector $e_q$ lies in the tangent plane at $q$, and the feedback $\omega = -k\,e_q$ moves $q$ straight along the great circle toward $q_d$ ([](#fig-s2-error)). The one equilibrium besides the target is the antipode $-q_d$, and it is unstable: in terms of the angle, the closed loop is $\dot\theta = -k\sin\theta$ ([](#fig-s2-flow)).
 
 ![Error on the sphere. Level sets of $\Psi_q$ are circles of latitude about $q_d$. The error vector $e_q = q_d \times q$ lies in the tangent plane at $q$, perpendicular to the great circle through $q$ and $q_d$. The feedback $\omega = -k\,e_q$ produces the velocity $\dot q$ along that great circle.](figures/ch01-s2-error.svg){#fig-s2-error}
+
+![The flow of $\omega = -k\,e_q$. Points released all over the sphere slide along great circles to $q_d$. Watch the ones that start near the antipode: they barely move at first, because the push is $\sin\theta$. A point placed exactly at $-q_d$ never leaves.](figures/ch01-flow-strip.png){#fig-s2-flow anim="figures/ch01-flow.gif"}
 
 ::: {.warning #warn-sine name="The restoring torque fades near half a turn"}
 Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The restoring torque is proportional to $\|e_R\| = \sin\theta$. It grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyzes this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. [](#sec3-errors) compares the alternatives, which reshape $\Psi_R$ so that the push does not fade, and [](#fig3-heights) and [](#fig3-linger) show what each one costs. [](#sec6-almost) measures what the fading costs a tracking controller: a fixed delay for every factor of ten closer to half a turn ([](#fig6-settle)). [](#sec7-local) measures the same effect on a regulator built by linearization.

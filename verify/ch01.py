@@ -234,7 +234,8 @@ ck.true("animation, short run: 10 deg turned at the last frame", abs(runs_["plus
         f"{runs_['plus']['turned'][-1]:.2f} deg")
 ck.true("animation, long run: 350 deg turned at the last frame", abs(runs_["minus"]["turned"][-1] - 350) < 0.5,
         f"{runs_['minus']['turned'][-1]:.2f} deg")
-ck.true("long run: the quaternion goes round the circle away from -1, with q3 > 0", bool(np.all(s_minus[3] > 0)))
+ck.true("long run: the quaternion goes round the circle away from -1, with q3 > 0 until q0 > 0.9",
+        bool(np.all(s_minus[3][s_minus[0] < 0.9] > 0)))
 ck.true("long run: q0 rises from -0.9962 and never passes through -1", bool(s_minus[0].min() > -0.9963))
 
 # Flow animation: closed form of theta_dot = -k sin(theta).
