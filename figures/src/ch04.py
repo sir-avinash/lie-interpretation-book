@@ -7,8 +7,9 @@ from scipy.integrate import solve_ivp
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from figkit import (INDIGO, INK, MUTED, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
-                    Scene, great_circle, halo, hat, new_plot, rot, save, style_axes, unit)
+from figkit import (DASH, INDIGO, INK, MUTED, PAPER, PEACH, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
+                    Scene, animate, ease, great_circle, halo, hat, new_plot, phase, quadrotor, rot, save,
+                    style_axes, unit)
 
 OUT = ROOT / "figures"
 E1, E2, E3 = np.eye(3)
@@ -66,40 +67,6 @@ def pendulum_path(q0, w0, T, n=200, l=1.0):
 def cam(s, a, b):
     """Unit vector on the camera-facing side of the unit sphere, at canvas position (a, b)."""
     return a * s.right + b * s.up + np.sqrt(1 - a * a - b * b) * s.view
-
-
-def variation_s2():
-    s = Scene(width=6.4, height=3.7, azim=-38, elev=10)
-    s.shadow((0, 0, -1.12), 1.0)
-    s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
-    s.sphere_curve(great_circle(E3), color=INK, lw=0.6, alpha=0.45)
-    q0 = cam(s, -0.66, 0.02)
-    v0 = 2.5 * unit(tangent(q0, s.right + 0.62 * s.up))
-    t, Q, W = pendulum_path(q0, np.cross(q0, v0), 0.60)
-    T = t[-1]
-    bump = np.sin(np.pi * t / T)
-    Qd = np.cross(W, Q)
-    xi = np.array([-b * unit(qd) for b, qd in zip(bump, Qd)])          # xi along the path, so delta q is across it
-    for eps, alpha in ((0.44, 0.95), (0.22, 0.6), (-0.22, 0.6), (-0.44, 0.6)):
-        Qe = np.array([rot(x, eps * np.linalg.norm(x)) @ q if np.linalg.norm(x) > 1e-9 else q for x, q in zip(xi, Q)])
-        s.sphere_curve(Qe, color=TEAL, lw=1.1, alpha=alpha, show_hidden=False, zorder=15)
-        if eps == 0.44:
-            Qtop = Qe
-    s.sphere_curve(Q, color=INDIGO, lw=2.2, zorder=17, show_hidden=False)
-    for k in (35, 67, 100, 133, 165):
-        dq = np.cross(xi[k], Q[k])
-        s.arrow(1.003 * Q[k], 1.003 * (Q[k] + 0.42 * dq), color=TERRACOTTA, lw=1.3, head=0.085)
-    s.dot(Q[0], color=INK, size=5)
-    s.dot(Q[-1], color=INK, size=5)
-    s.label(Q[0], r"$q(0)$", dx=-19, dy=-4, size=11.5)
-    s.label(Q[-1], r"$q(t_f)$", dx=20, dy=3, size=11.5)
-    s.label(Q[150], r"$q(t)$", dx=-14, dy=-10, color=INDIGO, size=11.5)
-    s.text2d(-2.0, 0.55, r"$\delta q = \xi \times q$", fontsize=11.5, color=TERRACOTTA)
-    s.text2d(-2.0, 0.22, "tangent to the sphere", fontsize=9.5, color=TERRACOTTA, **SANS)
-    s.text2d(2.05, 0.62, r"$q_\epsilon(t) = \exp(\epsilon\,\xi^{\wedge})\,q(t)$", fontsize=11.5, color=TEAL)
-    s.text2d(2.05, 0.22, "every varied curve\nstays on the sphere", fontsize=9.5, color=TEAL, linespacing=1.3, **SANS)
-    s.text2d(2.05, -0.5, "endpoints are\nnot varied", fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
-    s.save(OUT / "ch04-variation-s2.svg", pad=0.1)
 
 
 # ----------------------------------------- spherical pendulum: forces and projection
@@ -321,10 +288,445 @@ def integrators():
     save(fig, OUT / "ch04-integrators.svg")
 
 
+# ====================================================================== animations
+PALE_TEAL = "#b5d6d3"
+_CACHE = {}
+
+
+def cached(key, fn):
+    if key not in _CACHE:
+        _CACHE[key] = fn()
+    return _CACHE[key]
+
+
+def box(s, center, R, dims, face_colors, zorder=40, lw=0.9):
+    """Shaded convex box. Draws only the faces that look at the camera.
+
+    `dims` are the full edge lengths along the body axes (columns of R).
+    `face_colors` maps (axis, sign) to a fill color. Returns the visible faces
+    as {(axis, sign): (face center, in-plane half vectors)} for decoration.
+    """
+    c = np.asarray(center, float)
+    half = 0.5 * np.asarray(dims, float)
+    seen = {}
+    for axis in range(3):
+        for sign in (1, -1):
+            n = sign * R[:, axis]
+            if n @ s.view <= 1e-9:
+                continue
+            a, b = [(half[k] * R[:, k]) for k in range(3) if k != axis]
+            fc = c + half[axis] * n
+            s.patch([fc + a + b, fc - a + b, fc - a - b, fc + a - b],
+                    color=face_colors[(axis, sign)], alpha=1.0, lw=lw, zorder=zorder + 2 * (n @ s.view))
+            seen[(axis, sign)] = (fc, a, b)
+    return seen
+
+
+def axis_through_box(s, center, R, dims, d, length, color, zorder=40, dashed=False, lw=1.5, head=0.11):
+    """Arrow from the center of a box along the unit vector d, with the right occlusion.
+
+    If d points toward the camera the arrow is drawn from where it leaves the box, on top.
+    If it points away it is drawn from the center, underneath the box. Returns the tip.
+    """
+    c = np.asarray(center, float)
+    half = 0.5 * np.asarray(dims, float)
+    tip = c + length * d
+    if d @ s.view > 0:
+        leave = min(half[k] / max(abs(d @ R[:, k]), 1e-9) for k in range(3))
+        s.arrow(c + min(leave, 0.95 * length) * d, tip, color=color, zorder=zorder + 4, dashed=dashed, lw=lw, head=head)
+    else:
+        s.arrow(c, tip, color=color, zorder=zorder - 4, dashed=dashed, lw=lw, head=head)
+    return tip
+
+
+def align(a, b):
+    """The smallest rotation that takes the unit vector a to the unit vector b."""
+    a, b = unit(a), unit(b)
+    ax = np.cross(a, b)
+    n = np.linalg.norm(ax)
+    return np.eye(3) if n < 1e-12 else rot(ax, np.arctan2(n, a @ b))
+
+
+def rigid_rhs(_, s, accel):
+    R, Om = s[:9].reshape(3, 3), s[9:]
+    return np.concatenate([(R @ hat(Om)).ravel(), accel(R, Om)])
+
+
+# ----------------------------------------- opening: the 3D pendulum and its two models
+PEND_T = 2.3            # seconds simulated
+PEND_SLOW = 3.0         # the animation is this many times slower than the motion
+PEND_FPS = 14
+
+
+def pendulum_run():
+    """The pendulum of the opening, released with its rod 35 deg above the horizontal and a slow spin about the rod."""
+    s0 = np.concatenate([rot(E2, np.radians(125.0)).ravel(), [0.0, 0.0, 0.5]])
+    sol = solve_ivp(rigid_rhs, [0, PEND_T], s0, args=(pend_accel,), rtol=1e-10, atol=1e-12, dense_output=True)
+    tt = np.linspace(0, PEND_T, 2301)
+    Rs = sol.sol(tt)[:9].T.reshape(-1, 3, 3)
+    pitch = -np.arcsin(np.clip(Rs[:, 2, 0], -1, 1))                 # ZYX angles of the simulated attitude
+    roll = np.arctan2(Rs[:, 2, 1], Rs[:, 2, 2])
+    cond = np.array([np.linalg.cond(E_mat(th, ph).T @ J_P @ E_mat(th, ph)) for th, ph in zip(pitch, roll)])
+    return tt, Rs, np.degrees(pitch), cond
+
+
+def pendulum_frame(t):
+    tt, Rs, pitch, cond = cached("pendulum", pendulum_run)
+    k = int(round(t * (len(tt) - 1)))
+    R, now = Rs[k], tt[k]
+    s = Scene(width=7.0, height=3.8, azim=-62, elev=13, xlim=(-1.62, 4.58), ylim=(-1.68, 1.686))
+    # the body: a block on a rod, pinned at the origin. Scene units: 0.4 m.
+    dims = np.array([0.50, 0.34, 0.84])
+    ctr = R @ np.array([0.0, 0.0, -1.0])
+    cols = {(0, 1): PERIWINKLE, (0, -1): PERIWINKLE, (1, 1): SAND, (1, -1): SAND, (2, 1): PEACH, (2, -1): PEACH}
+    rod_z = 40 + (4 if (R @ -E3) @ s.view < 0 else -4)
+    s.curve(np.array([[0, 0, 0], R @ np.array([0, 0, -0.6])]), color=INK, lw=2.0, alpha=1.0, zorder=rod_z - 0.5)
+    box(s, ctr, R, dims, cols, zorder=40)
+    near = abs(pitch[k]) > 80.0
+    tip = axis_through_box(s, ctr, R, dims, R[:, 0], 0.72, TERRACOTTA if near else INK)
+    s.label(tip, r"$R\,e_1$", dx=0, dy=11 if R[2, 0] > 0 else -11, color=TERRACOTTA if near else INK, size=11)
+    s.dot((0, 0, 0), color=INK, size=9, zorder=60, hollow=True)
+    s.dot((0, 0, 0), color=INK, size=3.5, zorder=61)
+    rod_up = s.project(R @ -E3)[0][1] > 0.2
+    s.label((0, 0, 0), "pivot", dx=0, dy=-12 if rod_up else 12, size=9.5, **SANS)
+    if near:
+        s.text2d(-0.02, 1.4, f"pitch {abs(pitch[k]):.1f}°: the body swings on,\nthe Euler-angle model is close to singular",
+                 fontsize=10, color=TERRACOTTA, linespacing=1.3, **SANS)
+    else:
+        s.text2d(-0.02, 1.4, f"pitch {abs(pitch[k]):.0f}°: a 3D pendulum swings\nunder gravity, two models describe it",
+                 fontsize=10, color=INK, linespacing=1.3, **SANS)
+
+    # the weight of the two descriptions: 105 terms against one line
+    x0, y0 = 1.62, 1.50
+    s.text2d(x0, y0, r"Euler angles: 105 terms, mass matrix $E^{\top}\!JE$", fontsize=10, color=TERRACOTTA, ha="left", **SANS)
+    for i in range(105):
+        r, c = divmod(i, 21)
+        x = x0 + 0.08 * c
+        s.ax.plot([x, x + 0.052], [y0 - 0.2 - 0.075 * r] * 2, color=TERRACOTTA, lw=1.6, solid_capstyle="butt", zorder=20)
+    s.text2d(x0, y0 - 0.73, r"rotation matrix: one line, mass matrix $J$", fontsize=10, color=INDIGO, ha="left", **SANS)
+    s.ax.plot([x0, x0 + 0.45], [y0 - 0.93] * 2, color=INDIGO, lw=1.6, solid_capstyle="butt", zorder=20)
+
+    ax = s.fig.add_axes([0.565, 0.17, 0.41, 0.42])
+    style_axes(ax)
+    ax.semilogy(tt, cond, color=TERRACOTTA, lw=0.8, alpha=0.25)
+    ax.semilogy(tt[:k + 1], cond[:k + 1], color=TERRACOTTA, lw=1.8)
+    ax.axhline(np.linalg.cond(J_P), color=INDIGO, lw=1.6)
+    ax.plot([now], [min(cond[k], 3e6)], "o", ms=5.5, color=TERRACOTTA, zorder=5)
+    ax.plot([now], [np.linalg.cond(J_P)], "o", ms=5.5, color=INDIGO, zorder=5)
+    ax.set_xlim(0, PEND_T)
+    ax.set_ylim(1, 1e6)
+    ax.set_yticks([1, 1e2, 1e4, 1e6])
+    ax.minorticks_off()
+    ax.set_xlabel(f"time (s), shown {PEND_SLOW:.0f} times slower", fontsize=9.5, **SANS)
+    ax.set_ylabel("condition number", fontsize=9.5, **SANS)
+    return s
+
+
+def pendulum_anim():
+    n = int(round(PEND_T * PEND_SLOW * PEND_FPS)) + 1
+    animate(pendulum_frame, OUT / "ch04-pendulum.gif", OUT / "ch04-pendulum-strip.png", n=n, fps=PEND_FPS,
+            width_px=760, stills=(0.0, 0.25, 0.357, 0.835), strip_px=900, strip_cols=2)
+
+
+# ----------------------------------------------------- animation: toss a book
+BOOK_SPIN, BOOK_TILT = 2 * np.pi * 2.0, 0.01          # two revolutions per second, 1 % on the other axes
+BOOK_PHASES = ((2, 0.75), (0, 0.75), (1, 3.2))        # (spin axis, seconds simulated)
+BOOK_SLOW, BOOK_FPS = 3.0, 12
+BOOK_NAMES = {2: "through the covers", 0: "along the spine", 1: "across the width"}
+
+
+def book_run(axis, T):
+    """Euler's equation for the book of the text, started 1 % away from a principal axis."""
+    Om0 = BOOK_SPIN * BOOK_TILT * np.ones(3)
+    Om0[axis] = BOOK_SPIN
+    accel = lambda R, Om: np.cross(J_B * Om, Om) / J_B
+    return solve_ivp(rigid_rhs, [0, T], np.concatenate([np.eye(3).ravel(), Om0]), args=(accel,), rtol=1e-11, atol=1e-13,
+                     dense_output=True)
+
+
+def book_state(axis, T, tau):
+    """Attitude R (from the identity) and unit body angular momentum at time tau of the run about `axis`."""
+    sol = cached(("book", axis), lambda: book_run(axis, T))
+    y = sol.sol(tau)
+    return y[:9].reshape(3, 3), unit(J_B * y[9:])
+
+
+def book_polhodes():
+    curves = []
+    for axis in (E1, -E1, E3, -E3):
+        side = E2 if abs(axis @ E3) < 0.5 else E1
+        for ang in np.radians([18, 36, 54]) if abs(axis @ E1) > 0.5 else np.radians([20, 40, 60, 76]):
+            P = body_momentum_path(np.cos(ang) * axis + np.sin(ang) * side, 40.0, 3000)
+            d = np.linalg.norm(P - P[0], axis=1)
+            back = np.where((d[1:-1] < d[:-2]) & (d[1:-1] < d[2:]) & (d[1:-1] < 0.02))[0]
+            curves.append(P[: back[0] + 3] if len(back) else P)
+    return curves
+
+
+def book_frame(t):
+    total = sum(T for _, T in BOOK_PHASES)
+    clock = t * total
+    for idx, (axis, T) in enumerate(BOOK_PHASES):
+        if clock <= T or idx == len(BOOK_PHASES) - 1:
+            break
+        clock -= T
+    tau = min(clock, T)
+    R_rel, p = book_state(axis, T, tau)
+    unstable = axis == 1
+    col = TERRACOTTA if unstable else INDIGO
+
+    s = Scene(width=6.9, height=3.6, azim=52, elev=26, xlim=(-4.3, 1.6), ylim=(-1.68, 1.398))
+    # --- left: the book in the world frame. Its angular momentum points along h and never moves.
+    ctr = -2.85 * s.right + 0.12 * s.up
+    h = unit(0.80 * s.right + 0.22 * s.up + 0.56 * s.view)
+    p0 = book_state(axis, T, 0.0)[1]
+    start = {2: rot(E3, 0.5), 0: rot(E1, 0.9), 1: rot(E2, 0.35)}[axis]         # a pleasant first view of each spin
+    R = align(start @ p0, h) @ start @ R_rel
+    dims = 7.5 * DIMS
+    cols = {(2, 1): PERIWINKLE, (2, -1): PEACH, (1, -1): PALE_TEAL, (1, 1): PAPER, (0, 1): PAPER, (0, -1): PAPER}
+    seen = box(s, ctr, R, dims, cols, zorder=40)
+    if (2, 1) in seen:                                   # a title block on the front cover
+        fc = seen[(2, 1)][0]
+        o, ax_, ay_ = fc + 0.36 * R[:, 0], 0.11 * R[:, 0], 0.27 * R[:, 1]
+        s.patch([o + ax_ + ay_, o - ax_ + ay_, o - ax_ - ay_, o + ax_ - ay_], color=INDIGO, alpha=1.0, lw=0.0, zorder=43)
+    axis_through_box(s, ctr, R, dims, h, 1.28, MUTED, dashed=True, lw=1.1, head=0.09)
+    tip = axis_through_box(s, ctr, R, dims, R[:, axis], 1.0, col, lw=1.7)
+    hx = s.project(ctr + 1.28 * h)[0]
+    s.text2d(hx[0] + 0.05, hx[1] + 0.2, r"$R\,J\Omega$", fontsize=10.5, color=MUTED)
+    tx = s.project(tip)[0] - s.project(ctr)[0]
+    if R[:, axis] @ h < 0.8:
+        s.label(tip, rf"$R\,e_{axis + 1}$", dx=14 * np.sign(tx[0] or 1) * (abs(tx[0]) > 0.3), dy=12 if tx[1] > 0 else -12,
+                color=col, size=11)
+    s.text2d(-2.85, 1.24, "the book, in the world frame", fontsize=9.5, color=MUTED, **SANS)
+
+    # --- right: the body angular momentum on its sphere
+    s.shadow((0, 0, -1.12), 1.0)
+    s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
+    for P in cached("polhodes", book_polhodes):
+        s.sphere_curve(P, color=INK, lw=0.7, alpha=0.5, show_hidden=False)
+    k = np.sqrt((1 / J_B[0] - 1 / J_B[1]) / (1 / J_B[1] - 1 / J_B[2]))
+    for sign in (1, -1):
+        s.sphere_curve(great_circle([k, 0, -sign]), color=TERRACOTTA, lw=0.9, alpha=0.6, show_hidden=False)
+    for e, name, dx, dy in ((E1, r"$e_1$", -12, -6), (E2, r"$e_2$", 13, -4), (E3, r"$e_3$", 0, 13)):
+        s.label(1.0 * e, name, dx=dx, dy=dy, size=12)
+        s.dot(e, color=INK, size=3.2, zorder=29)
+    for done_axis, _ in BOOK_PHASES[:idx]:               # the spins already shown stayed where they were
+        s.dot(np.eye(3)[done_axis], color=INDIGO, size=6)
+    trail = np.array([book_state(axis, T, x)[1] for x in np.linspace(0, tau, max(2, int(400 * tau / T)))])
+    s.sphere_curve(1.003 * trail, color=col, lw=2.0, zorder=18)
+    s.dot(1.003 * p, color=col, size=7, hollow=not s.point_visible(p), zorder=45)
+    s.text2d(0.0, 1.24, r"body angular momentum $J\Omega$ on its sphere", fontsize=9.5, color=MUTED, **SANS)
+
+    # --- what is happening now
+    if not unstable:
+        msg = f"spin about $e_{axis + 1}$, {BOOK_NAMES[axis]}: it stays"
+    elif p[1] > 0.5:
+        msg = f"spin about $e_2$, {BOOK_NAMES[axis]}: it leaves" if tau < 1.6 else "and it comes back: a flip every 1.5 s"
+    elif p[1] < -0.5:
+        msg = "the book has turned over: $J\\Omega$ is at $-e_2$, on the far side"
+    else:
+        msg = "nothing pushes it: $R\\,J\\Omega$ has not moved"
+    s.text2d(-2.85, -1.36, msg, fontsize=10, color=col, **SANS)
+    s.text2d(-2.85, -1.58, f"t = {tau:.2f} s, shown {BOOK_SLOW:.0f} times slower", fontsize=9.5, color=MUTED, **SANS)
+    return s
+
+
+def book_anim():
+    total = sum(T for _, T in BOOK_PHASES)
+    n = int(round(total * BOOK_SLOW * BOOK_FPS)) + 1
+    animate(book_frame, OUT / "ch04-book.gif", OUT / "ch04-book-strip.png", n=n, fps=BOOK_FPS, width_px=760,
+            stills=(0.245, 0.44, 0.67, 0.98), strip_px=900, strip_cols=2, hold=1.5)
+
+
+# ------------------------------------- animation: Hamilton's principle on the sphere
+VAR_EPS = 0.44
+
+
+def variation_data():
+    """The pendulum path of fig4-variation (1 kg bob, 1 m rod), its variation field and the action of each varied path."""
+    cam_s = Scene(width=1, height=1, azim=-38, elev=10)
+    q0 = cam(cam_s, -0.66, 0.02)
+    v0 = 2.5 * unit(tangent(q0, cam_s.right + 0.62 * cam_s.up))
+    import matplotlib.pyplot as plt
+    plt.close(cam_s.fig)
+    t, Q, W = pendulum_path(q0, np.cross(q0, v0), 0.60, n=1201)
+    xi = np.array([-np.sin(np.pi * tk / t[-1]) * unit(qd) for tk, qd in zip(t, np.cross(W, Q))])
+
+    def varied(eps):
+        return np.array([rot(x, eps * np.linalg.norm(x)) @ q if np.linalg.norm(x) > 1e-9 else q for x, q in zip(xi, Q)])
+
+    def action(eps):
+        Qe = varied(eps)
+        Qd = np.gradient(Qe, t, axis=0, edge_order=2)
+        return np.trapezoid(0.5 * np.sum(Qd * Qd, axis=1) - G * Qe[:, 2], t)          # m = 1 kg, l = 1 m
+
+    eps = np.linspace(-VAR_EPS, VAR_EPS, 89)
+    S = np.array([action(e) for e in eps])
+    return t, Q, xi, varied, eps, S - action(0.0)
+
+
+def variation_frame(t):
+    tt, Q, xi, varied, eps_grid, dS = cached("variation", variation_data)
+    legs = ((0.06, 0.28, 0.0, 1.0), (0.28, 0.50, 1.0, 0.0), (0.50, 0.72, 0.0, -1.0), (0.72, 0.94, -1.0, 0.0))
+    frac = 0.0
+    for a, b, lo, hi in legs:
+        if t >= a:
+            frac = lo + (hi - lo) * ease(phase(t, a, b))
+    eps = VAR_EPS * frac
+    reach_hi = VAR_EPS * (ease(phase(t, 0.06, 0.28)))
+    reach_lo = -VAR_EPS * (ease(phase(t, 0.50, 0.72)))
+
+    s = Scene(width=6.9, height=3.25, azim=-38, elev=10, xlim=(-2.25, 4.65), ylim=(-2.0, 1.25))
+    s.shadow((0, 0, -1.12), 1.0)
+    s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
+    s.sphere_curve(great_circle(E3), color=INK, lw=0.6, alpha=0.45)
+    for e in (VAR_EPS, -VAR_EPS):                              # the two extremes of the sweep, faint
+        s.sphere_curve(varied(e)[::10], color=TEAL, lw=0.8, alpha=0.35, show_hidden=False, zorder=15)
+    s.sphere_curve(Q[::6], color=INDIGO, lw=2.2, zorder=17, show_hidden=False)
+    Qe = varied(eps)
+    if abs(eps) > 1e-3:
+        s.sphere_curve(1.002 * Qe[::6], color=TEAL, lw=2.0, zorder=18, show_hidden=False)
+        for k in (210, 400, 600, 800, 990):                     # the displacement of five points of the path
+            s.arrow(1.004 * Q[k], 1.004 * Qe[k], color=TERRACOTTA, lw=1.2, head=0.075, zorder=31)
+        mid = Qe[600]
+        s.label(mid, r"$q_\epsilon(t)$", dx=0, dy=13 if eps > 0 else -13, color=TEAL, size=11.5)
+    s.dot(Q[0], color=INK, size=5)
+    s.dot(Q[-1], color=INK, size=5)
+    s.label(Q[0], r"$q(0)$", dx=-19, dy=-4, size=11.5)
+    s.label(Q[-1], r"$q(t_f)$", dx=20, dy=3, size=11.5)
+    if eps >= 0:
+        s.label(Q[900], r"$q(t)$", dx=-16, dy=-12, color=INDIGO, size=11.5)
+    else:
+        s.label(Q[380], r"$q(t)$", dx=8, dy=13, color=INDIGO, size=11.5)
+    if abs(eps) >= 1e-3:
+        msg, col = "turn each point about $\\xi(t)$: the path stays on the sphere", TEAL
+    elif t > 0.9:
+        msg, col = "every varied path costs more action: stationary at $\\epsilon = 0$", INDIGO
+    else:
+        msg, col = "the pendulum's own path: the action is stationary", INDIGO
+    s.text2d(0.0, -1.55, msg, fontsize=10, color=col, **SANS)
+    s.text2d(0.0, -1.8, "the endpoints are not varied", fontsize=9.5, color=MUTED, **SANS)
+
+    ax = s.fig.add_axes([0.63, 0.2, 0.34, 0.66])
+    style_axes(ax)
+    seen = (eps_grid <= reach_hi + 1e-9) & (eps_grid >= reach_lo - 1e-9)
+    ax.plot(eps_grid, dS, color=MUTED, lw=0.7, alpha=0.3)
+    ax.plot(eps_grid[seen], dS[seen], color=INDIGO, lw=1.9)
+    ax.plot([eps], [np.interp(eps, eps_grid, dS)], "o", ms=6, color=TEAL if abs(eps) > 1e-3 else INDIGO, zorder=5)
+    ax.axvline(0, color=INK, lw=0.5, alpha=0.4)
+    ax.set_xlim(-0.5, 0.5)
+    ax.set_ylim(-0.08 * dS.max(), 1.12 * dS.max())
+    ax.set_xticks([-0.4, 0, 0.4])
+    ax.set_xlabel(r"$\epsilon$", fontsize=11)
+    ax.set_title(r"action $S(\epsilon) - S(0)$ (J·s)", fontsize=9.5, **SANS)
+    return s
+
+
+def variation_anim():
+    animate(variation_frame, OUT / "ch04-variation.gif", OUT / "ch04-variation-strip.png", n=84, fps=14, width_px=720,
+            stills=(0.0, 0.28, 0.72, 1.0), strip_px=900, strip_cols=2)
+
+
+# ------------------------------------------- animation: cut the motors
+M_Q, M_L, L_C = 1.5, 0.3, 1.0                 # the quadrotor and load of the text
+CUT_FALL, CUT_SLOW, CUT_FPS = 0.70, 3.0, 14
+
+
+def load_rhs(_, s, f):
+    """Equations eq4-load with R = I and no torque: the state is x_L, its velocity, q and omega."""
+    v, q, om = s[3:6], s[6:9], s[9:12]
+    u = f * E3
+    vd = ((q @ u) - M_Q * L_C * (om @ om)) * q / (M_Q + M_L) - G * E3
+    return np.concatenate([v, vd, np.cross(om, q), -np.cross(q, u) / (M_Q * L_C)])
+
+
+def cut_run():
+    """Fly level at hover thrust with the load swinging, then cut the thrust as the cable passes the vertical."""
+    f_hover = (M_Q + M_L) * G
+    q0 = np.array([np.sin(np.radians(40.0)), 0.0, -np.cos(np.radians(40.0))])
+    s0 = np.concatenate([L_C * q0, [1.6, 0.0, 0.0], q0, np.zeros(3)])       # the quadrotor starts at the origin
+    cross = lambda _, s, f: s[6]
+    cross.direction = 1.0                                        # the cable passes the vertical on its way back
+    sol1 = solve_ivp(load_rhs, [0, 4.0], s0, args=(f_hover,), rtol=1e-10, atol=1e-12, dense_output=True, events=cross)
+    t_cut = sol1.t_events[0][0]
+    sol2 = solve_ivp(load_rhs, [t_cut, t_cut + CUT_FALL], sol1.sol(t_cut), args=(0.0,), rtol=1e-10, atol=1e-12,
+                     dense_output=True)
+    tt = np.linspace(0, t_cut + CUT_FALL, 1501)
+    Y = np.array([sol1.sol(x) if x <= t_cut else sol2.sol(x) for x in tt])
+    f = np.where(tt <= t_cut, f_hover, 0.0)
+    q, om = Y[:, 6:9], Y[:, 9:12]
+    tension = M_L / (M_Q + M_L) * (M_Q * L_C * np.sum(om * om, axis=1) - f * (q @ E3))        # eq4-load-tension
+    return tt, t_cut, Y, f, tension
+
+
+def cut_frame(t):
+    tt, t_cut, Y, f, tension = cached("cut", cut_run)
+    k = int(round(t * (len(tt) - 1)))
+    now, on = tt[k], tt[k] <= t_cut
+    xL, q = Y[:, :3], Y[:, 6:9]
+    xQ = xL - L_C * q
+    xC = (M_Q * xQ + M_L * xL) / (M_Q + M_L)
+    s = Scene(width=6.9, height=4.1, azim=-90, elev=9, xlim=(-1.3, 5.9), ylim=(-3.45, 0.828))
+    kc = int(np.searchsorted(tt, t_cut))
+    s.curve(xC[:k + 1], color=TEAL, lw=1.0, alpha=0.9, zorder=16)
+    s.curve(xL[:k + 1], color=INDIGO, lw=1.6, alpha=0.9, zorder=17)
+    s.curve(np.array([xQ[k], xL[k]]), color=INK, lw=1.1, alpha=1.0, zorder=25)
+    quadrotor(s, xQ[k], np.eye(3), arm=0.34)
+    if on:
+        s.arrow(xQ[k], xQ[k] + 0.62 * E3, color=TERRACOTTA, zorder=36)
+        s.label(xQ[k] + 0.62 * E3, r"$f\,R\,e_3$", dx=22, dy=-4, color=TERRACOTTA, size=11)
+    else:
+        for j in range(1, 6):                                   # the cable at equal intervals since the cut
+            g = int(np.searchsorted(tt, t_cut + 0.14 * j))
+            if g < k:
+                s.curve(np.array([xQ[g], xL[g]]), color=MUTED, lw=0.8, alpha=0.55, zorder=15)
+        s.curve(np.array([xQ[kc], xL[kc]]), color=MUTED, lw=0.8, alpha=0.55, zorder=15)
+        s.dot(xQ[kc], color=TERRACOTTA, size=5, hollow=True, zorder=20)
+        s.label(xQ[kc], "thrust cut here", dx=0, dy=12, size=9.5, color=TERRACOTTA, **SANS)
+    s.arrow(xQ[k], xQ[k] + 0.5 * q[k], color=INDIGO, zorder=37, head=0.1)
+    d = unit(s.project(q[k])[0])                                # the cable direction on the canvas
+    nrm = np.array([d[1], -d[0]]) * (1 if d[1] <= 0 else -1)    # the side of the cable away from the paths
+    s.label(xQ[k] + 0.36 * q[k], r"$q$", dx=-12 * nrm[0], dy=-12 * nrm[1], color=INDIGO, size=12)
+    s.dot(xL[k], color=INK, size=7.5, zorder=40)
+    s.label(xL[k], r"$x_L$", dx=15 * d[0] + 5 * nrm[0], dy=15 * d[1] + 5 * nrm[1], size=11.5)
+    s.label(xQ[k], r"$x_Q$", dx=31, dy=11, size=11.5)
+    s.dot(xC[k], color=TEAL, size=4.5, zorder=41)
+    s.label(xC[0], "center of mass", dx=-7, dy=0, size=9.5, color=TEAL, ha="right", **SANS)
+    if on:
+        msg = "hover thrust:\nthe load swings beneath the quadrotor like a pendulum"
+    else:
+        msg = "thrust cut: the cable keeps turning at a constant rate,\nand the center of mass falls on a parabola"
+    s.ax.text(-1.2, -3.1, msg, fontsize=10, color=INK if on else TERRACOTTA, ha="left", va="center", linespacing=1.3,
+              zorder=50, path_effects=halo(), **SANS)
+
+    # the cable tension as a bar
+    bx, by, scale = 5.3, -2.45, 0.4                           # scene units per newton
+    s.ax.plot([bx - 0.2, bx + 0.2], [by, by], color=INK, lw=0.9, zorder=20)
+    s.ax.fill([bx - 0.11, bx + 0.11, bx + 0.11, bx - 0.11], [by, by, by + scale * tension[k], by + scale * tension[k]],
+              color=TEAL, alpha=0.9, zorder=19, lw=0)
+    s.ax.plot([bx - 0.2, bx + 0.2], [by + scale * M_L * G] * 2, color=MUTED, lw=0.8, linestyle=DASH, zorder=21)
+    s.text2d(bx + 0.26, by + scale * M_L * G, r"$m_L g$", fontsize=10.5, color=MUTED, ha="left")
+    s.text2d(bx + 0.26, by, "0", fontsize=9.5, color=MUTED, ha="left", **SANS)
+    s.text2d(bx, by - 0.24, f"$T$ = {tension[k]:.1f} N", fontsize=10.5, color=TEAL)
+    s.text2d(bx, by - 0.5, "cable tension", fontsize=9.5, color=TEAL, **SANS)
+    s.text2d(5.15, 0.5, f"t = {now:.2f} s\nshown {CUT_SLOW:.0f} times slower", fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
+    return s
+
+
+def cut_anim():
+    tt = cached("cut", cut_run)[0]
+    n = int(round(tt[-1] * CUT_SLOW * CUT_FPS)) + 1
+    animate(cut_frame, OUT / "ch04-cut.gif", OUT / "ch04-cut-strip.png", n=n, fps=CUT_FPS, width_px=720,
+            stills=(0.1, 0.55, 0.8, 1.0), strip_px=900, strip_cols=2, hold=1.6)
+
+
 if __name__ == "__main__":
+    pendulum_anim()
     euler_cond()
-    variation_s2()
+    variation_anim()
     pendulum_forces()
     polhodes()
+    book_anim()
     quad_load()
+    cut_anim()
     integrators()

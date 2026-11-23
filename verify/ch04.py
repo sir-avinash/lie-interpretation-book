@@ -716,4 +716,86 @@ for hh in (0.02, 0.01):
 ck.true("Lie-group RK4 is fourth order", 10 < errs[0] / errs[1] < 24, f"error ratio {errs[0] / errs[1]:.1f}")
 ck.record("geomech_check_eom", geomech_errors)
 
+# =========================================================================
+# 8. The animations show the verified motions
+# =========================================================================
+# The figure script holds the simulations that the animations play. Load it and check them against this file.
+import importlib.util
+from pathlib import Path
+
+_spec = importlib.util.spec_from_file_location("fig_ch04", Path(__file__).resolve().parents[1] / "figures" / "src" / "ch04.py")
+fig = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(fig)
+
+# fig4-pendulum: the pendulum of section 1, and the condition number of E'JE along its motion
+ck.close("opening animation: same pendulum as section 1", np.concatenate([np.diag(fig.J_P), fig.RHO_P, [fig.M_P]]),
+         np.concatenate([np.diag(J_p), rho_p, [m_p]]))
+tt_o, Rs_o, pitch_o, cond_o = fig.pendulum_run()
+Om_o = np.array([0.0, 0.0, 0.5])
+ck.close("opening animation: its acceleration is the chapter's pendulum equation", fig.pend_accel(Rs_o[700], Om_o),
+         pendulum_accel(Rs_o[700], Om_o), tol=1e-12)
+ck.true("opening animation: every frame is a rotation", max(np.linalg.norm(R.T @ R - np.eye(3)) for R in Rs_o) < 1e-7)
+a_o = np.abs(pitch_o)
+peaks_o = [float(a_o[i]) for i in range(1, len(a_o) - 1) if a_o[i] > a_o[i - 1] and a_o[i] >= a_o[i + 1] and a_o[i] > 85]
+ck.true("opening animation: the pitch comes within about a degree of 90 deg, twice", len(peaks_o) == 2 and min(peaks_o) > 88.5,
+        f"peaks {np.round(peaks_o, 2)} deg")
+ck.record("opening_pitch_peaks_deg", peaks_o)
+k_o = int(np.argmax(a_o))
+ck.close("opening animation: plotted condition number is cond(E'JE) at the simulated pitch and roll", cond_o[k_o],
+         np.linalg.cond(D_euler(-np.arcsin(Rs_o[k_o][2, 0]), np.arctan2(Rs_o[k_o][2, 1], Rs_o[k_o][2, 2]))), tol=1e-6 * cond_o[k_o])
+ck.true("opening animation: cond(E'JE) exceeds 1e4 at both passes", all(cond_o[np.abs(a_o - pk) < 1e-9].max() > 1e4 for pk in peaks_o))
+
+# fig4-variation: the action of the varied pendulum path
+t_v, Q_v, xi_v, varied_v, eps_v, dS_v = fig.variation_data()
+ck.true("variation animation: every varied path stays on the sphere and keeps its endpoints",
+        np.max(np.abs(np.linalg.norm(varied_v(0.44), axis=1) - 1)) < 1e-12 and np.allclose(varied_v(0.44)[[0, -1]], Q_v[[0, -1]]))
+ck.true("variation animation: xi is perpendicular to q", np.max(np.abs(np.sum(xi_v * Q_v, axis=1))) < 1e-8)
+mid_v = len(eps_v) // 2
+slope_v = (dS_v[mid_v + 1] - dS_v[mid_v - 1]) / (eps_v[mid_v + 1] - eps_v[mid_v - 1])
+ck.true("variation animation: dS/d eps = 0 at eps = 0", abs(slope_v) < 1e-3, f"{slope_v:.1e} J s")
+ck.true("variation animation: every varied path has a larger action", np.all(np.delete(dS_v, mid_v) > 0),
+        f"S(+0.44) - S(0) = {dS_v[-1]:.3f}, S(-0.44) - S(0) = {dS_v[0]:.3f} J s")
+ck.record("variation_action_rise_Js", {"eps_+0.44": float(dS_v[-1]), "eps_-0.44": float(dS_v[0])})
+
+# fig4-book: the same book, spin and tilt, and the same flip times
+ck.close("book animation: same inertia, spin and tilt as the example", np.concatenate([fig.J_B, [fig.BOOK_SPIN, fig.BOOK_TILT]]),
+         np.concatenate([J_b, [spin, tilt]]))
+sol_b = fig.book_run(1, 3.2)
+tb = np.linspace(0, 3.2, 6401)
+Om_b = sol_b.sol(tb)[10]
+flips_b = tb[1:][np.sign(Om_b[1:]) != np.sign(Om_b[:-1])]
+ck.close("book animation: Omega_2 reverses at the times recorded above", flips_b[:2], flips[:2], tol=2e-3)
+i_b = np.searchsorted(t, 2.0)
+ck.close("book animation: attitude and body rate equal the run above at t = 2 s", sol_b.sol(t[i_b]),
+         np.concatenate([Rr[i_b].ravel(), Omr[i_b]]), tol=1e-6)
+for ax_b in (0, 2):
+    yb = fig.book_run(ax_b, 0.75).sol(np.linspace(0, 0.75, 400))
+    off_b = np.max(np.linalg.norm(np.delete(yb[9:], ax_b, axis=0), axis=0)) / spin
+    ck.true(f"book animation: the spin about e{ax_b + 1} stays within 2 %", off_b < 0.02, f"{off_b:.4f}")
+
+# fig4-cut: level flight at hover thrust with the load swinging, then no thrust
+ck.close("cut animation: same masses and cable length", [fig.M_Q, fig.M_L, fig.L_C], [mQ, mL, ll])
+tt_c, t_cut, Y_c, f_c_, T_c = fig.cut_run()
+worst = 0.0
+for k_c in (100, 600, 1200, 1450):
+    s_c = Y_c[k_c]
+    vLd, omd, _ = load_accels(s_c[6:9], s_c[9:12], np.eye(3), np.zeros(3), f_c_[k_c], np.zeros(3))
+    worst = max(worst, np.max(np.abs(fig.load_rhs(0.0, s_c, f_c_[k_c])[[3, 4, 5, 9, 10, 11]] - np.concatenate([vLd, omd]))))
+ck.true("cut animation: its right-hand side is the chapter's equations with R = I", worst < 1e-12, f"err {worst:.1e}")
+after = tt_c > t_cut + 1e-6
+ck.close("cut animation: thrust is cut as the cable passes the vertical", Y_c[np.searchsorted(tt_c, t_cut), 6], 0.0, tol=5e-3)
+ck.true("cut animation: after the cut the cable rate omega is constant", np.max(np.ptp(Y_c[after, 9:12], axis=0)) < 1e-8)
+xC_c = Y_c[:, :3] - mQ / (mQ + mL) * ll * Y_c[:, 6:9]
+zfit = np.polyfit(tt_c[after], xC_c[after, 2], 2)
+ck.close("cut animation: after the cut the center of mass falls with g", -2 * zfit[0], G, tol=1e-6)
+ck.true("cut animation: before the cut the center of mass flies level", np.ptp(xC_c[~after, 2]) < 1e-8)
+T_before, T_after = float(T_c[~after][-1]), float(T_c[after][0])
+ck.close("cut animation: tension after the cut is mL mQ l |omega|^2 / (mQ + mL)", T_after,
+         mL * mQ * ll * np.sum(Y_c[-1, 9:12] ** 2) / (mQ + mL))
+ck.true("cut animation: the tension drops but stays positive", 0 < T_after < T_before and np.ptp(T_c[after]) < 1e-8,
+        f"{T_before:.2f} N -> {T_after:.2f} N")
+ck.record("cut_tension_before_N", T_before)
+ck.record("cut_tension_after_N", T_after)
+ck.record("cut_time_s", float(t_cut))
+
 ck.finish()

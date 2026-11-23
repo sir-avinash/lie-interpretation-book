@@ -60,5 +60,16 @@
     "quadrotor with suspended load (R3 x S2 x SO(3))": 4.059809332153562e-08,
     "two quadrotors with a point-mass load (R3 x (S2 x SO(3))^2)": 9.87324473030761e-08,
     "telescoping leg (R x SO(3))": 2.8941391402917046e-08
-  }
+  },
+  "opening_pitch_peaks_deg": [
+    88.91210025845575,
+    89.57312991013012
+  ],
+  "variation_action_rise_Js": {
+    "eps_+0.44": 0.9844664027798922,
+    "eps_-0.44": 1.1412296652699128
+  },
+  "cut_tension_before_N": 4.3200232729946295,
+  "cut_tension_after_N": 1.3770624076469637,
+  "cut_time_s": 1.4165049144499076
 }

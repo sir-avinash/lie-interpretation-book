@@ -13,7 +13,7 @@ A reference satellite spins steadily about the vertical at one radian per second
 
 Both gyroscopes are honest. The reference gyroscope reads $\Omega_d = (0, 0, 1)$. Yours reads $\Omega = (0, 1, 0)$, because the vertical happens to be your second body axis ([](#fig3-frames)). Subtract and you get an error of 1.41 rad/s. Yet the two bodies turn together like two parts of one rigid object. Nothing between them is changing. The sensible answer is zero.
 
-![Two frames that spin together about the vertical. They share one motion, but each gyroscope reports it along its own axes, so the readings differ. Subtracting the readings compares components taken in two different frames.](figures/ch03-frames.svg){#fig3-frames}
+![Two frames that spin together about the vertical. They share one motion, but each gyroscope reports it along its own axes, so the readings differ. Subtracting the readings compares components taken in two different frames, and reports 1.41 rad/s. Carry the reference's angular velocity over to the body frame first, and the difference is zero.](figures/ch03-frames-strip.png){#fig3-frames anim="figures/ch03-frames.gif"}
 
 [](#ch-why) asked what "error" means for a configuration on a curved space. This is the same question for velocities, and it is the subtler one. A velocity is attached to the place where it was measured. On a flat space every place shares one set of axes, so you subtract without thinking. On a curved space you have to carry one velocity over to the other before you compare, and there is more than one way to carry it. To sort this out we need three things: a way to nudge a configuration, a way to measure how far off it is, and a way to move a velocity from one place to another.
 
@@ -46,7 +46,7 @@ $$
 
 Put $\delta R = R\,\eta^\wedge$ next to the kinematics $\dot R = R\,\Omega^\wedge$ of [](#eq-kinematics). They have the same shape. A variation is a velocity in a direction that is not time. The vectors $\eta(t)$ and $\xi(t)$ may change along the curve, so the family is a ribbon of curves, as in [](#fig3-variation).
 
-![A variation on the sphere. The reference curve $q(t)$ sits inside a family of nearby curves $q_\epsilon(t)$. At each instant the gap opens along $\delta q = \xi \times q$, which is tangent to the sphere. The axis $\xi$ lies in the tangent plane too, at right angles to $\delta q$.](figures/ch03-variation.svg){#fig3-variation}
+![A variation on the sphere. The reference curve $q(t)$ sits inside a family of nearby curves $q_\epsilon(t)$. Watch $\epsilon$ sweep: every member of the family stays on the sphere. At each instant the gap opens along $\delta q = \xi \times q$, which is tangent to the sphere. The axis $\xi$ lies in the tangent plane too, at right angles to $\delta q$. Right: the same nudge seen edge on. The straight step $q + \epsilon\,\delta q$ leaves the sphere, and the rotation does not.](figures/ch03-variation-strip.png){#fig3-variation anim="figures/ch03-variation.gif"}
 
 The ribbon has two directions: along the curve, in $t$, and across it, in $\epsilon$. We know how the configuration changes in each. What happens to the velocity when we step across?
 
@@ -172,7 +172,7 @@ Rotate about one axis with unit inertia: $\ddot\theta = -k_p\, e(\theta) - k_d\,
 Start at 179.9° instead. The first two laws do not notice. The trace law needs 8.4 s. Near half a turn it sees $\ddot\beta \approx k_p\beta - k_d\dot\beta$ for the small angle $\beta = \pi - \theta$, an unstable equilibrium with growth rate $\lambda = 1.04\ \text{s}^{-1}$. Every factor of ten closer to 180° costs $\ln 10/\lambda = 2.2$ s more. There is no upper bound.
 :::
 
-![Simulated recovery from rest near half a turn, same gains, three error vectors. The trace error lingers, and lingers 2.2 s longer for each factor of ten by which the start approaches 180°.](figures/ch03-linger.svg){#fig3-linger}
+![Simulated recovery from rest near half a turn, same gains, three error vectors. Left: each state on its own height. Right: the error angle against time. The trace height is flat at the top, so the trace error lingers, and lingers 2.2 s longer for each factor of ten by which the start approaches 180°.](figures/ch03-linger-strip.png){#fig3-linger anim="figures/ch03-linger.gif"}
 
 Mueller (2018) makes this comparison for multicopters and adds an idea worth keeping. Split the relative rotation into a **tilt**, the shortest rotation that aligns the thrust axes, and a yaw about the thrust axis. The tilt angle $\theta_{\text{tilt}}$ is the angle between $R e_3$ and $R_d e_3$, so its height $1 - \cos\theta_{\text{tilt}}$ is exactly the sphere error $\Psi_q$ of the thrust direction. The angles obey $\cos\tfrac{\theta}{2} = \cos\tfrac{\theta_{\text{tilt}}}{2}\cos\tfrac{\theta_{\text{yaw}}}{2}$, with $\theta_{\text{yaw}}$ the yaw angle, so the tilt never exceeds the total. A multicopter translates by tilting, so the tilt matters more than the yaw. Mueller's controller adds to the logarithm law a second restoring torque that acts on the tilt alone and is proportional to the tilt angle. Teng et al. (2022) reach the logarithm from another side: they define the cost as $\tfrac12\chi\T P\chi$ in $\chi = \log(R_d\T R)^\vee$, and the same definition works on any matrix Lie group.
 
@@ -188,7 +188,7 @@ One walker stands on the equator and another at 60° north on the same meridian.
 Now test "without turning". Stand at the pole with an arrow pointing down the Greenwich meridian. Walk down that meridian to the equator, keeping the arrow straight ahead. Walk a quarter of the way round the equator. The arrow now points sideways, due south, and you do not turn it. Walk back up to the pole. You are home. Your arrow points along the 90° meridian ([](#fig3-globe)). It has turned a quarter turn, and you never turned it.
 :::
 
-![Sliding an arrow around one eighth of the sphere without ever rotating it relative to the surface. It returns rotated by 90°, the area enclosed by the path. The result of carrying a vector between two points depends on the route.](figures/ch03-globe.svg){#fig3-globe}
+![Sliding an arrow around one eighth of the sphere without ever rotating it relative to the surface. It returns rotated by 90°, the area enclosed by the path. Around a smaller triangle it returns rotated by 37°, again the area enclosed. The result of carrying a vector between two points depends on the route.](figures/ch03-globe-strip.png){#fig3-globe anim="figures/ch03-globe.gif"}
 
 So "the same vector, somewhere else" has no meaning on a curved space until you say how it was carried. A rule that carries velocities from the reference to the body is a **transport map**. Since no rule is forced on us, we choose one that makes the control problem easy. The requirement is modest.
 
@@ -240,7 +240,7 @@ $$
 
 This is the pair used by Wu (2017), and it completes [](#eq-error-s2), which held only for a fixed target.
 
-![Velocity error on the sphere. The reference velocity $\dot q_d$ lives in the tangent plane at $q_d$ and cannot be subtracted from $\dot q$ directly. The transport map [](#eq3-transport-s2) carries it to $q$. It agrees with parallel transport along the great circle (dashed) for the component along the circle, and shrinks the component across it by $\cos\theta$.](figures/ch03-transport.svg){#fig3-transport}
+![Velocity error on the sphere. The reference velocity $\dot q_d$ lives in the tangent plane at $q_d$ and cannot be subtracted from $\dot q$ directly. The transport map [](#eq3-transport-s2) carries it to $q$. As $q$ moves away, the carried velocity agrees with parallel transport along the great circle (dashed) for the component along the circle, and its component across the circle shrinks by $\cos\theta$. In the last frame the two velocities at $q$ are subtracted.](figures/ch03-transport-strip.png){#fig3-transport anim="figures/ch03-transport.gif"}
 
 ::: {.example #ex3-transport-s2 name="A transport map that forgets"}
 Put $q_d = e_3$ and $q = e_1$, a quarter circle apart. If the reference moves toward $q$, $\dot q_d = e_1$, then $\mathcal{T}\dot q_d = -e_3$: the body is asked to move away along the same great circle, which keeps the angle fixed. Parallel transport gives the same answer. If the reference moves sideways, $\dot q_d = e_2$, then $\mathcal{T}\dot q_d = 0$, while parallel transport gives $e_2$. In general the sideways part is scaled by $\cos\theta$.

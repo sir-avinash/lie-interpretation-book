@@ -470,6 +470,38 @@ v = carry(carry(carry(v0, E3, E1), E1, E2), E2, E3)
 ck.close("around the octant the arrow comes back as e2", v, E2)
 ck.close("holonomy angle = enclosed area = pi/2", np.arccos(v0 @ v), 4 * np.pi / 8)
 ck.record("holonomy_octant_deg", float(np.degrees(np.arccos(v0 @ v))))
+
+
+# the same around a smaller triangle: pole, then 60 degrees down the meridians at longitude 0 and 90
+def solid_angle(a, b, c):
+    """Area of a spherical triangle from its corners alone (Van Oosterom and Strackee)."""
+    return 2 * np.arctan2(abs(a @ np.cross(b, c)), 1 + a @ b + b @ c + c @ a)
+
+
+def colat(c_deg, lon_deg):
+    c, lo = np.radians(c_deg), np.radians(lon_deg)
+    return np.array([np.sin(c) * np.cos(lo), np.sin(c) * np.sin(lo), np.cos(c)])
+
+
+ck.close("the octant has area pi/2 by the corner formula", solid_angle(E3, E1, E2), np.pi / 2)
+A_, B_ = colat(60, 0), colat(60, 90)
+v_small = carry(carry(carry(v0, E3, A_), A_, B_), B_, E3)
+turn_small = np.arctan2(E3 @ np.cross(v0, v_small), v0 @ v_small)
+ck.close("carried arrow stays tangent and keeps its length", [v_small @ E3, np.linalg.norm(v_small)], [0.0, 1.0])
+ck.close("smaller triangle: holonomy angle = enclosed area", turn_small, solid_angle(E3, A_, B_))
+ck.true("quoted: the smaller triangle turns the arrow by 37 degrees (0.64 rad)",
+        abs(np.degrees(turn_small) - 37) < 0.5 and abs(turn_small - 0.64) < 0.005, f"{np.degrees(turn_small):.2f} deg")
+ck.record("holonomy_small_triangle_deg", float(np.degrees(turn_small)))
+ck.record("holonomy_small_triangle_area", float(solid_angle(E3, A_, B_)))
+rng_tri = np.random.default_rng(31)                             # its own stream: later checks keep their test points
+for _ in range(5):                                             # and for random triangles
+    P_ = [unit(rng_tri.normal(size=3)) for _ in range(3)]
+    if P_[0] @ np.cross(P_[1], P_[2]) < 0:
+        P_[1], P_[2] = P_[2], P_[1]
+    u0 = unit(np.cross(np.cross(P_[0], P_[1]), P_[0]))
+    u1 = carry(carry(carry(u0, P_[0], P_[1]), P_[1], P_[2]), P_[2], P_[0])
+    ck.close("random triangle: holonomy angle = enclosed area", np.arctan2(P_[0] @ np.cross(u0, u1), u0 @ u1),
+             solid_angle(*P_))
 # north at two places are different vectors of R^3
 def north(lat, lon):
     la, lo = np.radians(lat), np.radians(lon)

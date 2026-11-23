@@ -32,6 +32,8 @@
   "linger_escape_rate": 1.0352761804100827,
   "linger_seconds_per_decade": 2.2241264085511654,
   "holonomy_octant_deg": 90.0,
+  "holonomy_small_triangle_deg": 36.869897645844006,
+  "holonomy_small_triangle_area": 0.6435011087932841,
   "dead_reckoning_euler_diff_deg": {
     "min": 4.587652645813144,
     "max": 64.02611672812294
