@@ -183,6 +183,9 @@ def main() -> None:
         for ch in part["chapter"]:
             if "file" not in ch or (only and isinstance(ch["num"], int) and ch["num"] not in only):
                 continue
+            if not (ROOT / ch["file"]).exists():
+                print(f'note: {ch["file"]} not written yet; listed as planned', file=sys.stderr)
+                continue
             meta, body = split_front_matter((ROOT / ch["file"]).read_text(encoding="utf-8"))
             num = ch["num"]
             appendix = not isinstance(num, int)

@@ -35,9 +35,9 @@ chapter = [
 [[part]]
 title = "III. Geometric control"
 chapter = [
-  { num = 6, title = "Tracking control and almost-global stability" },
+  { num = 6, file = "chapters/ch06_tracking_control.md", title = "Tracking control and almost-global stability" },
   { num = 7, file = "chapters/ch07_variation_linearization_lqr.md", title = "Variation-based linearization and LQR" },
-  { num = 8, title = "Robust, adaptive and safety-critical control" },
+  { num = 8, file = "chapters/ch08_robust_adaptive_safe.md", title = "Robust, adaptive and safety-critical control" },
 ]
 
 [[part]]
@@ -52,7 +52,7 @@ chapter = [
 title = "V. Trajectory optimization"
 chapter = [
   { num = 12, title = "Variational integrators and collocation" },
-  { num = 13, title = "Error-state MPC and on-manifold solvers" },
+  { num = 13, file = "chapters/ch13_error_state_mpc.md", title = "Error-state MPC and on-manifold solvers" },
 ]
 
 [[part]]
