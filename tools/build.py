@@ -155,7 +155,7 @@ def chapter_main(ch: dict, prev: dict | None, nxt: dict | None, cfg: dict) -> st
     return (
         f'<div class="running-head">{ch["num"]}. {esc(ch["nav_plain"])}</div>'
         f'<article class="chapter" id="{ch["id"]}">'
-        f'<header class="chapter-head"><div class="chapter-num">Chapter {ch["num"]}</div>'
+        f'<header class="chapter-head"><div class="chapter-num">{ch["kind"]} {ch["num"]}</div>'
         f'<h1>{ch["title_html"]}</h1>{assets}</header>'
         f'{ch["body"]}</article>{foot}')
 
@@ -176,15 +176,19 @@ def main() -> None:
     chapters = []
     for part in cfg["part"]:
         for ch in part["chapter"]:
-            if "file" not in ch or (only and ch["num"] not in only):
+            if "file" not in ch or (only and isinstance(ch["num"], int) and ch["num"] not in only):
                 continue
             meta, body = split_front_matter((ROOT / ch["file"]).read_text(encoding="utf-8"))
             num = ch["num"]
-            skill_dirs = sorted((ROOT / "skills").glob(f"ch{num:02d}-*/SKILL.md"))
-            if skill_dirs and "skill" not in meta:
-                meta["skill"] = str(skill_dirs[0].relative_to(ROOT))
+            appendix = not isinstance(num, int)
+            if not appendix:
+                skill_dirs = sorted((ROOT / "skills").glob(f"ch{num:02d}-*/SKILL.md"))
+                if skill_dirs and "skill" not in meta:
+                    meta["skill"] = str(skill_dirs[0].relative_to(ROOT))
             chapters.append({
-                **meta, "num": num, "src": body, "file": f"ch{num:02d}.html",
+                **meta, "num": num, "src": body,
+                "file": f"app{num}.html" if appendix else f"ch{num:02d}.html",
+                "kind": "Appendix" if appendix else "Chapter",
                 "id": meta.get("id", f"ch-{num}"), "part": part["title"],
                 "title": meta.get("title") or fail(f'{ch["file"]}: missing title'),
             })
@@ -200,7 +204,7 @@ def main() -> None:
             if key in labels:
                 fail(f'label "{key}" defined in both {labels[key]["file"]} and {ch["file"]}')
             labels[key] = val
-        labels[ch["id"]] = {"text": f'Chapter {ch["num"]}', "file": ch["file"]}
+        labels[ch["id"]] = {"text": f'{ch["kind"]} {ch["num"]}', "file": ch["file"]}
 
     labels_path = tmp / "labels.json"
     labels_path.write_text(json.dumps(labels), encoding="utf-8")
@@ -270,7 +274,7 @@ def main() -> None:
     # Single-page edition for printing to PDF.
     whole = "".join(
         f'<article class="chapter" id="{ch["id"]}"><header class="chapter-head">'
-        f'<div class="chapter-num">Chapter {ch["num"]}</div><h1>{ch["title_html"]}</h1></header>'
+        f'<div class="chapter-num">{ch["kind"]} {ch["num"]}</div><h1>{ch["title_html"]}</h1></header>'
         f'{ch["body_single"]}</article>' for ch in chapters)
     (OUT / "book.html").write_text(PAGE.format(
         title=book_title, book_title=book_title, body_class="single-page",
