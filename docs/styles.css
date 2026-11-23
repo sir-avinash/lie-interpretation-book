@@ -343,5 +343,26 @@ article pre code { background: none; padding: 0; }
   body { background: #ffffff; color: #000000; font-size: 11pt; }
   .sidebar, .asset-bar, .chapter-nav-footer { display: none !important; }
   .main { padding: 0; max-width: 100%; }
-  .callout, .kc-figure, .mermaid { break-inside: avoid; }
+  .chapter-break { break-before: page; page-break-before: always; }
+  .callout, .kc-figure, .mermaid, table, pre { break-inside: avoid; }
+}
+
+.print-all-btn {
+  display: block;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--accent-indigo);
+  border-radius: 5px;
+  background: #f4f6fb;
+  color: var(--accent-indigo);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.print-all-btn:hover {
+  background: rgba(27, 31, 138, 0.12);
 }

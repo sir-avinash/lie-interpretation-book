@@ -72,6 +72,39 @@ function buildNav() {
     btn.onclick = () => selectSection(sec.id);
     navEl.appendChild(btn);
   });
+
+  const printBtn = document.createElement('button');
+  printBtn.className = 'print-all-btn';
+  printBtn.textContent = 'Full Book (Print / PDF)';
+  printBtn.onclick = () => renderFullBook();
+  navEl.appendChild(printBtn);
+}
+
+async function renderFullBook() {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  assetBarEl.innerHTML = '<strong>Full Book Edition</strong> — Use <code>Cmd+P → Save as PDF</code> (or run <code>bash scripts/export_pdf.sh</code>).';
+
+  let fullHtml = '';
+  BOOK_SECTIONS.forEach((sec, idx) => {
+    const breakCls = idx > 0 ? ' chapter-break' : '';
+    const runningHead = `<div class="running-head">${sec.part} &middot; ${sec.label}</div>`;
+    let html = renderMarkdownWithMath(sec.markdown);
+    if (sec.diagramKey && window.KC_DIAGRAMS[sec.diagramKey]) {
+      html = window.KC_DIAGRAMS[sec.diagramKey] + html;
+    }
+    fullHtml += `<section class="${breakCls}">${runningHead}${html}</section>`;
+  });
+
+  contentEl.innerHTML = fullHtml;
+  decorateCallouts(contentEl);
+
+  if (window.mermaid) {
+    await mermaid.run({ nodes: contentEl.querySelectorAll('.mermaid') });
+  }
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    await MathJax.typesetPromise([contentEl]);
+  }
+  window.__BOOK_READY__ = true;
 }
 
 async function selectSection(id) {
@@ -121,5 +154,10 @@ async function selectSection(id) {
 }
 
 buildNav();
-const initialId = window.location.hash ? window.location.hash.slice(1) : BOOK_SECTIONS[0].id;
-selectSection(initialId);
+const params = new URLSearchParams(window.location.search);
+if (params.get('print') === 'all') {
+  renderFullBook();
+} else {
+  const initialId = window.location.hash ? window.location.hash.slice(1) : BOOK_SECTIONS[0].id;
+  selectSection(initialId);
+}
