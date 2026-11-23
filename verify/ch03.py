@@ -229,31 +229,31 @@ def e_R(R, Rd):
     return 0.5 * vee(Rd.T @ R - R.T @ Rd)
 
 
-def Psi_G(R, Rd, G):
-    return np.trace(G @ (I3 - Rd.T @ R))
+def Psi_D(R, Rd, D):
+    return np.trace(D @ (I3 - Rd.T @ R))
 
 
-def e_G(R, Rd, G):
-    return vee(G @ Rd.T @ R - R.T @ Rd @ G)
+def e_D(R, Rd, D):
+    return vee(D @ Rd.T @ R - R.T @ Rd @ D)
 
 
 R, Rd = random_rotation(rng), random_rotation(rng)
 eta = rng.normal(size=3)
-G = np.diag([0.9, 0.6, 0.3])
+D = np.diag([0.9, 0.6, 0.3])
 ck.close("delta Psi_R = e_R . eta", fd(lambda e: Psi_R(R @ expm_so3(e * eta), Rd), 0.0), e_R(R, Rd) @ eta, tol=1e-8)
-ck.close("delta Psi_G = e_G . eta, e_G = (G Rd^T R - R^T Rd G)^vee",
-         fd(lambda e: Psi_G(R @ expm_so3(e * eta), Rd, G), 0.0), e_G(R, Rd, G) @ eta, tol=1e-8)
-ck.close("G = I/2 recovers Psi_R", Psi_G(R, Rd, I3 / 2), Psi_R(R, Rd))
-ck.close("G = I/2 recovers e_R", e_G(R, Rd, I3 / 2), e_R(R, Rd))
+ck.close("delta Psi_D = e_D . eta, e_D = (D Rd^T R - R^T Rd D)^vee",
+         fd(lambda e: Psi_D(R @ expm_so3(e * eta), Rd, D), 0.0), e_D(R, Rd, D) @ eta, tol=1e-8)
+ck.close("D = I/2 recovers Psi_R", Psi_D(R, Rd, I3 / 2), Psi_R(R, Rd))
+ck.close("D = I/2 recovers e_R", e_D(R, Rd, I3 / 2), e_R(R, Rd))
 ck.close("tr(A hat(eta)) = -(A - A^T)^vee . eta", np.trace(R @ hat(eta)), -vee(R - R.T) @ eta)
 
-# small-error stiffness of the weighted error: e_G ~ (tr(G) I - G) eta
+# small-error stiffness of the weighted error: e_D ~ (tr(D) I - D) eta
 small = 1e-6 * eta
-ck.close("near the target e_G = (tr(G) I - G) eta", e_G(Rd @ expm_so3(small), Rd, G) / 1e-6,
-         (np.trace(G) * I3 - G) @ eta, tol=1e-5)
+ck.close("near the target e_D = (tr(D) I - D) eta", e_D(Rd @ expm_so3(small), Rd, D) / 1e-6,
+         (np.trace(D) * I3 - D) @ eta, tol=1e-5)
 
-# critical points of Psi_G with distinct weights g1 > g2 > g3 > 0
-g1, g2, g3 = np.diag(G)
+# critical points of Psi_D with distinct weights g1 > g2 > g3 > 0
+g1, g2, g3 = np.diag(D)
 flips = {"identity": np.diag([1.0, 1, 1]), "flip about e1": np.diag([1.0, -1, -1]),
          "flip about e2": np.diag([-1.0, 1, -1]), "flip about e3": np.diag([-1.0, -1, 1])}
 want_val = {"identity": 0.0, "flip about e1": 2 * (g2 + g3), "flip about e2": 2 * (g1 + g3), "flip about e3": 2 * (g1 + g2)}
@@ -270,27 +270,27 @@ def hessian(E, G_):
 
 
 for name, E in flips.items():
-    ck.close(f"weighted error: e_G = 0 at {name}", e_G(E, I3, G), np.zeros(3))
-    ck.close(f"weighted error: Psi_G at {name}", Psi_G(E, I3, G), want_val[name])
-    eig = np.linalg.eigvalsh(hessian(E, G))
-    d = np.diag(G @ E)
+    ck.close(f"weighted error: e_D = 0 at {name}", e_D(E, I3, D), np.zeros(3))
+    ck.close(f"weighted error: Psi_D at {name}", Psi_D(E, I3, D), want_val[name])
+    eig = np.linalg.eigvalsh(hessian(E, D))
+    d = np.diag(D @ E)
     ck.close(f"Hessian eigenvalues at {name} are sums of the other two d_i", np.sort(eig), np.sort(d.sum() - d), tol=1e-5)
     ck.true(f"Morse index at {name} is {want_index[name]}", int(np.sum(eig < -1e-6)) == want_index[name])
 ck.record("weighted_values", {k: float(v) for k, v in want_val.items()})
-# no other critical points: a random search for zeros of e_G finds only these four
+# no other critical points: a random search for zeros of e_D finds only these four
 found = set()
 for _ in range(300):
     x = log_so3(random_rotation(rng))
-    for _ in range(60):                                       # Newton on e_G(exp(x)) = 0
+    for _ in range(60):                                       # Newton on e_D(exp(x)) = 0
         E = expm_so3(x)
-        F = e_G(E, I3, G)
-        Jn = np.column_stack([(e_G(expm_so3(x + 1e-6 * I3[i]), I3, G) - F) / 1e-6 for i in range(3)])
+        F = e_D(E, I3, D)
+        Jn = np.column_stack([(e_D(expm_so3(x + 1e-6 * I3[i]), I3, D) - F) / 1e-6 for i in range(3)])
         try:
             x = x - np.linalg.solve(Jn, F)
         except np.linalg.LinAlgError:
             break
     E = expm_so3(x)
-    if np.linalg.norm(e_G(E, I3, G)) < 1e-9:
+    if np.linalg.norm(e_D(E, I3, D)) < 1e-9:
         found.add(tuple(np.round(np.diag(E)).astype(int)) if np.allclose(E, np.diag(np.diag(E)), atol=1e-6) else "other")
 ck.true("distinct weights: exactly four critical points", found == {(1, 1, 1), (1, -1, -1), (-1, 1, -1), (-1, -1, 1)}, str(found))
 # equal weights: every half turn is critical
@@ -400,10 +400,10 @@ dPsi = fd(lambda s: Psi_R(R_ref(s), Rd_ref(s)), t0)
 ck.close("d/dt Psi_R = e_R . e_Omega", dPsi, e_R(R, Rd) @ e_Om, tol=1e-7)
 ck.close("with equal weights, d/dt Psi_R = e_R . (Omega - Omega_d) as well", dPsi, e_R(R, Rd) @ (Om - Omd), tol=1e-7)
 ck.close("reason: e_R is the rotation axis, so (Rd^T R) e_R = e_R", E @ e_R(R, Rd), e_R(R, Rd))
-dPsiG = fd(lambda s: Psi_G(R_ref(s), Rd_ref(s), G), t0)
-ck.close("weighted: d/dt Psi_G = e_G . e_Omega", dPsiG, e_G(R, Rd, G) @ e_Om, tol=1e-7)
-ck.true("weighted: e_G . (Omega - Omega_d) is NOT d/dt Psi_G", abs(dPsiG - e_G(R, Rd, G) @ (Om - Omd)) > 1e-2,
-        f"gap {abs(dPsiG - e_G(R, Rd, G) @ (Om - Omd)):.3f}")
+dPsiG = fd(lambda s: Psi_D(R_ref(s), Rd_ref(s), D), t0)
+ck.close("weighted: d/dt Psi_D = e_D . e_Omega", dPsiG, e_D(R, Rd, D) @ e_Om, tol=1e-7)
+ck.true("weighted: e_D . (Omega - Omega_d) is NOT d/dt Psi_D", abs(dPsiG - e_D(R, Rd, D) @ (Om - Omd)) > 1e-2,
+        f"gap {abs(dPsiG - e_D(R, Rd, D) @ (Om - Omd)):.3f}")
 C = 0.5 * (np.trace(R.T @ Rd) * I3 - R.T @ Rd)
 ck.close("d/dt e_R = 1/2 (tr(R^T Rd) I - R^T Rd) e_Omega", fd(lambda s: e_R(R_ref(s), Rd_ref(s)), t0), C @ e_Om, tol=1e-7)
 ck.close("C = I at zero error", 0.5 * (np.trace(I3) * I3 - I3), I3)

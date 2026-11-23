@@ -145,11 +145,11 @@ def so3_ball():
     s.arrow((0, 0, 0), 0.62 * u, color=INDIGO)
     s.dot((0, 0, 0), color=INK)
     s.label((0, 0, 0), "identity", dx=-26, dy=-9, size=9.5, fontfamily="Source Sans 3")
-    s.label(0.62 * u, r"$\theta\,u$", dx=14, dy=-2, color=INDIGO)
+    s.label(0.62 * u, r"$\theta\,a$", dx=14, dy=-2, color=INDIGO)
     s.dot(p_exit, color=TERRACOTTA)
     s.dot(p_enter, color=TERRACOTTA, hollow=not s.point_visible(p_enter))
-    s.label(p_exit, r"$\pi u$", dx=13, dy=7, color=TERRACOTTA)
-    s.label(p_enter, r"$-\pi u$", dx=-17, dy=-8, color=TERRACOTTA)
+    s.label(p_exit, r"$\pi a$", dx=13, dy=7, color=TERRACOTTA)
+    s.label(p_enter, r"$-\pi a$", dx=-17, dy=-8, color=TERRACOTTA)
     # A rotation that keeps turning about u: leaves through pi u, re-enters at -pi u.
     s.arrow(0.66 * u, 0.97 * u, color=TERRACOTTA, lw=1.2, head=0.08)
     s.arrow(-0.99 * u, -0.6 * u, color=TERRACOTTA, lw=1.2, head=0.08)
@@ -176,7 +176,7 @@ def obstruction():
             s.arrow(p0, p1, color=INDIGO, lw=1.3, head=0.1)
     s.dot(c + s.up, color=INDIGO, size=6)
     s.dot(c - s.up, color=TERRACOTTA, size=6, hollow=True)
-    s.label(c + s.up, "goal", dy=13, size=10, color=INDIGO, fontfamily="Source Sans 3")
+    s.label(c + s.up, "target", dy=13, size=10, color=INDIGO, fontfamily="Source Sans 3")
     s.label(c - s.up, "a second equilibrium is forced", dy=-14, size=10, color=TERRACOTTA, fontfamily="Source Sans 3")
     s.label(c, r"$S^1$", size=13)
     # (b) the sphere with the flow of  omega = -k e_q

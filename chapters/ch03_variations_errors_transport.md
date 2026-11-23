@@ -71,7 +71,7 @@ $$
 
 The term $\dot\eta$ is what you would have guessed. The term $\Omega \times \eta$ is the opening puzzle in miniature. Freeze $\eta$, so the neighbor is the same body with its frame remounted by a small fixed rotation. The body still spins as before, but its gyroscope axes have turned, so the reading turns with them.
 
-::: {.example #ex3-remount name="A slightly remounted gyro"}
+::: {.example #ex3-remount name="A slightly remounted gyroscope"}
 Take $\Omega = (0, 0, 1)$ rad/s and remount the frame by $\eta = (0.1, 0, 0)$, held constant. Equation [](#eq3-delta-Omega) predicts a change of $\Omega \times \eta = (0, 0.1, 0)$. The exact reading is $\exp(-\eta^\wedge)\,\Omega = (0,\ 0.0998,\ 0.9950)$. Grow $\eta$ to a quarter turn and the reading becomes $(0, 1, 0)$: the satellite of [](#fig3-frames).
 :::
 
@@ -117,10 +117,10 @@ We can now nudge configurations and velocities. Next we need a number that says 
 
 ## Heights and slopes {#sec3-errors}
 
-[](#ch-why) introduced the attitude error of [](#def-error-so3) as a height $\Psi_R$ and its slope $e_R$. With variations in hand, that recipe becomes a definition that works on any manifold.
+[](#sec-error) introduced the attitude error of [](#def-error-so3) as a height $\Psi_R$ and its slope $e_R$. With variations in hand, that recipe becomes a definition that works on any manifold.
 
 ::: {.definition #def3-error-vector name="Error function and error vector"}
-An **error function** $\Psi \ge 0$ depends on the actual and the desired configuration and vanishes only when they agree. Its **error vector** $e$ is its slope under a variation of the actual configuration:
+An error function $\Psi \ge 0$ depends on the actual and the desired configuration and vanishes only when they agree. Its error vector $e$ is its slope under a variation of the actual configuration:
 $$
 \delta\Psi = e_R \cdot \eta \ \text{ on } \SO(3), \qquad \delta\Psi = e_q \cdot \xi \ \text{ on } S^2, \qquad \delta\Psi = e_x \cdot \delta x \ \text{ on } \R^3 .
 $$
@@ -128,7 +128,7 @@ $$
 
 On $\R^3$ the height $\tfrac12\|x - x_d\|^2$ has slope $x - x_d$. Nothing new. On the sphere, $\Psi_q = 1 - q\cdot q_d$ gives $\delta\Psi_q = -(\xi \times q)\cdot q_d = \xi \cdot (q_d \times q)$, so $e_q = q_d \times q$, as in [](#def-error-s2).
 
-On $\SO(3)$ let us do slightly more than [](#ch-why) did and weight the axes. Take $D = \operatorname{diag}(d_1, d_2, d_3)$ with positive entries and
+On $\SO(3)$ let us do slightly more than [](#def-error-so3) did and weight the axes. Take $D = \operatorname{diag}(d_1, d_2, d_3)$ with positive entries and
 
 $$
 \Psi_R = \tr\!\big(D\,(I - R_d\T R)\big). \label{eq3-weighted-psi}
@@ -195,7 +195,7 @@ Let $\Psi$ be an error function with error vector $e$. A transport map $\mathcal
 $$
 \ddt\Psi = e \cdot e_{\text{vel}}, \qquad e_{\text{vel}} = (\text{actual velocity}) - \mathcal{T}\,(\text{desired velocity}) . \label{eq3-compatible}
 $$
-The vector $e_{\text{vel}}$ is the **velocity error**. On $\SO(3)$ it is the $e_\Omega$ of [](#def-error-so3).
+The vector $e_{\text{vel}}$ is the velocity error. On $\SO(3)$ it is the $e_\Omega$ of [](#def-error-so3).
 :::
 
 Compatibility says that the height changes only through the velocity error, exactly as $\ddt\tfrac12\|x - x_d\|^2 = (x - x_d)\cdot(\dot x - \dot x_d)$ on a flat space. It is the property that makes $\Psi$ plus a kinetic term into a Lyapunov function.

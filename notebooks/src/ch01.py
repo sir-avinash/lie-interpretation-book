@@ -43,7 +43,7 @@ def Rz(a):
 # %% [markdown]
 # ## 1. A calm body, a panicking chart
 #
-# For yaw-pitch-roll angles $\eta = (\psi, \theta, \phi)$ the body rate is $\Omega = E(\theta, \phi)\,\dot\eta$
+# For yaw-pitch-roll angles $\Theta = (\psi, \theta, \phi)$ the body rate is $\Omega = E(\theta, \phi)\,\dot\Theta$
 # with $\det E = -\cos\theta$. Hold the body rate fixed and sweep the pitch.
 
 # %%
@@ -73,7 +73,7 @@ plt.show()
 # %% [markdown]
 # ### The two-labs test
 #
-# Rotate the world frame by $Q$. The physical error $R_d^\top R$ does not change. The Euler-angle difference does.
+# Rotate the world frame by $Y$. The physical error $R_d^\top R$ does not change. The Euler-angle difference does.
 
 # %%
 def euler_zyx(R):
@@ -82,11 +82,11 @@ def euler_zyx(R):
 
 R = Rz(0.2) @ Ry(0.3) @ Rx(-0.4)
 Rd = Rz(-0.5) @ Ry(0.6) @ Rx(0.1)
-Q = Rx(0.9)
+Y = Rx(0.9)
 
 print("Euler difference, lab A:", np.round(euler_zyx(R) - euler_zyx(Rd), 3))
-print("Euler difference, lab B:", np.round(euler_zyx(Q @ R) - euler_zyx(Q @ Rd), 3))
-print("Rd^T R changes by      :", np.abs((Q @ Rd).T @ (Q @ R) - Rd.T @ R).max())
+print("Euler difference, lab B:", np.round(euler_zyx(Y @ R) - euler_zyx(Y @ Rd), 3))
+print("Rd^T R changes by      :", np.abs((Y @ Rd).T @ (Y @ R) - Rd.T @ R).max())
 
 # %% [markdown]
 # ## 2. Unwinding
@@ -170,11 +170,11 @@ plt.legend()
 plt.show()
 
 # %% [markdown]
-# The restoring action $\|e_R\|$ peaks at 90° and fades to zero at 180°. That is the warning at the end of Section 1.5.
+# The restoring torque is proportional to $\|e_R\|$, which peaks at 90° and fades to zero at 180°. That is the Pitfall at the end of Section 1.5.
 #
 # ### The sphere
 #
-# Under $\omega = -k\,e_q$ with $e_q = q_d \times q$, the angle to the goal obeys $\dot\theta = -k \sin\theta$.
+# Under $\omega = -k\,e_q$ with $e_q = q_d \times q$, the angle to the target obeys $\dot\theta = -k \sin\theta$.
 # Start very close to the antipode and watch it leave slowly, then arrive.
 
 # %%
@@ -188,7 +188,7 @@ for start in [179.9, 179.0, 170.0, 90.0]:
                     t_eval=np.linspace(0, 14, 500), rtol=1e-9, atol=1e-11)
     plt.plot(sol.t, np.degrees(np.arccos(np.clip(sol.y.T @ qd, -1, 1))), label=f"{start}°")
 plt.xlabel("time (s)")
-plt.ylabel("angle to goal (degrees)")
+plt.ylabel("angle to target (degrees)")
 plt.legend(title="start")
 plt.show()
 

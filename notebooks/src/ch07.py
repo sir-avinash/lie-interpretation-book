@@ -63,7 +63,7 @@ def ctrb(A, B):
 # ## 1. The spherical pendulum
 #
 # A mass $m$ on a rod of length $l$, pushed by a force $F$ on the mass:
-# $\dot q = \omega\times q$, $\ m l\,\dot\omega = q\times(F - m g e_3)$.
+# $\dot q = \omega\times q$, $\ m l^2\,\dot\omega = -m g l\, q\times e_3 + l\, q\times F$.
 #
 # The linear state is $s = (\xi, \delta\omega)$ with $A(t)$, $B(t)$ and the constraint matrix $C(t)$ of Proposition 7.1.
 
@@ -135,7 +135,7 @@ for e in (1e-3, 1e-4):
 # %% [markdown]
 # ### The same linearization from `geomech`
 #
-# `linearize` returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ with the same state $(\xi, \delta\omega)$. The dynamic row matches the hand formula entry by entry. The kinematic row is printed as $q q^\top\hat\omega$ where we wrote $\hat\omega$: the two agree on the constraint subspace and differ off it.
+# `linearize` returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ with the same state $(\xi, \delta\omega)$. The dynamic row matches the hand formula entry by entry. The kinematic row is printed as $q q^\top\omega^\wedge$ where we wrote $\omega^\wedge$: the two agree on the constraint subspace and differ off it.
 
 # %%
 from geomech import S2, Cross, Dot, Scalar, SystemVariables, Vector, check_eom, compute_eom, getScalars, linearize
@@ -163,22 +163,22 @@ wd, Fr = np.cross(qd, rng.normal(size=3)), rng.normal(size=3)
 state = layout.pack(q=qd, omega_q=wd)
 Mg = mod.M_lin(state, Z3, Fr, p)
 Ag, Bg = np.linalg.solve(Mg, mod.A_lin(state, Z3, Fr, p)), np.linalg.solve(Mg, mod.B_lin(state, Z3, Fr, p))
-N = np.linalg.svd(s2_C(qd, wd))[2][2:].T          # basis of the constraint subspace
+Z = np.linalg.svd(s2_C(qd, wd))[2][2:].T          # basis of the constraint subspace
 print("dynamic row, entry by entry :", f"{np.abs(Ag[3:] - s2_A(qd, wd, Fr)[3:]).max():.1e}")
 print("B, entry by entry           :", f"{np.abs(Bg - s2_B(qd)).max():.1e}")
-print("kinematic row on ker C      :", f"{np.abs((Ag - s2_A(qd, wd, Fr)) @ N).max():.1e}")
+print("kinematic row on ker C      :", f"{np.abs((Ag - s2_A(qd, wd, Fr)) @ Z).max():.1e}")
 print("kinematic row off ker C     :", f"{np.abs(Ag[:3] - s2_A(qd, wd, Fr)[:3]).max():.2f}")
 
 # %% [markdown]
-# ## 2. A constrained state, and LQR for the upright pendulum
+# ## 2. A state that is not free, and LQR for the upright pendulum
 #
 # At $q_d = e_3$ the naive rank test gives 4 for a 6-component state. The two missing directions are not states of a pendulum. Reduce to the constraint subspace and the pair is controllable. The Riccati equation on the unreduced pair has no stabilizing solution.
 
 # %%
 A, B = s2_A(E3, Z3, Z3), s2_B(E3)
-N = np.zeros((6, 4))
-N[0, 0] = N[1, 1] = N[3, 2] = N[4, 3] = 1.0
-Ar, Br = N.T @ A @ N, N.T @ B
+Z = np.zeros((6, 4))
+Z[0, 0] = Z[1, 1] = Z[3, 2] = Z[4, 3] = 1.0
+Ar, Br = Z.T @ A @ Z, Z.T @ B
 print("rank, full state   :", np.linalg.matrix_rank(ctrb(A, B)), "of 6")
 print("rank, reduced state:", np.linalg.matrix_rank(ctrb(Ar, Br)), "of 4")
 try:
@@ -190,14 +190,14 @@ except Exception as exc:
 
 Q, Ru = np.diag([10.0, 10.0, 1.0, 1.0]), 0.1 * I3
 P = solve_continuous_are(Ar, Br, Q, Ru)
-K_pend = np.linalg.solve(Ru, Br.T @ P) @ N.T      # 3 x 6, acts on (e_q, omega)
+K_pend = np.linalg.solve(Ru, Br.T @ P) @ Z.T      # 3 x 6, acts on (e_q, omega)
 kp, kd = K_pend[0, 1], K_pend[0, 4]
-print(f"kp = {kp:.2f} N,  kd = {kd:.2f} N s,  poles = {np.sort(np.linalg.eigvals(Ar - Br @ np.linalg.solve(Ru, Br.T @ P)).real).round(2)}")
+print(f"kp = {kp:.2f} N,  kd = {kd:.2f} N·s,  poles = {np.sort(np.linalg.eigvals(Ar - Br @ np.linalg.solve(Ru, Br.T @ P)).real).round(2)}")
 
 # %% [markdown]
 # ### Closed loop, and the region of attraction
 #
-# The feedback is $F = -K\,(e_q, \omega)$ with $e_q = q_d\times q$. From rest the pendulum recovers only if $\cos\theta_0 > mg/k_p$. Replacing $e_q$ by the logarithmic error (length $\theta$ instead of $\sin\theta$) changes nothing to first order and moves the boundary.
+# The feedback is $F = -K\,(e_q, \omega)$ with $e_q = q_d\times q$. From rest the pendulum recovers only if $\cos\theta_0 > mg/k_p$. Replacing $e_q$ by the logarithm error (length $\theta$ instead of $\sin\theta$) changes nothing to first order and moves the boundary.
 
 # %%
 def pend_error(q, mode):
@@ -223,7 +223,7 @@ for k, mode in enumerate(("sin", "log")):
     for deg in (30, 60, 70, 72, 73, 76, 78):
         tt, ang = pend_run(np.radians(deg), mode)
         ax[k].plot(tt, ang, label=f"{deg}°")
-    ax[k].set(title="error e_q" if mode == "sin" else "logarithmic error", xlabel="time (s)", ylim=(0, 180), xlim=(0, 4))
+    ax[k].set(title="error e_q" if mode == "sin" else "logarithm error", xlabel="time (s)", ylim=(0, 180), xlim=(0, 4))
 ax[0].set_ylabel("angle from upright (deg)")
 ax[1].legend(ncol=2, fontsize=8)
 plt.tight_layout()
@@ -231,7 +231,7 @@ plt.tight_layout()
 # %% [markdown]
 # ## 3. The rigid body: one gain for every attitude
 #
-# $J\dot\Omega = J\Omega\times\Omega + \tau$ (set `mgrho` to add a pendulum's gravity torque). The linear state is $(\eta, \delta\Omega)$, with no constraint.
+# $J\dot\Omega + \Omega\times J\Omega = \tau$ (set `mgrho` to add a pendulum's gravity torque). The linear state is $(\eta, \delta\Omega)$, with no constraint.
 
 # %%
 J = np.diag([0.03, 0.05, 0.07])
@@ -248,11 +248,11 @@ def so3_A(Rd, Od, mgrho=Z3):
     return A
 
 
-def e_R(Rd, R):
+def e_R(R, Rd):
     return 0.5 * vee(Rd.T @ R - R.T @ Rd)
 
 
-def e_Om(Rd, R, Od, Om):
+def e_Omega(R, Rd, Om, Od):
     return Om - R.T @ Rd @ Od
 
 
@@ -271,7 +271,7 @@ print(np.round(K_hover, 3))
 # %% [markdown]
 # ### Against an Euler-angle LQR
 #
-# Same plant, same weights, same initial error. The competitor linearizes in ZYX Euler angles about the hold point and feeds back wrapped angle differences. Change `pitch_deg` and watch.
+# Same plant, same weights, same initial error. The competitor linearizes in ZYX Euler angles about the target and feeds back wrapped angle differences. Change `pitch_deg` and watch.
 
 # %%
 def Ry(a):
@@ -303,7 +303,7 @@ def hold(pitch_deg, err_deg, axis=(1, 1, 1), T=3.0):
     eul_d = euler_of(Rd)
     KE = np.linalg.solve(R_att, B_att.T @ solve_continuous_are(euler_A(np.r_[eul_d, Z3], Z3), B_att, Q_att, R_att))
     R0 = Rd @ expm_so3(np.radians(err_deg) * np.array(axis) / np.linalg.norm(axis))
-    laws = {"geometric": lambda t, R, Om: -K_hover @ np.r_[e_R(Rd, R), Om],
+    laws = {"geometric": lambda t, R, Om: -K_hover @ np.r_[e_R(R, Rd), Om],
             "Euler": lambda t, R, Om: -KE @ np.r_[wrap(euler_of(R) - eul_d), Om]}
     out, te = {}, np.linspace(0, T, 601)
     for name, law in laws.items():
@@ -319,9 +319,9 @@ for pitch_deg, ls in ((0, ":"), (85, "-")):
     for name, (t, ang, tq) in hold(pitch_deg, 20).items():
         ax[0].plot(t, ang, ls, label=f"{name}, pitch {pitch_deg}°")
         ax[1].plot(t, tq, ls)
-        print(f"pitch {pitch_deg:2d} deg, {name:9s}: max error {ang.max():6.1f} deg, peak torque {tq.max():5.2f} N m")
+        print(f"pitch {pitch_deg:2d} deg, {name:9s}: max error {ang.max():6.1f} deg, peak torque {tq.max():5.2f} N·m")
 ax[0].set(xlabel="time (s)", ylabel="attitude error (deg)")
-ax[1].set(xlabel="time (s)", ylabel="torque (N m)")
+ax[1].set(xlabel="time (s)", ylabel="torque (N·m)")
 ax[0].legend(fontsize=8)
 plt.tight_layout()
 
@@ -344,7 +344,7 @@ def flip(t):
     return expm_so3(a * n_axis), Od, J @ (dda * n_axis) + np.cross(Od, J @ Od)
 
 
-def riccati(Afun, PT, T, n=1501):
+def riccati(Afun, Pf, T, n=1501):
     Rinv = np.linalg.inv(R_att)
 
     def rhs(t, pv):
@@ -352,7 +352,7 @@ def riccati(Afun, PT, T, n=1501):
         return -(A.T @ P + P @ A - P @ B_att @ Rinv @ B_att.T @ P + Q_att).ravel()
 
     ts = np.linspace(T, 0, n)
-    sol = solve_ivp(rhs, [T, 0], PT.ravel(), t_eval=ts, rtol=1e-9, atol=1e-11, method="LSODA")
+    sol = solve_ivp(rhs, [T, 0], Pf.ravel(), t_eval=ts, rtol=1e-9, atol=1e-11, method="LSODA")
     Ps = sol.y.T.reshape(-1, 6, 6)[::-1]
     return ts[::-1], Ps, np.array([Rinv @ B_att.T @ P for P in Ps])
 
@@ -382,8 +382,8 @@ def flip_law(velocity="transported"):
     def law(t, R, Om):
         t = min(max(t, 0.0), T_flip)
         Rd, Od, tau_d = flip(t)
-        eR, eO = e_R(Rd, R), e_Om(Rd, R, Od, Om)
-        s = np.r_[eR, eO + np.cross(Od, eR)] if velocity == "transported" else np.r_[eR, eO]
+        e_R_val, eO = e_R(R, Rd), e_Omega(R, Rd, Om, Od)
+        s = np.r_[e_R_val, eO + np.cross(Od, e_R_val)] if velocity == "transported" else np.r_[e_R_val, eO]
         return tau_d - K_of_t(t) @ s
     return law
 

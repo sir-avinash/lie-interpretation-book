@@ -61,5 +61,5 @@
   "chain4_constraint_drift": 6.439293542825908e-15,
   "multi_quad_rigid_check_eom": 8.978153941974191e-08,
   "multi_quad_rigid_equations": 8,
-  "catalogue_size": 30
+  "catalog_size": 30
 }

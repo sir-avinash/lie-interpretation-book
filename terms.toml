@@ -259,11 +259,13 @@ math = true
 pattern = 'M_\{k ?\+ ?1\}|M_k\b|M_0\s*=\s*B|M_1\s*=|dM_k'
 use = '\Gamma_k for the matrices of the controllability rank test (M is the mass matrix)'
 where = ['chapters', 'notebooks', 'skills']
+code = true
 
 [[rule]]
 pattern = '\bN\\T|N\^\\top|\bN\^T\b|N = blkdiag'
 use = 'Z for a basis of the constraint subspace (N counts time steps)'
 where = ['chapters', 'notebooks', 'skills']
+code = true
 
 [[rule]]
 pattern = '\\omega\\?,?\s*J\s*q|\\exp\(\\theta\\?,?\s*J\)|\\omega ?J\\\}'
@@ -276,7 +278,7 @@ use = '\theta_{\text{tilt}}, \theta_{\text{yaw}} (\rho is the vector to the cent
 math = true
 
 [[rule]]
-pattern = '\\ell\b|\bL_c\b|\bl_c\b|L_\{?\\?(text|mathrm)?\{?(cable|rod)'
+pattern = '(?<!E_)\\ell\b|\bL_c\b|\bl_c\b|L_\{?\\?(text|mathrm)?\{?(cable|rod)'
 use = 'l for a length (L is the Lagrangian)'
 math = true
 
@@ -290,7 +292,7 @@ pattern = '\be_[xyz]\b|\\hat\{?[xyz]\}?\b|e_\{[xyz]\}'
 use = 'e_1, e_2, e_3 for the standard basis'
 where = ['chapters', 'notebooks', 'skills', 'figures']
 math = true
-allow = ['e_x \cdot \delta x', 'e_x = \epsilon', '\hat R']
+allow = ['e_x \cdot \delta x', 'e_x = \epsilon', '\hat R', '| $e_x$ |']
 
 [[rule]]
 pattern = '\\tilde\{?\\?(R|q|Omega|omega)\b|\bR_e\b|\\Omega_e\b|\bq_e\b|e_\{?\\dot\{?R|\be_w\b|e_\{\\Omega_d|e_\{\\text\{vel\}\}_'
@@ -321,7 +323,7 @@ pattern = 'spatial (angular )?velocit'
 use = 'world-frame angular velocity'
 ignore_case = true
 math = false
-allow = ['the robotics literature also calls']
+allow = ['robotics literature also calls']
 
 [[rule]]
 pattern = 'body[- ]fixed|local frame|vehicle frame|body-frame frame'
@@ -349,13 +351,13 @@ where = ['chapters', 'skills', 'figures']
 math = false
 
 [[rule]]
-pattern = 'almost[ -]global(?!ly)\w*\s+(?!stab|asymp|guarantee|claim|result|converg|tracking)\w+|almost global\b'
+pattern = 'almost[ -]global(?!ly)\w*\s+(?!stab|asymp|guarantee|claim|result|converg|tracking|behav)\w+|almost global\b'
 use = 'almost-global (hyphenated, as an adjective before stability, convergence, tracking, claim, guarantee)'
 ignore_case = true
 math = false
 
 [[rule]]
-pattern = '\b\d+[- ]degrees?\b|flip-over'
+pattern = '\b\d+[- ]degrees?\b(?! of freedom)|flip-over'
 use = 'the ° sign: 90°, half a turn'
 ignore_case = true
 where = ['chapters', 'skills', 'figures']
@@ -403,6 +405,7 @@ pattern = 'logarithmic (error|law|one)|\blog[- ]error|"log:|rotation-vector erro
 use = 'logarithm error'
 ignore_case = true
 where = ['chapters', 'skills', 'figures', 'notebooks']
+code = true
 
 [[rule]]
 pattern = 'restoring action|proportional action|restoring push'
@@ -474,6 +477,7 @@ math = false
 pattern = '\bN m\b|\bN s\b|\bNm\b|\bN-m\b|\bkg m\b|kg m\^2|kg-m|rad/sec|rad s\^|deg/s\b|m/s\^2|m/s2\b|\\text\{N\\,[ms]\}|\\text\{N\\cdot'
 use = 'units as N·m, N·s, kg·m², rad/s, m/s², s⁻¹'
 where = ['chapters', 'skills', 'figures', 'notebooks']
+code = true
 
 [[rule]]
 pattern = '\d %(?![\w(])'
@@ -492,26 +496,31 @@ where = ['chapters', 'skills', 'figures', 'notebooks', 'verify']
 pattern = '\bexp_so3\b|\bso3_exp\b|\bexpm3\b|\bhat_map\b|\bvee_map\b|\bunhat\b|\bskew\('
 use = 'hat, vee, expm_so3, log_so3'
 where = ['notebooks', 'figures', 'skills', 'verify']
+code = true
 
 [[rule]]
 pattern = '\be_Om\b|\be_om\b|\beOmega\b|\beR\b|\be_W\b|\be_w\b'
 use = 'e_R, e_Omega, e_q, e_omega'
 where = ['notebooks', 'figures', 'skills']
+code = true
 
 [[rule]]
 pattern = '\bPsi\(|\bpsi_R\b|\bPsiR\b|\bPsi_SO3\b'
 use = 'Psi_R, Psi_q'
 where = ['notebooks', 'figures', 'skills']
+code = true
 
 [[rule]]
 pattern = '\b(R|q|Omega|omega)_?(des|ref|star|goal)\b(?!\()'
 use = 'Rd, qd, Omegad, omegad'
 where = ['notebooks', 'figures', 'skills']
+code = true
 
 [[rule]]
 pattern = 'def e_R\((Rd|R_d),|def e_q\((qd|q_d),|def Psi_R\((Rd|R_d),|def Psi_q\((qd|q_d),|def e_Omega\((Rd|R_d),'
 use = 'the actual configuration first, the desired one second: e_R(R, Rd)'
 where = ['notebooks', 'figures', 'skills', 'verify']
+code = true
 
 [[rule]]
 pattern = 'Exercise starters|Exercises to start from here|Starting points for exercises'
@@ -532,3 +541,36 @@ where = ['figures']
 pattern = '''color\s*=\s*["'](?!none)|\btab:[a-z]+|["']C[0-9]["']'''
 use = 'the palette constants of tools/figkit.py (INK, INDIGO, TERRACOTTA, TEAL, MUTED)'
 where = ['figures']
+
+[[rule]]
+pattern = '\bG Rd\^T|Rd G\)|\bg[123]\b|G = diag|G = I/2|`G`'
+use = 'D = diag(d1, d2, d3) for the weight of the attitude error function'
+where = ['skills', 'notebooks']
+code = true
+
+[[rule]]
+pattern = '\bP\(T\)|\bM\(q\)\\?,? ?a\b|\bM a \+ b'
+use = 't_f for the final time; M v_dot + b + G u = 0 for the standard form'
+where = ['skills', 'notebooks']
+code = true
+
+[[rule]]
+pattern = '\b(inertial|spatial) (frame|velocity)|set-?point|hold point|\bgyros?\b|\d+ degrees?\b(?! of freedom)|restoring action|log(arithmic)? error'
+use = 'the preferred terms of Appendix A, also inside code spans'
+where = ['skills']
+ignore_case = true
+code = true
+
+[[rule]]
+pattern = '\b(R|q|Omega|omega)_d\b|\bW_d\b|\bw_d\b'
+use = 'Rd, qd, Omegad, omegad in code and code-style formulas (the subscript form R_d belongs to math)'
+where = ['skills', 'notebooks']
+code = true
+math = false
+
+[[rule]]
+pattern = '\b(R|q|x|X|Omega|omega|eta|xi|theta)d?dot\b|\b(R|q|x|s|P|eta|xi|Omega|omega)\x27(?=[ `)])'
+use = 'R_dot, q_dot, Omega_dot for time derivatives in code-style formulas'
+where = ['skills']
+allow = ["slot 'q' must"]
+code = true

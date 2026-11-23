@@ -2,7 +2,7 @@
 # # Chapter 5: Symbolic derivation
 #
 # This notebook reproduces the chapter's examples with `geomech` and gives you a place to start the exercises.
-# The order is: derive the quadrotor with a suspended load, check it, plant a sign error, simulate it,
+# The order is: derive the quadrotor with a cable-suspended load, check it, plant a sign error, simulate it,
 # compare with the thesis equations, then watch the spherical pendulum go through the pipeline stage by stage,
 # and finish with a chain of n links.
 
@@ -55,14 +55,14 @@ print_eom(eom)
 print("check_eom error:", err)
 
 # %% [markdown]
-# `print_eom` prints LaTeX source, one line per variation. Each line is $\int (\text{variation}) \cdot E\,dt = 0$,
-# so the equation of motion is $E = 0$ with $E = -(\text{Euler–Lagrange}) + \text{forcing}$.
+# `print_eom` prints LaTeX source, one line per variation. Each line is $\int (\text{variation}) \cdot E_\xi\,\mathrm{d}t = 0$,
+# so the equation of motion is $E_\xi = 0$ with $E_\xi = -(\text{Euler-Lagrange expression}) + \text{forcing}$.
 # The equation for $\xi_q$ only holds on the tangent plane at $q$.
 #
 # ## 2. Trust, but verify (Section 5.4)
 #
 # Type the load equation by hand, once with each sign of the centripetal term. `check_eom` compares each with a
-# finite-difference Euler–Lagrange residual at random states.
+# finite-difference Euler-Lagrange residual at random states.
 
 # %%
 aL, domega = xL.t_diff().t_diff(), omega.t_diff()
@@ -101,7 +101,7 @@ print("-(omega . v) q   :", -(wv @ vv) * qv)
 # %% [markdown]
 # ## 3. From equations to motion (Section 5.5)
 #
-# Standard form $M a + b + G u = 0$, a generated NumPy module, and a Lie-group integrator.
+# Standard form $M\,\dot v + b + G\,u = 0$, a generated NumPy module, and a Lie-group integrator.
 
 # %%
 from geomech.codegen import StateLayout, collect_params, load_module, module_source
@@ -151,7 +151,7 @@ print("constraint drift, forced run:", traj.max_drift())
 
 # %% [markdown]
 # Compare with the hand-derived model of Wu (2017), eq. (3.4):
-# $(m_Q+m_L)(\ddot x_L + g e_3) = (q\cdot fRe_3 - m_Q l\,\dot q\cdot\dot q)\,q$, $\ m_Q l\,\dot\omega = -q\times fRe_3$,
+# $(m_Q+m_L)(\ddot x_L + g e_3) = (q\cdot fRe_3 - m_Q l\,\|\dot q\|^2)\,q$, $\ m_Q l\,\dot\omega = -q\times fRe_3$,
 # $\ J\dot\Omega + \Omega\times J\Omega = \tau$.
 
 # %%
@@ -289,9 +289,9 @@ plt.ylabel("z (m)")
 plt.show()
 
 # %% [markdown]
-# ## Exercise starters
+# ## Starting points for the exercises
 #
-# **Exercise 5.3.** The 3D pendulum on $SO(3)$. Run it with a trace and find the stage where the term from
+# **Exercise 5.3.** The 3D pendulum on $\mathrm{SO}(3)$. Run it with a trace and find the stage where the term from
 # $\delta\Omega = \dot\eta + \Omega\times\eta$ survives.
 
 # %%

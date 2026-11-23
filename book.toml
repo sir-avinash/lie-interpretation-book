@@ -67,3 +67,9 @@ title = "VII. Case studies"
 chapter = [
   { num = 16, title = "Aerial manipulation, legged and limbless robots" },
 ]
+
+[[part]]
+title = "Reference"
+chapter = [
+  { num = "A", file = "chapters/appA_notation.md", title = "Notation and glossary" },
+]

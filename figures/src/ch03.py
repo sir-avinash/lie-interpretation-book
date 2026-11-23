@@ -43,9 +43,9 @@ def frames():
         s.label(c - 1.62 * E3, reading, size=11.5, color=col)
         return c
 
-    c = body(-1.7, yaw, "reference frame", r"gyro reads $\Omega_d = (0,\,0,\,1)$", INDIGO)
+    c = body(-1.7, yaw, "reference frame", r"gyroscope reads $\Omega_d = (0,\,0,\,1)$", INDIGO)
     s.label(c + 1.45 * E3, "both spin at 1 rad/s about the vertical", dx=118, size=10, color=MUTED, **SANS)
-    body(1.7, yaw @ Roff, "body frame, mounted a quarter turn away", r"gyro reads $\Omega = (0,\,1,\,0)$", TEAL)
+    body(1.7, yaw @ Roff, "body frame, mounted a quarter turn away", r"gyroscope reads $\Omega = (0,\,1,\,0)$", TEAL)
     s.save(OUT / "ch03-frames.svg", pad=0.08)
 
 
@@ -112,31 +112,31 @@ def heights():
         ax.plot(deg[right], y[right], **kw)
 
     ax0.plot(deg, 1 - np.cos(th), color=INDIGO, lw=1.8)
-    ax0.plot(deg, 0.5 * fold**2, color=TERRACOTTA, lw=1.8)
-    ax0.plot(deg, 4 * (1 - np.cos(fold / 2)), color=TEAL, lw=1.8)
-    ax0.text(8, 5.05, r"log:  $\frac{1}{2}\theta^2$", color=TERRACOTTA, ha="left", fontsize=10.5)
+    ax0.plot(deg, 0.5 * fold**2, color=TEAL, lw=1.8)
+    ax0.plot(deg, 4 * (1 - np.cos(fold / 2)), color=TERRACOTTA, lw=1.8)
+    ax0.text(8, 5.05, r"logarithm:  $\frac{1}{2}\theta^2$", color=TEAL, ha="left", fontsize=10.5)
     ax0.text(8, 4.35, r"trace:  $1-\cos\theta$", color=INDIGO, ha="left", fontsize=10.5)
-    ax0.text(8, 3.65, "quaternion:", color=TEAL, ha="left", fontsize=10.5)
-    ax0.text(8, 3.0, r"$4(1-\cos\frac{\theta}{2})$", color=TEAL, ha="left", fontsize=10.5)
+    ax0.text(8, 3.65, "quaternion:", color=TERRACOTTA, ha="left", fontsize=10.5)
+    ax0.text(8, 3.0, r"$4(1-\cos\frac{\theta}{2})$", color=TERRACOTTA, ha="left", fontsize=10.5)
     ax0.set_ylim(0, 5.6)
     ax0.set_title("height  Ψ", fontsize=10, loc="left", color=INK, **SANS)
 
     ax1.axhline(0, color=INK, lw=0.6)
     ax1.plot(deg, np.sin(th), color=INDIGO, lw=1.8)
-    broken(ax1, wrapped, color=TERRACOTTA, lw=1.8)
-    broken(ax1, np.sign(np.cos(th / 2)) * 2 * np.sin(th / 2), color=TEAL, lw=1.8)
-    for y, col in [(np.pi, TERRACOTTA), (-np.pi, TERRACOTTA), (2, TEAL), (-2, TEAL)]:
+    broken(ax1, wrapped, color=TEAL, lw=1.8)
+    broken(ax1, np.sign(np.cos(th / 2)) * 2 * np.sin(th / 2), color=TERRACOTTA, lw=1.8)
+    for y, col in [(np.pi, TEAL), (-np.pi, TEAL), (2, TERRACOTTA), (-2, TERRACOTTA)]:
         ax1.plot([180], [y], "o", ms=4, mfc=PAPER, mec=col, mew=1.0, zorder=5)
     ax1.plot([180], [0], "o", ms=4.5, color=INDIGO, zorder=6)
     ax1.plot([180, 180], [-np.pi, np.pi], color=MUTED, lw=0.6, ls=(0, (2, 2)), zorder=1)
-    ax1.text(8, -1.75, r"log:  $\theta$", color=TERRACOTTA, fontsize=10.5, ha="left")
+    ax1.text(8, -1.75, r"logarithm:  $\theta$", color=TEAL, fontsize=10.5, ha="left")
     ax1.text(8, -2.4, r"trace:  $\sin\theta$", color=INDIGO, fontsize=10.5, ha="left")
-    ax1.text(8, -3.05, r"quaternion:  $2\sin\frac{\theta}{2}$", color=TEAL, fontsize=10.5, ha="left")
+    ax1.text(8, -3.05, r"quaternion:  $2\sin\frac{\theta}{2}$", color=TERRACOTTA, fontsize=10.5, ha="left")
     ax1.annotate("continuous,\nso it must vanish", (180, 0), xytext=(215, 1.2), fontsize=9, color=INDIGO, ha="left", va="center",
                  arrowprops=dict(arrowstyle="-", color=INDIGO, lw=0.7, shrinkB=3), linespacing=1.2, **SANS)
     ax1.text(215, 2.75, "never vanish,\nso they must jump", fontsize=9, color=MUTED, ha="left", va="center", linespacing=1.2, **SANS)
     ax1.set_ylim(-3.5, 3.5)
-    ax1.set_title("slope  = restoring action", fontsize=10, loc="left", color=INK, **SANS)
+    ax1.set_title("slope  = restoring torque", fontsize=10, loc="left", color=INK, **SANS)
     for ax in (ax0, ax1):
         ax.set_xlim(0, 360)
         ax.set_xticks([0, 90, 180, 270, 360])
@@ -149,7 +149,7 @@ def linger():
     fig, ax = new_plot(6.4, 2.8)
     fig.subplots_adjust(left=0.1, right=0.97, bottom=0.2, top=0.95)
     kp, kd = 4.0, 2 * np.sqrt(2)
-    laws = [("trace", np.sin, INDIGO), ("log", lambda a: a, TERRACOTTA), ("quat", lambda a: 2 * np.sin(a / 2), TEAL)]
+    laws = [("trace", np.sin, INDIGO), ("log", lambda a: a, TEAL), ("quat", lambda a: 2 * np.sin(a / 2), TERRACOTTA)]
     tt = np.linspace(0, 10, 1500)
     for name, f, col in laws:
         for th0, ls in [(179.0, "-"), (179.9, (0, (4, 2.5)))]:
@@ -159,8 +159,8 @@ def linger():
                             t_eval=tt, rtol=1e-10, atol=1e-12)
             ax.plot(tt, np.degrees(sol.y[0]), color=col, lw=1.8, ls=ls)
     ax.axhline(0, color=INK, lw=0.6)
-    ax.text(0.95, 60, r"log:  $\theta$", color=TERRACOTTA, fontsize=10.5, ha="right", path_effects=halo())
-    ax.text(1.62, 96, r"quaternion:  $2\sin\frac{\theta}{2}$", color=TEAL, fontsize=10.5, ha="left", path_effects=halo())
+    ax.text(1.3, 22, r"logarithm:  $\theta$", color=TEAL, fontsize=10.5, ha="right", path_effects=halo())
+    ax.text(1.62, 96, r"quaternion:  $2\sin\frac{\theta}{2}$", color=TERRACOTTA, fontsize=10.5, ha="left", path_effects=halo())
     ax.text(3.3, 148, r"trace:  $\sin\theta$,  from 179°", color=INDIGO, fontsize=10.5, ha="left", path_effects=halo())
     ax.text(7.25, 100, "from 179.9°", color=INDIGO, fontsize=10.5, ha="left", path_effects=halo())
     ax.annotate("", (6.42, 40), xytext=(4.2, 40), arrowprops=dict(arrowstyle="<|-|>", color=MUTED, lw=0.8, mutation_scale=8))

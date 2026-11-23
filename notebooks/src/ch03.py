@@ -3,8 +3,8 @@
 #
 # Six experiments from the chapter:
 #
-# 1. Two gyros on bodies that move as one, and why their readings differ.
-# 2. Variation formulas on $SO(3)$ and $S^2$, checked by finite differences along real families of curves.
+# 1. Two gyroscopes on bodies that move as one, and why their readings differ.
+# 2. Variation formulas on $\mathrm{SO}(3)$ and $S^2$, checked by finite differences along real families of curves.
 # 3. Three attitude error functions, and how long each lingers near half a turn.
 # 4. Transport maps: the compatibility test, and an arrow carried around an octant of the sphere.
 # 5. Dead reckoning with a wrong start: invariant errors against Euler-angle differences.
@@ -31,7 +31,7 @@ def vee(M):
     return np.array([M[2, 1], M[0, 2], M[1, 0]])
 
 
-def exp_so3(w):
+def expm_so3(w):
     th = np.linalg.norm(w)
     if th < 1e-12:
         return I3 + hat(w)
@@ -61,7 +61,7 @@ def curve_on_SO3(Omega, R0, T=2.0):
 
 
 # %% [markdown]
-# ## 1. Two gyros, one motion
+# ## 1. Two gyroscopes, one motion
 #
 # The reference spins about the world vertical at 1 rad/s. The body does the same,
 # but its frame is mounted a quarter turn away about its first axis.
@@ -80,12 +80,12 @@ def Rx(a):
 Rd = lambda t: Rz(t)
 R = lambda t: Rz(t) @ Rx(np.pi / 2)
 t = 0.7
-Omega_d = vee(Rd(t).T @ fd(Rd, t))
+Omegad = vee(Rd(t).T @ fd(Rd, t))
 Omega = vee(R(t).T @ fd(R, t))
-print("reference gyro Omega_d =", Omega_d.round(6))
-print("body gyro      Omega   =", Omega.round(6))
-print("naive error  |Omega - Omega_d|          =", np.linalg.norm(Omega - Omega_d).round(4))
-print("transported  |Omega - R^T Rd Omega_d|   =", np.linalg.norm(Omega - R(t).T @ Rd(t) @ Omega_d).round(10))
+print("reference gyroscope Omegad =", Omegad.round(6))
+print("body gyroscope      Omega   =", Omega.round(6))
+print("naive error  |Omega - Omegad|          =", np.linalg.norm(Omega - Omegad).round(4))
+print("transported  |Omega - R^T Rd Omegad|   =", np.linalg.norm(Omega - R(t).T @ Rd(t) @ Omegad).round(10))
 
 # %% [markdown]
 # ## 2. Variations, by finite differences
@@ -96,9 +96,9 @@ print("transported  |Omega - R^T Rd Omega_d|   =", np.linalg.norm(Omega - R(t).T
 # %%
 Omega_fun = lambda t: np.array([np.sin(t), 0.6 * np.cos(2 * t), 0.4 + 0.3 * t])
 eta_fun = lambda t: np.array([0.5 * np.cos(t), 0.3 * t, np.sin(1.3 * t) - 0.2])
-R_ref = curve_on_SO3(Omega_fun, exp_so3([0.3, -0.5, 0.2]))
+R_curve = curve_on_SO3(Omega_fun, expm_so3([0.3, -0.5, 0.2]))
 
-R_eps = lambda t, eps: R_ref(t) @ exp_so3(eps * eta_fun(t))
+R_eps = lambda t, eps: R_curve(t) @ expm_so3(eps * eta_fun(t))
 Omega_eps = lambda t, eps: vee(R_eps(t, eps).T @ fd(lambda s: R_eps(s, eps), t))
 
 t = 0.9
@@ -113,21 +113,21 @@ print("eta_dot alone     :", fd(eta_fun, t).round(6), "  <- misses the cross ter
 # Compare three candidate formulas for $\delta\omega$.
 
 # %%
-q_ref = lambda t: unit([np.cos(t) * np.cos(0.4 * t), np.sin(t) * np.cos(0.4 * t) + 0.3, 0.5 + np.sin(0.4 * t)])
+q_curve = lambda t: unit([np.cos(t) * np.cos(0.4 * t), np.sin(t) * np.cos(0.4 * t) + 0.3, 0.5 + np.sin(0.4 * t)])
 a_fun = lambda t: np.array([np.sin(0.7 * t) + 0.2, np.cos(1.1 * t), 0.5 * t])
 
 
 def xi_fun(t):
-    q = q_ref(t)
+    q = q_curve(t)
     return a_fun(t) - (a_fun(t) @ q) * q
 
 
-q_eps = lambda t, eps: exp_so3(eps * xi_fun(t)) @ q_ref(t)
+q_eps = lambda t, eps: expm_so3(eps * xi_fun(t)) @ q_curve(t)
 omega_eps = lambda t, eps: np.cross(q_eps(t, eps), fd(lambda s: q_eps(s, eps), t))
 
 t = 0.8
-q, xi, xidot = q_ref(t), xi_fun(t), fd(xi_fun, t)
-omega = np.cross(q, fd(q_ref, t))
+q, xi, xidot = q_curve(t), xi_fun(t), fd(xi_fun, t)
+omega = np.cross(q, fd(q_curve, t))
 domega_fd = fd(lambda e: omega_eps(t, e), 0.0, h=1e-4)
 print("finite difference        :", domega_fd.round(6))
 print("xi_dot - 2 omega x xi    :", (xidot - 2 * np.cross(omega, xi)).round(6), "  <- correct")
@@ -157,7 +157,7 @@ for y in (side * fold, side * 2 * np.sin(fold / 2)):
     y[deg == 180] = np.nan
     ax[1].plot(deg, y)
 ax[1].axhline(0, color="k", lw=0.5)
-ax[1].set_title("slope = restoring action")
+ax[1].set_title("slope = restoring torque")
 for a in ax:
     a.set_xlabel("error angle (degrees)")
     a.set_xticks([0, 90, 180, 270, 360])
@@ -199,44 +199,44 @@ print(f"unstable rate at 180 deg: {lam:.3f} 1/s, so {np.log(10) / lam:.2f} s per
 # ## 4. Transport
 #
 # **The compatibility test.** Move $R$ and $R_d$ along arbitrary curves and compare $\dot\Psi$ by finite differences
-# with $e\cdot e_{\text{vel}}$. Run it for the transported velocity error and for the naive difference, with equal
+# with $e\cdot e_{\text{vel}}$. Run it for the velocity error and for the naive difference, with equal
 # and unequal weights.
 
 # %%
-def Psi(R, Rd, G):
-    return np.trace(G @ (I3 - Rd.T @ R))
+def Psi_R(R, Rd, D):
+    return np.trace(D @ (I3 - Rd.T @ R))
 
 
-def e_R(R, Rd, G):
-    return vee(G @ Rd.T @ R - R.T @ Rd @ G)
+def e_R(R, Rd, D):
+    return vee(D @ Rd.T @ R - R.T @ Rd @ D)
 
 
 Omd_fun = lambda t: np.array([0.3 * np.cos(t), -0.5, 0.4 * np.sin(2 * t)])
-Rd_ref = curve_on_SO3(Omd_fun, exp_so3([-0.4, 0.1, 0.6]))
+Rd_curve = curve_on_SO3(Omd_fun, expm_so3([-0.4, 0.1, 0.6]))
 t = 1.1
-R, Rd, Om, Omd = R_ref(t), Rd_ref(t), Omega_fun(t), Omd_fun(t)
-for name, G in [("equal weights  ", I3 / 2), ("unequal weights", np.diag([0.9, 0.6, 0.3]))]:
-    dPsi = fd(lambda s: Psi(R_ref(s), Rd_ref(s), G), t)
+R, Rd, Om, Omd = R_curve(t), Rd_curve(t), Omega_fun(t), Omd_fun(t)
+for name, D in [("equal weights  ", I3 / 2), ("unequal weights", np.diag([0.9, 0.6, 0.3]))]:
+    dPsi = fd(lambda s: Psi_R(R_curve(s), Rd_curve(s), D), t)
     print(name, "| dPsi/dt =", f"{dPsi:+.6f}",
-          "| e_R . (Om - R^T Rd Omd) =", f"{e_R(R, Rd, G) @ (Om - R.T @ Rd @ Omd):+.6f}",
-          "| e_R . (Om - Omd) =", f"{e_R(R, Rd, G) @ (Om - Omd):+.6f}")
+          "| e_R . (Om - R^T Rd Omd) =", f"{e_R(R, Rd, D) @ (Om - R.T @ Rd @ Omd):+.6f}",
+          "| e_R . (Om - Omd) =", f"{e_R(R, Rd, D) @ (Om - Omd):+.6f}")
 
 C = 0.5 * (np.trace(R.T @ Rd) * I3 - R.T @ Rd)
-print("d/dt e_R, finite difference:", fd(lambda s: e_R(R_ref(s), Rd_ref(s), I3 / 2), t).round(6))
+print("d/dt e_R, finite difference:", fd(lambda s: e_R(R_curve(s), Rd_curve(s), I3 / 2), t).round(6))
 print("C e_Omega                  :", (C @ (Om - R.T @ Rd @ Omd)).round(6))
 
 # %% [markdown]
 # On the sphere: $e_q = q_d\times q$, $e_\omega = \omega - (I - qq^\top)\omega_d$.
 
 # %%
-qd_ref = lambda t: unit([0.4 + np.sin(0.9 * t), np.cos(0.6 * t), 0.8 + 0.2 * t])
+qd_curve = lambda t: unit([0.4 + np.sin(0.9 * t), np.cos(0.6 * t), 0.8 + 0.2 * t])
 t = 0.6
-q, qd = q_ref(t), qd_ref(t)
-om, omd = np.cross(q, fd(q_ref, t)), np.cross(qd, fd(qd_ref, t))
+q, qd = q_curve(t), qd_curve(t)
+om, omd = np.cross(q, fd(q_curve, t)), np.cross(qd, fd(qd_curve, t))
 e_q = np.cross(qd, q)
-e_om = om - (I3 - np.outer(q, q)) @ omd
-print("dPsi_q/dt      =", fd(lambda s: 1 - q_ref(s) @ qd_ref(s), t).round(8))
-print("e_q . e_omega  =", (e_q @ e_om).round(8))
+e_omega = om - (I3 - np.outer(q, q)) @ omd
+print("dPsi_q/dt      =", fd(lambda s: 1 - q_curve(s) @ qd_curve(s), t).round(8))
+print("e_q . e_omega  =", (e_q @ e_omega).round(8))
 
 # %% [markdown]
 # **An arrow around an octant.** Parallel transport along a great circle from $a$ to $b$ is the rotation
@@ -244,7 +244,7 @@ print("e_q . e_omega  =", (e_q @ e_om).round(8))
 
 # %%
 def carry(v, a, b):
-    return exp_so3(np.arccos(np.clip(a @ b, -1, 1)) * unit(np.cross(a, b))) @ v
+    return expm_so3(np.arccos(np.clip(a @ b, -1, 1)) * unit(np.cross(a, b))) @ v
 
 
 v0 = e1                       # at the pole e3, pointing down the meridian towards e1
@@ -257,13 +257,13 @@ print("turned by", np.degrees(np.arccos(v0 @ v3)).round(6), "degrees; enclosed a
 # %% [markdown]
 # ## 5. Dead reckoning with a wrong start
 #
-# Truth and estimate integrate the same gyro signal. The estimate starts 5° wrong.
+# Truth and estimate integrate the same gyroscope signal. The estimate starts 5° wrong.
 
 # %%
-gyro = lambda t: np.array([1.2 * np.sin(1.3 * t), 0.9 * np.cos(0.7 * t), 0.8 + 0.5 * np.sin(2.1 * t)])
+gyroscope = lambda t: np.array([1.2 * np.sin(1.3 * t), 0.9 * np.cos(0.7 * t), 0.8 + 0.5 * np.sin(2.1 * t)])
 R0 = Rz(0.3) @ Rx(-0.2)
-R_true = curve_on_SO3(gyro, R0, T=10)
-R_hat = curve_on_SO3(gyro, R0 @ exp_so3(np.radians(5) * unit([1, 2, -1])), T=10)
+R_true = curve_on_SO3(gyroscope, R0, T=10)
+R_hat = curve_on_SO3(gyroscope, R0 @ expm_so3(np.radians(5) * unit([1, 2, -1])), T=10)
 
 
 def euler_zyx(R):
@@ -300,18 +300,18 @@ print(f"Euler-angle difference wanders between {min(eul):.1f} and {max(eul):.1f}
 
 # %%
 t = 1.0
-Rd, Omd = Rd_ref(t), Omd_fun(t)
+Rd, Omd = Rd_curve(t), Omd_fun(t)
 eta, etadot = eta_fun(t), fd(eta_fun, t)
 dOmega = etadot + np.cross(Omd, eta)
-print("  eps   |e_R - eps eta|  |e_Om - eps eta_dot|  |e_Om - eps dOmega|")
+print("  eps   |e_R - eps eta|  |e_Omega - eps eta_dot|  |e_Omega - eps dOmega|")
 for eps in (0.4, 0.2, 0.1, 0.05):
-    Rp = lambda s: Rd_ref(s) @ exp_so3(eps * eta_fun(s))
+    Rp = lambda s: Rd_curve(s) @ expm_so3(eps * eta_fun(s))
     Rn = Rp(t)
     Omn = vee(Rn.T @ fd(Rp, t))
-    eR = e_R(Rn, Rd, I3 / 2)
-    eOm = Omn - Rn.T @ Rd @ Omd
-    print(f"  {eps:<5} {np.linalg.norm(eR - eps * eta):.2e}         {np.linalg.norm(eOm - eps * etadot):.2e}"
-          f"              {np.linalg.norm(eOm - eps * dOmega):.2e}")
+    e_R_val = e_R(Rn, Rd, I3 / 2)
+    e_Omega_val = Omn - Rn.T @ Rd @ Omd
+    print(f"  {eps:<5} {np.linalg.norm(e_R_val - eps * eta):.2e}         {np.linalg.norm(e_Omega_val - eps * etadot):.2e}"
+          f"              {np.linalg.norm(e_Omega_val - eps * dOmega):.2e}")
 
 # %% [markdown]
 # ## Starting points for the exercises
@@ -319,5 +319,5 @@ for eps in (0.4, 0.2, 0.1, 0.05):
 # - **Exercise 3.3.** Replace `xi_fun` above by `a_fun` (not perpendicular to $q$) and rerun the $S^2$ cell.
 # - **Exercise 3.5.** In `respond`, set a nonzero initial rate and add noise to the angle before it enters `laws[law]`.
 #   For the logarithm and quaternion laws, wrap the angle into $(-\pi, \pi]$ first.
-# - **Exercise 3.6.** Replace the transport in `e_om` by the parallel transport `carry(omd, qd, q)` and rerun the test.
-# - **Exercise 3.7.** Difference `R(t) @ Rd(t).T` in the first experiment and compare with $w - w_d$ in the world frame.
+# - **Exercise 3.6.** Replace the transport in `e_omega` by the parallel transport `carry(omd, qd, q)` and rerun the test.
+# - **Exercise 3.7.** Difference `R(t) @ Rd(t).T` in the first experiment and compare with $\omega - \omega_d$ in the world frame.

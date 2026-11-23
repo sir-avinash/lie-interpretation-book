@@ -26,7 +26,7 @@ Target length is 3000 to 4500 words of prose, not counting display math or the r
 - Do not announce what you are about to say. Say it.
 - Address the reader as "you". Use "we" for shared derivation steps.
 - Define a term once, in bold, at first use. Do not rename it later.
-- British or American spelling is fine. Be consistent within a chapter.
+- American spelling throughout: linearization, modeling, stabilize, center, behavior, maneuver, favorite, neighbor. This holds in code identifiers and plot labels too.
 - No claims you have not checked. No invented quotes, numbers or citations. Cite only works you can identify precisely. If a source PDF is available, check the claim against it.
 - Never mention how the book was produced, which tools generated it, or what any layout was modelled on.
 
@@ -81,27 +81,19 @@ Rules that keep the build green:
 - Math is KaTeX. A LaTeX error fails the build. Use `\begin{bmatrix}`, `\begin{aligned}`, `\tfrac`, `\operatorname`. One `\label` per display.
 - Shared macros are in `book.toml`: `\R`, `\SO`, `\so`, `\SE`, `\se`, `\T` (transpose, as in `R\T`), `\tr`, `\quat`, `\Ad`, `\ad`, `\dd`, `\ddt`.
 
-Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-linearization` (7).
+Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-linearization` (7), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
 
-## Notation
+## Notation and terminology
 
-Fixed for the whole book. Do not introduce alternatives.
+`chapters/appA_notation.md` is the single source of truth. It fixes every symbol, every convention (frames, signs, orderings, the direction of the cable vector) and every technical term, and it says which variants are not used. `terms.toml` holds the same decisions as machine-checkable rules, and `python tools/check_terms.py` enforces them on chapters, figure scripts, notebook sources and skills.
 
-| Object | Symbol and convention |
-| :-- | :-- |
-| Attitude | $R \in \SO(3)$, body to world. $\dot R = R\,\Omega^\wedge$ with $\Omega$ in the body frame. |
-| Hat and vee | $x^\wedge y = x \times y$, $(x^\wedge)^\vee = x$. Written as postfix `^\wedge`, `^\vee`. |
-| Direction | $q \in S^2$. $\dot q = \omega \times q$ with $\omega \cdot q = 0$. |
-| Position | $x \in \R^3$, velocity $v = \dot x$. |
-| Unit quaternion | $\quat = (q_0, q_v) \in S^3$. The letter $q$ alone is always a direction. |
-| Variation on $\SO(3)$ | $\delta R = R\,\eta^\wedge$, $\eta \in \R^3$. |
-| Variation on $S^2$ | $\delta q = \xi \times q$, $\xi \cdot q = 0$. |
-| Attitude error | $\Psi_R = \tfrac12\tr(I - R_d\T R)$, $e_R = \tfrac12(R_d\T R - R\T R_d)^\vee$, $e_\Omega = \Omega - R\T R_d\,\Omega_d$. |
-| Direction error | $\Psi_q = 1 - q\cdot q_d$, $e_q = q_d \times q$. |
-| Desired quantities | subscript $d$. |
-| Inertia, mass, gravity | $J$, $m$, $g$. Gravity acts along $-e_3$. |
-| Inputs | torque $\tau$ (body frame), thrust $f$, generic input $u$. |
-| Standard basis | $e_1, e_2, e_3$. Identity $I$. |
+- Read the appendix before writing. Use its symbols and its terms. Do not introduce alternatives.
+- A new symbol or term is added to the appendix, and a rule for its variants to `terms.toml`, before it is used in a chapter.
+- A symbol means one thing in the whole book. If a letter you want is taken, choose another. Do not reuse it locally.
+- When a later chapter restates an equation from an earlier one, it uses the same form and cites it with `[](#label)`.
+- Point to a specific definition, equation, figure or section, not to a whole chapter, whenever one exists.
+- Notebooks and skills are read outside the book, where the macros of `book.toml` do not exist. They write the same notation in plain LaTeX: `R_d^\top R`, `\mathrm{SO}(3)`, `\mathbb{R}`, `\operatorname{tr}`.
+- Code uses the function names `hat`, `vee`, `expm_so3`, `log_so3`, `Psi_R`, `Psi_q`, `e_R`, `e_Omega`, `e_q`, `e_omega`, with the actual configuration before the desired one: `e_R(R, Rd)`. Desired quantities are `Rd`, `qd`, `Omegad`, `omegad`, and a time derivative in a code-style formula is `R_dot`, `Omega_dot`. Short local names for velocities inside a cell (`Om`, `om`) are tolerated.
 
 ## Figures
 
@@ -110,7 +102,8 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - **Compute, never fake.** Every point is the projection of real 3D geometry through `Scene`. Hidden parts are found by the kit (`sphere_curve`, `point_visible`, `ribbons`).
 - **One question per figure.** If the caption needs "and also", make two figures.
 - **Stroke tiers.** Silhouette thickest, vectors next, construction lines thin, hidden lines dashed. Use the kit's constants.
-- **Palette.** Ink for structure. Indigo for the main object or the "good" path. Terracotta for the contrasting object, error or failure. Teal for a third role. Pastel fills only.
+- **Palette.** Ink for structure. Indigo for the main object or the "good" path. Terracotta for the contrasting object, error or failure. Teal for a third role. Pastel fills only. A quantity keeps its color across chapters: the trace error is indigo and the logarithm error is teal wherever they are plotted.
+- **Labels use the book's symbols and terms exactly.** A label is checked by `tools/check_terms.py` like any sentence.
 - **Labels sit next to what they name**, with the halo the kit applies. Math in labels uses `$...$`. Words use `fontfamily="Source Sans 3"` at size 9 to 10.
 - Mathtext in labels cannot draw a postfix `^\wedge` or `\mathcal` well. Keep hats and calligraphic letters out of figure labels.
 - **Look at every figure** before you keep it. Rasterise it and check for overlaps, clipped text, edge-on planes and labels that landed on a line.
@@ -130,7 +123,7 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 
 Each chapter has a notebook and a skill.
 
-- **Notebook.** Source in `notebooks/src/chNN.py` (percent format, `# %%` and `# %% [markdown]` cells). Build and execute with `python tools/make_notebook.py notebooks/src/chNN.py notebooks/chNN_name.ipynb`. It must run top to bottom on a clean Colab runtime: install anything beyond NumPy, SciPy and Matplotlib in its first cell. It lets the reader reproduce the chapter's examples and start the exercises.
+- **Notebook.** Source in `notebooks/src/chNN.py` (percent format, `# %%` and `# %% [markdown]` cells). Build and execute with `python tools/make_notebook.py notebooks/src/chNN.py notebooks/chNN_name.ipynb`. It must run top to bottom on a clean Colab runtime: install anything beyond NumPy, SciPy and Matplotlib in its first cell. It lets the reader reproduce the chapter's examples and start the exercises. Its title is `# Chapter N: Title`, its section titles follow the chapter's, and its last section is "Starting points for the exercises".
 - **Skill.** `skills/chNN-name/SKILL.md` with valid front matter (`name`, `description`). It is a procedure a researcher or an agent follows to apply the chapter to their own system: when to use it, the steps, the checks that must pass, the failure modes. Formulas in a skill must match the chapter exactly. No narrative.
 
 ## Build
@@ -138,8 +131,9 @@ Each chapter has a notebook and a skill.
 ```bash
 python figures/src/ch03.py
 python verify/ch03.py
+python tools/check_terms.py
 python tools/build.py --only 3 --out /tmp/draft-ch3
 python tools/build.py
 ```
 
-The full build fails on any broken reference, duplicate label, missing figure or LaTeX error.
+The full build fails on any broken reference, duplicate label, missing figure or LaTeX error. `tools/check_terms.py` must report 0 violations before a chapter is merged.

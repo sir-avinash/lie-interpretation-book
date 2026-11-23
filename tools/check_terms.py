@@ -17,6 +17,8 @@ notebook cell.
                                       # false = only outside, omitted = both
     ignore_case = true                # optional
     allow = ['inertial frame of the gyroscope']   # optional literal exceptions
+    code = true                       # optional: also check inside Markdown
+                                      # code spans and fences (skipped by default)
 
 `allow` entries are literal substrings: a match is ignored when its line
 contains one of them. `where` may also name 'verify'. Patterns are searched
@@ -73,7 +75,7 @@ def main() -> None:
                 for m in regex.finditer(text):
                     if inside(m.start(), off):
                         continue
-                    if is_markdown and inside(m.start(), code):
+                    if is_markdown and not rule.get("code") and inside(m.start(), code):
                         continue
                     if "math" in rule and inside(m.start(), math) != rule["math"]:
                         continue

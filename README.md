@@ -24,6 +24,7 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 14 | Filtering on Lie groups | planned |
 | 15 | Equivariant learning and residual control | planned |
 | 16 | Aerial manipulation, legged and limbless robots | planned |
+| A | Notation and glossary | written |
 
 ## What each chapter comes with
 
@@ -43,7 +44,8 @@ notebooks/src/     notebook sources; built to notebooks/*.ipynb
 skills/            one skill per chapter
 tools/             build script, cross-reference filter, figure kit
 docs/              the built site (GitHub Pages serves this directory)
-AUTHORING.md       how chapters are written: voice, markup, notation
+AUTHORING.md       how chapters are written: voice, markup, figures
+terms.toml         vocabulary and notation rules (python tools/check_terms.py)
 ```
 
 ## Build
@@ -64,6 +66,10 @@ for f in figures/src/ch*.py; do python "$f"; done
 
 ```bash
 for f in verify/ch*.py; do python "$f"; done
+```
+
+```bash
+python tools/check_terms.py
 ```
 
 ```bash

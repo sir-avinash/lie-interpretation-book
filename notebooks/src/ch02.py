@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Chapter 2. The manifolds robots live on
+# # Chapter 2: The manifolds robots live on
 #
 # This notebook reproduces every number in the chapter and gives you starting points for the exercises.
 # It needs only NumPy, SciPy and Matplotlib.
@@ -25,7 +25,7 @@ def vee(M):
     return np.array([M[2, 1], M[0, 2], M[1, 0]])
 
 
-def exp_so3(phi):
+def expm_so3(phi):
     """Rodrigues' formula: exp(hat(phi))."""
     th = np.linalg.norm(phi)
     if th < 1e-12:
@@ -47,11 +47,11 @@ def angle(R):
 
 
 def Rx(a):
-    return exp_so3(a * E1)
+    return expm_so3(a * E1)
 
 
 def Rz(a):
-    return exp_so3(a * E3)
+    return expm_so3(a * E3)
 
 # %% [markdown]
 # ## 1. The opening puzzle: a cable that stretches
@@ -69,7 +69,7 @@ print(f"cable length after {T:.0f} s: {lengths[-1]:.4f}")
 print(f"predicted (1 + h^2 w^2)^(N/2): {(1 + h**2 * w**2) ** (T / h / 2):.4f}")
 
 # %% [markdown]
-# ## 2. Tangent vectors
+# ## 2. Curved sets and their velocities
 #
 # The velocity of any curve on the sphere is perpendicular to $q$, and $\omega = q \times \dot q$ recovers it.
 
@@ -88,17 +88,17 @@ print("omega x q - q_dot =", np.cross(omega, q0) - qdot)
 
 # %% [markdown]
 # The same for a rotation: $R^\top \dot R$ is skew-symmetric, so $\dot R = R\,\Omega^\wedge$.
-# The spatial velocity is $\omega = R\,\Omega$, and $R\,x^\wedge R^\top = (Rx)^\wedge$.
+# The world-frame angular velocity is $\omega = R\,\Omega$, and $R\,x^\wedge R^\top = (Rx)^\wedge$.
 
 # %%
 rng = np.random.default_rng(0)
-R = exp_so3(rng.normal(size=3))
+R = expm_so3(rng.normal(size=3))
 Om = rng.normal(size=3)
-Rdot = (R @ exp_so3(d * Om) - R @ exp_so3(-d * Om)) / (2 * d)
+Rdot = (R @ expm_so3(d * Om) - R @ expm_so3(-d * Om)) / (2 * d)
 S = R.T @ Rdot
 print("skew part check   :", f"{np.abs(S + S.T).max():.1e}")
 print("body velocity     :", vee(S), "(should be", Om, ")")
-print("spatial velocity  :", vee(Rdot @ R.T), "= R Omega =", R @ Om)
+print("world-frame omega :", vee(Rdot @ R.T), "= R Omega =", R @ Om)
 x = rng.normal(size=3)
 print("adjoint identity  :", f"{np.abs(R @ hat(x) @ R.T - hat(R @ x)).max():.1e}")
 
@@ -111,17 +111,17 @@ print("phone flat    :", I3.T @ w_world)
 print("phone upright :", Rx(np.pi / 2).T @ w_world)
 
 # %% [markdown]
-# ## 3. Exponential and logarithm
+# ## 3. From a velocity to a rotation: exp and log
 
 # %%
 phi = (np.pi / 2) * np.array([1.0, 1.0, 0.0]) / np.sqrt(2)
-R_ex = exp_so3(phi)
+R_ex = expm_so3(phi)
 print(R_ex)
 print("matches scipy expm:", np.allclose(R_ex, expm(hat(phi))))
 print("angle from trace  :", angle(R_ex), "(pi/2 =", np.pi / 2, ")")
 print("log               :", log_so3(R_ex), "(theta u =", phi, ")")
 u = np.array([0.0, 0.6, 0.8])
-print("exp(pi u) == exp(-pi u):", np.allclose(exp_so3(np.pi * u), exp_so3(-np.pi * u)))
+print("exp(pi u) == exp(-pi u):", np.allclose(expm_so3(np.pi * u), expm_so3(-np.pi * u)))
 
 # %% [markdown]
 # On the sphere, $\exp_q(v) = \cos\|v\|\,q + \sin\|v\|\,v/\|v\|$.
@@ -137,7 +137,7 @@ p = exp_s2(E3, v)
 print("landed at", p, " norm", np.linalg.norm(p), " arc length", np.arccos(p @ E3))
 
 # %% [markdown]
-# ## 4. Order matters
+# ## 4. Order matters: the bracket
 #
 # The book: quarter turns about the desk's $x$ and $z$ axes, in both orders.
 # Turns about fixed axes multiply on the left.
@@ -151,45 +151,45 @@ rel = x_then_z.T @ z_then_x
 print(f"the two results differ by {np.degrees(angle(rel)):.1f} degrees about", log_so3(rel) / angle(rel))
 
 # %% [markdown]
-# Small rotations: the leftover of $\exp(\epsilon a)\exp(\epsilon b)\exp(-\epsilon a)\exp(-\epsilon b)$
+# Small rotations: the leftover of $\exp(\epsilon a^\wedge)\exp(\epsilon b^\wedge)\exp(-\epsilon a^\wedge)\exp(-\epsilon b^\wedge)$
 # is $\epsilon^2\, a \times b$ to leading order.
 
 # %%
 a, b = E1, E2
 for eps in (0.1, 0.01):
-    C = exp_so3(eps * a) @ exp_so3(eps * b) @ exp_so3(-eps * a) @ exp_so3(-eps * b)
+    C = expm_so3(eps * a) @ expm_so3(eps * b) @ expm_so3(-eps * a) @ expm_so3(-eps * b)
     c = log_so3(C)
     print(f"eps = {eps}: leftover {np.linalg.norm(c):.6f} rad ({np.degrees(np.linalg.norm(c)):.3f} deg), "
           f"log / eps^2 = {c / eps**2}")
 print("bracket identity:", np.allclose(hat(a) @ hat(b) - hat(b) @ hat(a), hat(np.cross(a, b))))
 
 # %% [markdown]
-# ## 5. SE(3) and its adjoint
+# ## 5. Position and attitude together: SE(3) and its adjoint
 #
-# Twists are ordered $(V, \Omega)$, linear part first.
+# Twists are ordered $\zeta = (V, \Omega)$, linear part first.
 
 # %%
 def se3(R, x):
-    g = np.eye(4)
-    g[:3, :3], g[:3, 3] = R, x
-    return g
-
-
-def hat6(xi):
-    X = np.zeros((4, 4))
-    X[:3, :3], X[:3, 3] = hat(xi[3:]), xi[:3]
+    X = np.eye(4)
+    X[:3, :3], X[:3, 3] = R, x
     return X
 
 
-def Ad(g):
-    R, x = g[:3, :3], g[:3, 3]
+def hat6(zeta):
+    M = np.zeros((4, 4))
+    M[:3, :3], M[:3, 3] = hat(zeta[3:]), zeta[:3]
+    return M
+
+
+def Ad(X):
+    R, x = X[:3, :3], X[:3, 3]
     return np.block([[R, hat(x) @ R], [np.zeros((3, 3)), R]])
 
 
-g = se3(R, rng.normal(size=3))
-xi = rng.normal(size=6)
-lhs = g @ hat6(xi) @ np.linalg.inv(g)
-print("g xi^ g^-1 = (Ad_g xi)^ :", np.allclose(lhs, hat6(Ad(g) @ xi)))
+X = se3(R, rng.normal(size=3))
+zeta = rng.normal(size=6)
+lhs = X @ hat6(zeta) @ np.linalg.inv(X)
+print("X zeta^ X^-1 = (Ad_X zeta)^ :", np.allclose(lhs, hat6(Ad(X) @ zeta)))
 
 # %% [markdown]
 # ## 6. A product manifold: quadrotor with a cable-suspended load
@@ -209,7 +209,7 @@ def step(state, vel, h):
     """One step on R^3 x S^2 x SO(3): Euler on the flat factor, exponential on the curved ones."""
     xL, q, R = state
     vL, om, Om = vel
-    return xL + h * vL, exp_so3(h * om) @ q, R @ exp_so3(h * Om)
+    return xL + h * vL, expm_so3(h * om) @ q, R @ expm_so3(h * Om)
 
 
 state = (xL, q, I3)
@@ -232,7 +232,7 @@ def integrate(kind, h, T=10.0, midpoint=False):
     R, out = I3.copy(), [I3.copy()]
     for k in range(round(T / h)):
         Om = Omega_of((k + 0.5) * h) if midpoint else Omega_of(k * h)
-        R = R + h * R @ hat(Om) if kind == "euler" else R @ exp_so3(h * Om)
+        R = R + h * R @ hat(Om) if kind == "euler" else R @ expm_so3(h * Om)
         out.append(R)
     return np.array(out)
 
@@ -271,9 +271,9 @@ print("projected matrix is a rotation:", np.allclose(R_proj.T @ R_proj, I3), f"d
 print(f"but it is {np.degrees(angle(ref[-1].T @ R_proj)):.3f} deg from the true attitude")
 
 # %% [markdown]
-# ## Exercise starters
+# ## Starting points for the exercises
 #
-# **Exercise 2.1.** Change `h` in section 1 and compare with $\exp(\tfrac12 h\,\|\omega\|^2 T)$.
+# **Exercise 2.1.** Change `h` in section 1 and compare with $\exp(\tfrac12 h\,\|\omega\|^2 t_f)$.
 #
 # **Exercise 2.4.** Repeat the book experiment with 10° turns:
 

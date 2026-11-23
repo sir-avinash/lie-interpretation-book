@@ -9,7 +9,7 @@ Procedure for Chapter 5. Tested with `geomech` 1.1.0. For the full API, the cata
 
 ## When to use
 
-- The configuration is a product of $\R$, $\R^3$, $S^1$, $S^2$, $\SO(3)$. $\SE(3)$ is $\R^3 \times \SO(3)$ with the inertial velocity $\dot x$.
+- The configuration is a product of $\mathbb{R}$, $\mathbb{R}^3$, $S^1$, $S^2$, $\mathrm{SO}(3)$. $\mathrm{SE}(3)$ is $\mathbb{R}^3 \times \mathrm{SO}(3)$ with the world-frame velocity $\dot x$.
 - The Lagrangian depends on configurations and velocities only.
 - Constraints are already built into the configuration space (a taut cable is a point of $S^2$).
 
@@ -31,10 +31,10 @@ Do not use it for rolling constraints, closed kinematic chains, contact or impac
 1. **Install and record the version.** `pip install geomech`, then report `geomech.__version__`.
 2. **Declare symbols.** Constants need `attr=["Constant"]` (case-sensitive). Inertias need `attr=["Constant", "SymmetricMatrix"]`. An $S^1$ axis needs `attr=["Constant", "UnitNorm"]`. One half is `Scalar("0.5", value=0.5, attr=["Constant"])`.
 3. **Write $L$ and $\delta W$.** $L$ is kinetic minus potential energy, with gravity along $-e_3$. A force $F$ at a point contributes `Dot(delta_of_point, F)`, where the variation of the point is built term by term: $x \to$ `x.delta()`, $q \to$ `Cross(xi, q)`, $R\rho \to$ `R * Cross(eta, rho)`. A body torque $\tau$ contributes `Dot(eta, tau)`.
-4. **List the configuration variables** in `SystemVariables(scalars=[...], vectors=[...], matrices=[...])`. $S^1$ and $S^2$ points go in `vectors`, $\SO(3)$ in `matrices`. Never list $\omega$ or $\Omega$.
+4. **List the configuration variables** in `SystemVariables(scalars=[...], vectors=[...], matrices=[...])`. $S^1$ and $S^2$ points go in `vectors`, $\mathrm{SO}(3)$ in `matrices`. Never list $\omega$ or $\Omega$.
 5. **Derive.** `eom = compute_eom(L, dW, variables)`. The result is `{name: (variation, E)}`. Pass `trace=EOMTrace()` and call `trace.summary()` to see every stage.
 6. **Verify.** `err = check_eom(L, dW, variables, eom, inputs=inputs)`. Report the number.
-7. **Standard form.** `sf = to_standard_form(eom, variables, inputs)` gives $M(q)\,a + b(q,v) + G(q)\,u = 0$ per equation.
+7. **Standard form.** `sf = to_standard_form(eom, variables, inputs)` gives $M\,\dot v + b + G\,u = 0$, with $v$ the stacked velocities, per equation.
 8. **Generate code and simulate.**
 
 ```python
@@ -60,9 +60,9 @@ traj = simulate(plant, x0, t_final, p, u=u) # constant array or a function
 
 ## Conventions to state with every result
 
-- Each equation is $E = 0$ with $E = -(\text{Euler–Lagrange expression}) + \text{forcing}$. A point mass gives $-m\ddot x + F = 0$.
+- Each equation sets the coefficient of a variation to zero, $E_\xi = 0$, with $E_\xi = -(\text{Euler-Lagrange expression}) + \text{forcing}$. A point mass gives $-m\ddot x + F = 0$.
 - In the standard form, $M$ is minus the physical inertia.
-- An $S^2$ equation is $(I - qq^\top)E = 0$ together with $q\cdot\dot\omega = 0$. Its component along $q$ carries no information. Never solve it as a $3\times3$ system. `simulate` projects for you.
+- An $S^2$ equation is $(I - qq^\top)E_\xi = 0$ together with $q\cdot\dot\omega = 0$. Its component along $q$ carries no information. Never solve it as a $3\times3$ system. `simulate` projects for you.
 
 ## Failure modes
 

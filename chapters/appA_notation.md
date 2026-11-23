@@ -7,11 +7,11 @@ summary: Every symbol, convention and technical term of the book, with the place
 
 This appendix is the reference for the whole book. Each symbol means one thing, each term has one name, and every chapter, figure, notebook and skill follows the tables below. Read [](#secA-conventions) once. Use [](#secA-symbols) to look up a symbol and [](#secA-glossary) to look up a word. The last column of each table points to the place where the entry is introduced.
 
-A few letters are local and are not listed: $x, y, z$ for arbitrary vectors in an identity, $A$ for an arbitrary matrix, $i, j, k$ for indices, $n$ and $N$ for counts. They are named where they are used and mean nothing beyond that sentence.
+A few letters are local and are not listed: $x, y, z$ for arbitrary vectors in an identity, $A$ for an arbitrary matrix, $i, j, k$ for indices, $n$ and $N$ for counts. So are $\Pi$ for a projection, $\beta$ and $\sigma$ in two exercises, and $c_i$ for the entries of a matrix. They are named where they are used and mean nothing beyond that sentence.
 
 ## Conventions {#secA-conventions}
 
-**Frames.** The **world frame** is fixed, with $e_3$ pointing up. The **body frame** is attached to a rigid body. A rotation matrix $R$ maps body-frame components to world-frame components.
+**Frames.** The **world frame** does not move, with $e_3$ pointing up. The **body frame** is attached to a rigid body. A rotation matrix $R$ maps body-frame components to world-frame components.
 
 **Gravity.** Gravity acts along $-e_3$. A mass $m$ at position $x$ has potential energy $m g\,e_3\cdot x$ and weight $-m g\,e_3$.
 
@@ -40,6 +40,8 @@ A few letters are local and are not listed: $x, y, z$ for arbitrary vectors in a
 **Angles and units.** Angles in formulas are in radians. Degrees are used in prose and on plot axes, written 90° in text and $90^\circ$ in math. Units are SI and upright: rad/s, m/s², kg·m², N·m, N·s, s⁻¹. A percentage is written 5%.
 
 **Spelling.** American spelling: linearization, modeling, stabilize, center, behavior, maneuver, neighbor.
+
+**Names in code.** Notebooks, skills and scripts use `hat`, `vee`, `expm_so3`, `log_so3`, `Psi_R`, `Psi_q`, `e_R`, `e_Omega`, `e_q`, `e_omega`, and write desired quantities as `Rd`, `qd`, `Omegad`, `omegad`. Outside the book the same notation is written in plain LaTeX, for example `R_d^\top R`.
 
 **Colors in figures.** Ink is structure. Indigo is the main object, the reference or the method that works. Terracotta is the contrasting object, the error or the method that fails. Teal is a third role. The trace error is always indigo and the logarithm error always teal.
 
@@ -72,7 +74,7 @@ A few letters are local and are not listed: $x, y, z$ for arbitrary vectors in a
 
 | Symbol | Meaning | Defined in |
 | :-- | :-- | :-- |
-| $R$ | Attitude, body to world | [](#def-so3) |
+| $R$ | Attitude, body to world. $\hat R$ is an estimate of it | [](#def-so3) |
 | $\Omega$ | Body angular velocity, $\dot R = R\,\Omega^\wedge$ | [](#eq-kinematics) |
 | $q$ | Direction in $S^2$. The letter $q$ alone is always a direction | [](#eq2-s2-kinematics) |
 | $\omega$ | World-frame angular velocity: of a direction ($\dot q = \omega\times q$, $\omega\cdot q = 0$) or of a body ($\omega = R\,\Omega$) | [](#eq2-s2-kinematics), [](#eq2-spatial) |
@@ -210,7 +212,7 @@ A few letters are local and are not listed: $x, y, z$ for arbitrary vectors in a
 
 **Almost-global stability.** Convergence from every initial condition except a set of measure zero. It is the best a continuous controller can do on a compact configuration space. [](#sec-obstruction).
 
-**Attitude.** The rotation of a rigid body relative to the world frame, a point of $\SO(3)$. We do not say orientation. [](#sec-rotation-space).
+**Attitude.** The rotation of a rigid body relative to the world frame, a point of $\SO(3)$. [](#sec-rotation-space).
 
 **Body angular velocity.** The angular velocity $\Omega$ of a rigid body, expressed in the body frame. It is what a gyroscope reads. [](#sec2-body-spatial).
 
@@ -294,7 +296,7 @@ A few letters are local and are not listed: $x, y, z$ for arbitrary vectors in a
 
 **Virtual work.** The work the applied forces would do on a variation. [](#def4-dalembert).
 
-**World frame.** The fixed frame, with $e_3$ up. [](#sec-rotation-space).
+**World frame.** The frame that does not move, with $e_3$ up. [](#sec-rotation-space).
 
 **World-frame angular velocity.** The angular velocity expressed in the world frame, $\omega$. [](#sec2-body-spatial).
 

@@ -15,7 +15,7 @@ The arithmetic is not at fault, and a smaller step only slows the growth. Each u
 
 ## Curved sets and their velocities {#sec2-tangent}
 
-Start with the heading of [](#ch-why). A heading is a point on the unit circle,
+Start with the heading that opened [](#ch-why). A heading is a point on the unit circle,
 
 $$
 S^1 = \{\, q \in \R^2 : q \cdot q = 1 \,\}.
@@ -91,7 +91,7 @@ Compare [](#eq2-tangent-so3) with the sphere. At the identity the tangent space 
 A **Lie group** is a manifold that is also a group, with smooth multiplication and inversion. Its **Lie algebra** is the tangent space at the identity: the velocities with which a curve can leave the identity.
 :::
 
-The circle is a Lie group too. Identify the point at angle $\theta$ with the planar rotation by $\theta$ in $\SO(2)$, and multiplication adds angles. Its Lie algebra is the line $\{\omega \Lambda\}$. The three-sphere $S^3$ of unit quaternions from [](#ch-why) is a third: four numbers, one constraint, quaternion multiplication, and a Lie algebra of pure quaternions $(0, x)$, $x \in \R^3$. It covers $\SO(3)$ twice, and its kinematics $\dot\quat = \tfrac12\,\quat\otimes(0,\Omega)$ are [](#eq-kinematics) one level up.
+The circle is a Lie group too. Identify the point at angle $\theta$ with the planar rotation by $\theta$ in $\SO(2)$, and multiplication adds angles. Its Lie algebra is the line $\{\omega \Lambda\}$. The three-sphere $S^3$ of unit quaternions from [](#sec-quaternions) is a third: four numbers, one constraint, quaternion multiplication, and a Lie algebra of pure quaternions $(0, x)$, $x \in \R^3$. It covers $\SO(3)$ twice, and its kinematics $\dot\quat = \tfrac12\,\quat\otimes(0,\Omega)$ are [](#eq-kinematics) one level up.
 
 ### Two velocities for one motion {#sec2-body-spatial}
 

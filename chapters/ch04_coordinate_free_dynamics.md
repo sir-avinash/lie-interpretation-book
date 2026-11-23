@@ -9,7 +9,7 @@ verify: verify/ch04.py
 
 Pin a rigid body at one point and let it swing under gravity. This is the 3D pendulum. Write its equations of motion twice.
 
-First with yaw, pitch and roll. Substitute $\Omega = E(\theta,\phi)\,\dot\eta$ from [](#eq-euler-jacobian) into the kinetic energy $\tfrac12\Omega\cdot J\Omega$, apply the Euler-Lagrange equations, and expand. For a general inertia matrix you get three coupled equations with 105 terms between them, each a product of sines and cosines. Their mass matrix is $E\T J E$, and it has to be inverted at every time step.
+First with yaw, pitch and roll. Substitute $\Omega = E(\theta,\phi)\,\dot\Theta$ from [](#eq-euler-jacobian) into the kinetic energy $\tfrac12\Omega\cdot J\Omega$, apply the Euler-Lagrange equations, and expand. For a general inertia matrix you get three coupled equations with 105 terms between them, each a product of sines and cosines. Their mass matrix is $E\T J E$, and it has to be inverted at every time step.
 
 Then with the rotation matrix. The whole model is
 
@@ -39,7 +39,7 @@ and the **action** of a path $x(t)$ over $[0,t_f]$ is the number $S = \int_0^{t_
 Among all paths with the same endpoints $x(0)$ and $x(t_f)$, the motion is a path whose action is stationary: $\delta S = 0$ for every variation that vanishes at the endpoints.
 :::
 
-A **variation** is a one-parameter family of nearby paths, $x_\epsilon(t) = x(t) + \epsilon\,\delta x(t)$ with $\delta x(0) = \delta x(t_f) = 0$, and $\delta S$ is the derivative of $S$ along the family at $\epsilon = 0$. Three moves turn the principle into an equation.
+A variation ([](#def3-variation)) is a one-parameter family of nearby paths, $x_\epsilon(t) = x(t) + \epsilon\,\delta x(t)$ with $\delta x(0) = \delta x(t_f) = 0$, and $\delta S$ is the derivative of $S$ along the family at $\epsilon = 0$. Three moves turn the principle into an equation.
 
 *Vary.* Differentiate under the integral. Since $\epsilon$ and $t$ are independent, $\delta\dot x = \ddt\delta x$, and
 
@@ -79,7 +79,7 @@ q_\epsilon(t) = \exp\!\big(\epsilon\,\xi(t)^\wedge\big)\,q(t)
 \delta q = \xi\times q, \qquad \delta\dot q = \dot\xi\times q + \xi\times\dot q . \label{eq4-var-s2}
 $$
 
-Each $q_\epsilon(t)$ is $q(t)$ turned by the angle $\epsilon\|\xi\|$ about $\xi$, so its length is still one ([](#fig4-variation)). A component of $\xi$ along $q$ turns $q$ about itself and does nothing, so we take $\xi\cdot q = 0$. The fixed endpoints become $\xi(0) = \xi(t_f) = 0$.
+This is the variation on the sphere of [](#def3-variation), with the velocity rule [](#eq3-delta-qdot). Each $q_\epsilon(t)$ is $q(t)$ turned by the angle $\epsilon\|\xi\|$ about $\xi$, so its length is still one ([](#fig4-variation)). A component of $\xi$ along $q$ turns $q$ about itself and does nothing, so we take $\xi\cdot q = 0$. The fixed endpoints become $\xi(0) = \xi(t_f) = 0$.
 
 ![Hamilton's principle on the sphere. The path $q(t)$ is a computed pendulum swing. Each neighboring curve is $q(t)$ rotated about $\xi(t)$, so it stays on the sphere. The arrows are the variation $\delta q = \xi\times q$, tangent to the sphere and zero at both ends.](figures/ch04-variation-s2.svg){#fig4-variation}
 
@@ -90,7 +90,7 @@ $$
 = -\int_0^{t_f} \xi\cdot\Big(q\times\big(m l^2\ddot q + m g l\,e_3\big)\Big)\,\dd t ,
 $$
 
-using $a\cdot(\xi\times q) = \xi\cdot(q\times a)$. The third move is where the sphere shows. $\xi$ is arbitrary, but only among vectors perpendicular to $q$. The vector $q\times(\cdots)$ is already perpendicular to $q$, so it must vanish:
+using $y\cdot(\xi\times q) = \xi\cdot(q\times y)$ for any vector $y$. The third move is where the sphere shows. $\xi$ is arbitrary, but only among vectors perpendicular to $q$. The vector $q\times(\cdots)$ is already perpendicular to $q$, so it must vanish:
 
 $$
 q\times\big(m l^2\ddot q + m g l\,e_3\big) = 0 . \label{eq4-sph-cross}
@@ -108,7 +108,7 @@ $$
 \ddot q = -\|\dot q\|^2\,q - \frac{g}{l}\,(I - q q\T)\,e_3 . \label{eq4-sph-qdd}
 $$
 
-With the angular velocity of [](#ch-manifolds), $\dot q = \omega\times q$ and $\omega\cdot q = 0$, one finds $q\times\ddot q = \dot\omega$, and [](#eq4-sph-cross) becomes
+With the angular velocity of [](#eq2-s2-kinematics), $\dot q = \omega\times q$ and $\omega\cdot q = 0$, one finds $q\times\ddot q = \dot\omega$, and [](#eq4-sph-cross) becomes
 
 $$
 m l^2\,\dot\omega = -m g l\; q\times e_3, \qquad \dot q = \omega\times q . \label{eq4-sph}
@@ -138,13 +138,13 @@ The sphere was easy because $\delta\dot q$ was just the time derivative of $\del
 
 ## Rotations: where the gyroscopic term comes from {#sec4-so3}
 
-A free rigid body has attitude $R \in \SO(3)$ and Lagrangian $L = \tfrac12\,\Omega\cdot J\Omega$, with $\Omega^\wedge = R\T\dot R$ as in [](#eq-kinematics). Vary the attitude by rotating it, again so that the family stays on the manifold:
+A free rigid body has attitude $R \in \SO(3)$ and Lagrangian $L = \tfrac12\,\Omega\cdot J\Omega$, with $\Omega^\wedge = R\T\dot R$ as in [](#eq-kinematics). Vary the attitude by rotating it, as in [](#def3-variation), so that the family stays on the manifold:
 
 $$
 R_\epsilon(t) = R(t)\exp\!\big(\epsilon\,\eta(t)^\wedge\big), \qquad \delta R = R\,\eta^\wedge , \qquad \eta(0) = \eta(t_f) = 0 .
 $$
 
-The Lagrangian is written in $\Omega$, so we need $\delta\Omega$. [](#ch-variations) derives it. The calculation is two lines: vary $\Omega^\wedge = R\T\dot R$ and use $\delta\dot R = \dot R\,\eta^\wedge + R\,\dot\eta^\wedge$,
+The Lagrangian is written in $\Omega$, so we need $\delta\Omega$. [](#thm3-delta-omega) derives it. The calculation is two lines: vary $\Omega^\wedge = R\T\dot R$ and use $\delta\dot R = \dot R\,\eta^\wedge + R\,\dot\eta^\wedge$,
 
 $$
 \delta\Omega^\wedge = -\eta^\wedge\,\Omega^\wedge + \Omega^\wedge\eta^\wedge + \dot\eta^\wedge
@@ -230,7 +230,7 @@ Nothing pushed it. There is no torque in the air. Euler's equation [](#eq4-euler
 
 Here is the reason. In the body frame, $J\Omega$ moves on a sphere, since its length is conserved. It must also stay on a level set of the energy. Draw those level sets on the sphere ([](#fig4-polhodes), left). Around the axes of smallest and largest inertia they are closed loops: a spin that starts near those axes stays near. At the intermediate axis the level sets cross. A spin that starts there is carried along the crossing to the opposite side of the sphere, and back.
 
-![The intermediate-axis instability, computed from Euler's equation for a 20 × 13 × 3 cm book. Left: paths of the body angular momentum on its sphere. They circle $e_1$ and $e_3$ and cross at $\pm e_2$. The heavy curve is the simulated spin that starts 1 % away from the middle axis. It leaves $e_2$ (hidden), passes $-e_2$ and returns. Right: the spin component along the starting axis. About $e_2$ it reverses every 1.5 s.](figures/ch04-polhodes.svg){#fig4-polhodes}
+![The intermediate-axis instability, computed from Euler's equation for a 20 × 13 × 3 cm book. Left: paths of the body angular momentum on its sphere. They circle $e_1$ and $e_3$ and cross at $\pm e_2$. The heavy curve is the simulated spin that starts 1% away from the middle axis. It leaves $e_2$ (hidden), passes $-e_2$ and returns. Right: the spin component along the starting axis. About $e_2$ it reverses every 1.5 s.](figures/ch04-polhodes.svg){#fig4-polhodes}
 
 ::: {.example #ex4-book name="How fast it flips"}
 Model the book as a uniform 0.3 kg block, 20 × 13 × 3 cm. Its principal inertias are $(J_1, J_2, J_3) = (0.445,\ 1.02,\ 1.42)\times10^{-3}$ kg·m², with $e_2$ across the width. Linearize [](#eq4-euler-free) about a steady spin $\Omega_2$ about $e_2$. The wobble in $\Omega_1$ and $\Omega_3$ grows like $e^{\lambda t}$ with
@@ -239,7 +239,7 @@ $$
 \lambda = \Omega_2\sqrt{\frac{(J_2 - J_1)(J_3 - J_2)}{J_1 J_3}} . \label{eq4-growth}
 $$
 
-At two revolutions per second, $\lambda = 7.6$ s⁻¹: the wobble multiplies by $e$ every 0.13 s. Start the simulation with 1 % of the spin on each of the other axes. $\Omega_2$ first reverses at 0.88 s and then every 1.5 s ([](#fig4-polhodes), right). Through all of it the energy and all three components of $R J\Omega$ hold to better than one part in $10^{8}$. The same 1 % error on a spin about $e_1$ or $e_3$ never grows beyond 2 %. For those axes the product under the root changes sign and the wobble oscillates.
+At two revolutions per second, $\lambda = 7.6$ s⁻¹: the wobble multiplies by $e$ every 0.13 s. Start the simulation with 1% of the spin on each of the other axes. $\Omega_2$ first reverses at 0.88 s and then every 1.5 s ([](#fig4-polhodes), right). Through all of it the energy and all three components of $R J\Omega$ hold to better than one part in $10^{8}$. The same 1% error on a spin about $e_1$ or $e_3$ never grows beyond 2%. For those axes the product under the root changes sign and the wobble oscillates.
 :::
 
 This is the tennis racket theorem, or Dzhanibekov effect, after the cosmonaut who saw a wing nut do it in orbit. For us it is a check: a rigid-body simulation that does not flip the book is wrong.
@@ -256,7 +256,7 @@ $$
 
 Six degrees of freedom, four inputs. The force can only point along $R e_3$, so to accelerate sideways the vehicle must first rotate.
 
-**Quadrotor with a cable-suspended load, on $\SE(3)\times S^2$.** Hang a point mass $m_L$ from the quadrotor (mass $m_Q$, inertia $J$) on a massless cable of length $l$. Let $q \in S^2$ point from the quadrotor to the load, so that $x_Q = x_L - l q$ ([](#fig4-quad-load)). The Lagrangian and virtual work are
+**Quadrotor with a cable-suspended load, on $\R^3\times S^2\times\SO(3)$.** Hang a point mass $m_L$ from the quadrotor (mass $m_Q$, inertia $J$) on a massless cable of length $l$. As in [](#sec2-products), $q \in S^2$ points from the quadrotor to the load, so that $x_Q = x_L - l q$ ([](#fig4-quad-load)). The Lagrangian and virtual work are
 
 $$
 L = \tfrac12 m_Q\|\dot x_L - l\dot q\|^2 + \tfrac12 m_L\|\dot x_L\|^2 + \tfrac12\Omega\cdot J\Omega - m_Q g\,e_3\cdot(x_L - l q) - m_L g\,e_3\cdot x_L ,
@@ -282,7 +282,7 @@ Read three things off. First, the right side of the load equation is a multiple 
 ::: {.thought #thought4-cut name="Cut the motors"}
 The quadrotor is flying with the load swinging beneath it. Cut the thrust to zero. What does the cable do?
 
-Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its mass center on a parabola. A pendulum needs something to hang from, and a falling quadrotor is not it.
+Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its center of mass on a parabola. A pendulum needs something to hang from, and a falling quadrotor is not it.
 :::
 
 The tension is still available. From the load's free-body equation,
@@ -308,31 +308,31 @@ $$
 
 With one quadrotor this collapses to [](#eq4-load). Each quadrotor adds inertia to the load only along its own cable, through $m_i q_i q_i\T$. Wu (2017) carries the derivation through for a rigid-body payload, on $\SE(3)\times(S^2\times\SO(3))^n$.
 
-Legged robots fit the same mold. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with a leg length and three mass positions: thirteen degrees of freedom. Its simplest piece already shows something new.
+Legged robots fit the same mold. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with two leg lengths and three mass positions, of dimension fourteen ([](#tbl2-robots)). Its simplest piece already shows something new.
 
 ::: {.example #ex4-leg name="A telescoping leg"}
-A leg pivots about its foot with attitude $R$ and inertia $J_0$, and carries a mass $m$ at distance $\rho$ along its axis $R e_3$. A force $f$ extends it and a torque $\tau$ acts at the ankle. The configuration space is $\R\times\SO(3)$, and with $K = I - e_3 e_3\T$,
+A leg pivots about its foot with attitude $R$ and inertia $J_0$, and carries a mass $m$ at distance $l$ along its axis $R e_3$. A force $f$ extends it and a torque $\tau$ acts at the ankle. The configuration space is $\R\times\SO(3)$, and with $\Pi = I - e_3 e_3\T$, the projection off the leg axis,
 
 $$
 \begin{aligned}
-m\ddot\rho &= m\rho\;\Omega\cdot K\Omega - m g\,e_3\cdot R e_3 + f ,\\
-J(\rho)\,\dot\Omega + \Omega\times J(\rho)\,\Omega + 2 m\rho\dot\rho\,K\Omega &= m g\rho\,(R\T e_3)\times e_3 + \tau ,
-\qquad J(\rho) = J_0 + m\rho^2 K .
+m\ddot l &= m l\;\Omega\cdot \Pi\,\Omega - m g\,e_3\cdot R e_3 + f ,\\
+J(l)\,\dot\Omega + \Omega\times J(l)\,\Omega + 2 m l\,\dot l\,\Pi\,\Omega &= m g l\,(R\T e_3)\times e_3 + \tau ,
+\qquad J(l) = J_0 + m l^2\, \Pi .
 \end{aligned} \label{eq4-leg}
 $$
 
-The inertia now depends on the configuration, and its rate $\dot J = 2m\rho\dot\rho\,K$ appears as a new term: extend the leg and the rotation slows, like a skater opening her arms. The variation $\delta\rho$ is the ordinary one and $\delta R = R\,\eta^\wedge$ is that of [](#sec4-so3). Nothing else was needed.
+The inertia now depends on the configuration, and its rate $\dot J = 2 m l\,\dot l\,\Pi$ appears as a new term: extend the leg and the rotation slows, like a skater opening her arms. The variation $\delta l$ is the ordinary one and $\delta R = R\,\eta^\wedge$ is that of [](#sec4-so3). Nothing else was needed.
 :::
 
 ## Staying on the manifold while integrating {#sec4-integrate}
 
-The naive integration step treats the nine entries of $R$ as nine numbers: $R_{k+1} = R_k + h\,R_k\Omega_k^\wedge$. But then
+The naive integration step treats the nine entries of $R$ as nine numbers: $R_{k+1} = R_k + h\,R_k\Omega_k^\wedge$. [](#sec2-integration) showed what happens:
 
 $$
 R_{k+1}\T R_{k+1} = I - h^2\,(\Omega_k^\wedge)^2 \neq I ,
 $$
 
-so every step stretches the matrix a little, and it is no longer a rotation. The remedy is to move along the manifold with the exponential map, the device we used to build variations:
+so every step stretches the matrix a little, and it is no longer a rotation. The remedy is the exponential step [](#eq2-exp-step), which moves along the manifold with the device we used to build variations:
 
 $$
 R_{k+1} = R_k\exp\!\big(h\,\Omega_k^\wedge\big), \qquad q_{k+1} = \exp\!\big(h\,\omega_k^\wedge\big)\,q_k . \label{eq4-lie-euler}
@@ -344,14 +344,14 @@ Each update is a rotation, so $R_{k+1} \in \SO(3)$ and $\|q_{k+1}\| = 1$ to roun
 
 ![A 3D pendulum integrated for 60 s at $h = 0.02$ s by two fourth-order methods. Left: the entrywise method drifts off $\SO(3)$, the exponential update does not. Right: the energy error of the two methods is nearly the same.](figures/ch04-integrators.svg){#fig4-integrators}
 
-Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretizing Hamilton's principle itself, with an action sum in place of the action integral. They are the subject of the later chapter on variational integrators.
+Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretizing Hamilton's principle itself, with an action sum in place of the action integral. They are the subject of the chapter on variational integrators.
 
 We now have models that are short, global and checkable. What do you do when the system is too large to derive by hand? [](#ch-symbolic) answers that.
 
 ## Exercises {#sec4-exercises .unnumbered}
 
 ::: {.exercise #exr4-variation-omega}
-For the variation [](#eq4-var-s2) on the sphere, show that the angular velocity $\omega = q\times\dot q$ varies as $\delta\omega = \dot\xi + 2(\xi\cdot\dot q)\,q$, and check that $\delta(\omega\cdot q) = 0$. Then confirm the formula by finite differences in the notebook.
+For the variation [](#eq4-var-s2) on the sphere, show that the angular velocity $\omega = q\times\dot q$ varies as in [](#eq3-delta-omega), $\delta\omega = \dot\xi - 2\,\omega\times\xi$, and that the last term equals $2(\xi\cdot\dot q)\,q$. Check that $\delta(\omega\cdot q) = 0$. Then confirm the formula by finite differences in the notebook.
 :::
 
 ::: {.exercise #exr4-sph-omega}
@@ -380,10 +380,9 @@ Implement both first-order steps, the naive one and [](#eq4-lie-euler), for the 
 
 ## Notes and sources {#sec4-notes .unnumbered}
 
-Variations on $S^2$ and $\SO(3)$ are treated as in Lee, Leok and McClamroch (2018), which works through pendulums, rigid bodies and multibody systems in this style. The comparison of Euler-angle and $\SO(3)$ models of the 3D pendulum, with the conditioning of the Euler mass matrix, is from Siravuru (2019, ch. 4). He uses the ZXY angle order, singular at 90° of roll; we used the ZYX order of [](#ch-why). The Reaction Mass Biped is his chapter 5, which also carries out the derivation in discrete time. Sreenath, Lee and Kumar (2013) derived the quadrotor with a cable-suspended load on $\SE(3)\times S^2$. The form [](#eq4-load), the tension [](#eq4-load-tension) and the multi-quadrotor payload models are in Wu (2017, ch. 3). Teng et al. (2026) write rigid-body dynamics on $\SE(3)$ in Euler-Poincaré form for trajectory optimization. Marsden and Ratiu (1999) is the standard reference for the free rigid body and the stability of its steady spins.
+Variations on $S^2$ and $\SO(3)$ are treated as in Lee, Leok and McClamroch (2018), which works through pendulums, rigid bodies and multibody systems in this style. The comparison of Euler-angle and $\SO(3)$ models of the 3D pendulum, with the conditioning of the Euler mass matrix, is from Siravuru (2019, ch. 4). He uses the ZXY angle order, singular at 90° of roll; we used the ZYX order of [](#eq-zyx). The Reaction Mass Biped is his chapter 5, which also carries out the derivation in discrete time. Sreenath, Lee and Kumar (2013) derived the quadrotor with a cable-suspended load, written there on $\SE(3)\times S^2$. The form [](#eq4-load), the tension [](#eq4-load-tension) and the multi-quadrotor payload models are in Wu (2017, ch. 3). Teng et al. (2026) write rigid-body dynamics on $\SE(3)$ in Euler-Poincaré form for trajectory optimization. Marsden and Ratiu (1999) is the standard reference for the free rigid body and the stability of its steady spins.
 
 - T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
-- T. Lee, M. Leok and N. H. McClamroch, ["Geometric tracking control of a quadrotor UAV on SE(3)"](https://doi.org/10.1109/CDC.2010.5717652), *IEEE Conference on Decision and Control*, 2010.
 - J. E. Marsden and T. S. Ratiu, [*Introduction to Mechanics and Symmetry*](https://doi.org/10.1007/978-0-387-21792-5), 2nd ed., Springer, 1999.
 - A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
 - K. Sreenath, T. Lee and V. Kumar, ["Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load"](https://doi.org/10.1109/CDC.2013.6760219), *IEEE Conference on Decision and Control*, 2013.

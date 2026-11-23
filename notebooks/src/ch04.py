@@ -60,7 +60,7 @@ def tangent(q, v):
 # frame it is $J$.
 
 # %%
-J_p = np.diag([0.20, 0.25, 0.10])        # inertia about the pivot, kg m^2
+J_p = np.diag([0.20, 0.25, 0.10])        # inertia about the pivot, kg·m²
 m_p, rho_p = 1.0, np.array([0.0, 0.0, -0.4])
 
 
@@ -73,7 +73,7 @@ def E_mat(th, phi):
 pitch = np.radians(np.linspace(0, 89.9, 400))
 cond = [np.linalg.cond(E_mat(t, np.radians(20)).T @ J_p @ E_mat(t, np.radians(20))) for t in pitch]
 plt.figure(figsize=(6, 2.8))
-plt.semilogy(np.degrees(pitch), cond, label="Euler angles: $E^T J E$")
+plt.semilogy(np.degrees(pitch), cond, label="Euler angles: $E^\top J E$")
 plt.axhline(np.linalg.cond(J_p), color="C1", label="body frame: $J$")
 plt.xlabel("pitch (deg)"); plt.ylabel("condition number"); plt.legend(); plt.show()
 for deg in (0, 60, 85, 89):
@@ -216,12 +216,12 @@ for ax, axis in zip(axes, range(3)):
     print(f"e{axis + 1}: energy spread {np.ptp(Ek) / Ek[0]:.1e}, spatial momentum drift {np.abs(H - H[0]).max() / np.linalg.norm(H[0]):.1e}")
 axes[0].set_ylabel("Omega / spin"); plt.show()
 lam = spin * np.sqrt((Jb[1] - Jb[0]) * (Jb[2] - Jb[1]) / (Jb[0] * Jb[2]))
-print(f"inertias (1e-3 kg m^2): {np.round(Jb * 1e3, 3)},  growth rate about e2: {lam:.2f} /s")
+print(f"inertias (1e-3 kg·m²): {np.round(Jb * 1e3, 3)},  growth rate about e2: {lam:.2f} /s")
 
 # %% [markdown]
 # ## 6. Quadrotor with a cable-suspended load
 #
-# The chapter's equations on $\mathrm{SE}(3)\times S^2$, compared with `geomech` at a random
+# The chapter's equations on $\mathbb{R}^3\times S^2\times\mathrm{SO}(3)$, compared with `geomech` at a random
 # state, then the thought experiment: cut the thrust and watch the cable rate.
 
 # %%
@@ -317,9 +317,9 @@ for a in (a0, a1):
 plt.show()
 
 # %% [markdown]
-# ## Exercises to start from here
+# ## Starting points for the exercises
 #
-# - **4.1** Check $\delta\omega = \dot\xi + 2(\xi\cdot\dot q)\,q$ by finite differences, reusing cell 3.
+# - **4.1** Check $\delta\omega = \dot\xi - 2\,\omega\times\xi = \dot\xi + 2(\xi\cdot\dot q)\,q$ by finite differences, reusing cell 3.
 # - **4.4** Fit the early growth of $\Omega_1, \Omega_3$ in cell 5 and compare with
 #   $\lambda = \Omega_2\sqrt{(J_2-J_1)(J_3-J_2)/(J_1J_3)}$.
 # - **4.5** Add the energy of the quadrotor and load to cell 6 and confirm it is constant after the cut.

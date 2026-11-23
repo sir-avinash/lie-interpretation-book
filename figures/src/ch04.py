@@ -109,7 +109,7 @@ def pendulum_forces():
     s.shadow((0, 0, -1.12), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE, alpha=0.5)
     s.sphere_curve(great_circle(E3), color=INK, lw=0.6, alpha=0.45)
-    phi, polar = np.radians(az + 42), np.radians(52)       # bob 52 degrees from straight down
+    phi, polar = np.radians(az + 42), np.radians(52)       # bob 52° from straight down
     q = np.array([np.sin(polar) * np.cos(phi), np.sin(polar) * np.sin(phi), -np.cos(polar)])
     a, b = s.tangent_plane(1.002 * q, size=0.56, color=SAND, alpha=0.85)
     s.curve(np.array([[0, 0, 0], q]), color=INK, lw=1.6, alpha=1.0, zorder=22)       # the rod
@@ -167,7 +167,7 @@ def polhodes():
     k = np.sqrt((1 / J_B[0] - 1 / J_B[1]) / (1 / J_B[1] - 1 / J_B[2]))
     for sign in (1, -1):
         s.sphere_curve(great_circle([k, 0, -sign]), color=TERRACOTTA, lw=1.1, alpha=0.75, show_hidden=False)
-    # the simulated book: spin about e2 with a 1 % tilt
+    # the simulated book: spin about e2 with a 1% tilt
     P = body_momentum_path(J_B * np.array([0.01, 1.0, 0.01]), 60.0, 6000)
     s.sphere_curve(P, color=TERRACOTTA, lw=2.0, zorder=18, show_hidden=False)
     for axis, name, dx, dy in ((E1, r"$e_1$", 12, -2), (-E2, r"$-e_2$", -15, 5), (E3, r"$e_3$", 8, 10)):
@@ -204,7 +204,7 @@ def polhodes():
     s.save(OUT / "ch04-polhodes.svg")
 
 
-# ------------------------------------------------ quadrotor with a suspended load
+# ------------------------------------------------ quadrotor with a cable-suspended load
 def circle3(c, u, v, r, n=80):
     t = np.linspace(0, 2 * np.pi, n)
     return c + r * (np.outer(np.cos(t), u) + np.outer(np.sin(t), v))
@@ -219,7 +219,7 @@ def quad_load():
     xL = xQ + l * q
     b1, b2, b3 = R[:, 0], R[:, 1], R[:, 2]
     arm, rad = 0.78, 0.36
-    d1, d2 = unit(b1 + b2), unit(b2 - b1)                 # arms at 45 degrees to the body axes
+    d1, d2 = unit(b1 + b2), unit(b2 - b1)                 # arms at 45° to the body axes
     strands = []
     for d in (d1, d2):
         strands.append((np.linspace(xQ - arm * d, xQ + arm * d, 40), INK, 2.6))
@@ -314,7 +314,7 @@ def integrators():
     ax1.semilogy(t, out["lie"][:, 1], color=INDIGO, lw=1.4)
     ax1.set_ylim(1e-8, 1e-1)
     ax1.text(30, 6e-3, "both drift: neither conserves energy", color=INK, fontsize=10, ha="center", path_effects=halo())
-    ax1.set_title(r"energy error  $|E - E_0|$  (J)", fontsize=10, **SANS)
+    ax1.set_title("energy error (J)", fontsize=10, **SANS)
     for ax in (ax0, ax1):
         ax.set_xlim(0, T)
         ax.set_xlabel("time (s)", fontsize=9.5, **SANS)

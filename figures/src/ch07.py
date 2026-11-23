@@ -130,7 +130,7 @@ def linear_vs_nonlinear():
     T = 1.2
     tt = np.linspace(0, T, 300)
     ref, _, lin = swing_pair(T, 0.0)
-    ax0.plot(tt, np.linalg.norm(lin.sol(tt)[:3].T, axis=1), color="#b9bcc6", lw=5.5, zorder=5, solid_capstyle="round")
+    ax0.plot(tt, np.linalg.norm(lin.sol(tt)[:3].T, axis=1), color=MUTED, alpha=0.42, lw=5.5, zorder=5, solid_capstyle="round")
     for deg, col, off in ((1, INDIGO, 9), (10, TEAL, 0), (30, TERRACOTTA, -8)):
         nb = swing_pair(T, np.radians(deg))[1]
         y = np.linalg.norm(np.cross(ref.sol(tt)[:3].T, nb.sol(tt)[:3].T), axis=1) / np.radians(deg)
@@ -247,7 +247,7 @@ def large_errors():
     ax0.axvspan(78, 90, color=PEACH, alpha=0.5, lw=0)
     ax0.text(84, 2.0, "falls", color=TERRACOTTA, fontsize=10, ha="center", rotation=90, **SANS)
     ax0.text(30, 1.75, r"error $e_q$", color=INDIGO, fontsize=10.5, path_effects=halo())
-    ax0.text(47, 0.95, "log error", color=TEAL, fontsize=10.5, path_effects=halo())
+    ax0.text(33, 0.95, "logarithm error", color=TEAL, fontsize=10.5, path_effects=halo())
     ax0.annotate("72.2°", (th_sin, 3.72), xytext=(-5, 0), textcoords="offset points", ha="right", color=INDIGO,
                  fontsize=9.5, **SANS)
     ax0.annotate("77.2°", (77.2, 3.72), xytext=(4, 0), textcoords="offset points", ha="left", color=TEAL,
@@ -264,7 +264,7 @@ def large_errors():
     for mode, col in (("sin", INDIGO), ("log", TEAL)):
         ax1.plot(degs, [V.so3_settle(K0, np.radians(d), mode) for d in degs], color=col, lw=1.8)
     ax1.text(98, 1.75, r"error $e_R$", color=INDIGO, fontsize=10.5, path_effects=halo())
-    ax1.text(120, 0.72, "log error", color=TEAL, fontsize=10.5, path_effects=halo())
+    ax1.text(120, 0.72, "logarithm error", color=TEAL, fontsize=10.5, path_effects=halo())
     ax1.set_xlim(0, 180)
     ax1.set_ylim(0, 4)
     ax1.set_xticks([0, 45, 90, 135, 180])

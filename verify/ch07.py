@@ -170,11 +170,11 @@ def so3_A(Rd, Od, mgr=ZERO3, J=J_B):
 SO3_B = np.vstack([np.zeros((3, 3)), J_INV])
 
 
-def e_R(Rd, R):
+def e_R(R, Rd):
     return 0.5 * vee(Rd.T @ R - R.T @ Rd)
 
 
-def e_Om(Rd, R, Od, Om):
+def e_Omega(R, Rd, Om, Od):
     return Om - R.T @ Rd @ Od
 
 
@@ -251,7 +251,7 @@ def flip_controller(ref, K, velocity="transported"):
     def ctrl(t, R, Om):
         t = min(max(t, 0.0), ref.T)
         Rd, Od, tau_d = ref(t)
-        eR, eO = e_R(Rd, R), e_Om(Rd, R, Od, Om)
+        eR, eO = e_R(R, Rd), e_Omega(R, Rd, Om, Od)
         s = np.r_[eR, eO + np.cross(Od, eR)] if velocity == "transported" else np.r_[eR, eO]
         return tau_d - K(t) @ s
 
@@ -334,7 +334,7 @@ def hold_compare(pitch_deg, err_deg, axis, T=4.0, n=801):
     AE = euler_A(np.r_[eul_d, ZERO3], ZERO3)
     KE = np.linalg.solve(R_ATT, SO3_B.T @ solve_continuous_are(AE, SO3_B, Q_ATT, R_ATT))
     R0 = Rd @ expm_so3(np.radians(err_deg) * np.asarray(axis, float) / np.linalg.norm(axis))
-    laws = {"geometric": lambda t, R, Om: -K @ np.r_[e_R(Rd, R), Om],
+    laws = {"geometric": lambda t, R, Om: -K @ np.r_[e_R(R, Rd), Om],
             "euler": lambda t, R, Om: -KE @ np.r_[wrap(euler_of(R) - eul_d), Om]}
     out = {"Rd": Rd, "KE": KE, "K": K}
     te = np.linspace(0, T, n)
@@ -350,7 +350,7 @@ def hold_compare(pitch_deg, err_deg, axis, T=4.0, n=801):
 def so3_settle(K, th0, mode="sin", Tmax=40.0, tol_deg=1.0, axis=(1.0, 0.5, -0.7)):
     """Rest-to-rest recovery time of the hover LQR from an error of angle th0."""
     ax = np.asarray(axis) / np.linalg.norm(axis)
-    err = (lambda R: e_R(I3, R)) if mode == "sin" else log_so3
+    err = (lambda R: e_R(R, I3)) if mode == "sin" else log_so3
     grid = np.linspace(0, Tmax, 4001)
     s = so3_sim(expm_so3(th0 * ax), ZERO3, lambda t, R, Om: -K @ np.r_[err(R), Om], Tmax, t_eval=grid, rtol=1e-8)
     ang = np.array([np.degrees(np.linalg.norm(log_so3(R))) for R in s.y[:9].T.reshape(-1, 3, 3)])
@@ -701,9 +701,9 @@ def main():
     res = {}
     for e in (1e-2, 1e-3):
         R, Om = Rd @ expm_so3(e * eta), Od + e * dO
-        res[e] = (np.abs(e_R(Rd, R) - e * eta).max(),
-                  np.abs(e_Om(Rd, R, Od, Om) - e * (dO - np.cross(Od, eta))).max(),
-                  np.abs(e_Om(Rd, R, Od, Om) - e * dO).max())
+        res[e] = (np.abs(e_R(R, Rd) - e * eta).max(),
+                  np.abs(e_Omega(R, Rd, Om, Od) - e * (dO - np.cross(Od, eta))).max(),
+                  np.abs(e_Omega(R, Rd, Om, Od) - e * dO).max())
     ck.true("e_R = eta to first order (remainder is third order)", 500 < res[1e-2][0] / res[1e-3][0] < 2000)
     ck.true("e_Omega = dOmega - Omega_d x eta to first order (remainder is second order)",
             50 < res[1e-2][1] / res[1e-3][1] < 200)
@@ -864,7 +864,7 @@ def main():
             settle[179.0][0] > 2 * settle[179.0][1], f"{settle[179.0]}")
     ck.record("so3_settle", {str(k): v for k, v in settle.items()})
     half_turn = expm_so3(np.pi * ax)
-    ck.close("at exactly 180 deg, e_R = 0: the LQR applies no torque", e_R(I3, half_turn), 0, tol=1e-12)
+    ck.close("at exactly 180 deg, e_R = 0: the LQR applies no torque", e_R(half_turn, I3), 0, tol=1e-12)
 
     # ---- the Lie-algebraic route -------------------------------------------
     Rd, Od = random_rotation(rng), np.array([3.0, -2.0, 4.0])

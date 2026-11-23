@@ -13,7 +13,7 @@ description: Choose the configuration manifold of a robot (products of R^n, S^1,
 
 ## Conventions (fixed)
 
-- `R` in SO(3) maps body to world. `R_dot = R @ hat(Omega)`, `Omega` in the body frame. Spatial velocity `omega = R @ Omega`.
+- `R` in SO(3) maps body to world. `R_dot = R @ hat(Omega)`, `Omega` in the body frame. World-frame angular velocity `omega = R @ Omega`.
 - `q` in S^2 is a unit vector. `q_dot = cross(omega, q)` with `dot(omega, q) = 0`, and `omega = cross(q, q_dot)`.
 - `hat(x) @ y = cross(x, y)`, `vee(hat(x)) = x`.
 - SE(3): `g = [[R, x], [0, 1]]`, body twist `xi = (R.T @ v, Omega)`, linear part first, `g_dot = g @ hat6(xi)`.
@@ -61,7 +61,7 @@ Velocities of derived points follow by differentiating, for example `x_Q_dot = v
 ### 5. Implement the maps
 
 ```python
-def exp_so3(phi):                       # Rodrigues
+def expm_so3(phi):                       # Rodrigues
     th = np.linalg.norm(phi)
     if th < 1e-12:
         return np.eye(3) + hat(phi)
@@ -81,8 +81,8 @@ Formulas: `exp(theta * hat(u)) = I + sin(theta) hat(u) + (1 - cos(theta)) hat(u)
 
 ```python
 x = x + h * v                           # flat factor
-q = exp_so3(h * omega) @ q              # S^2
-R = R @ exp_so3(h * Omega)              # SO(3), body-frame Omega multiplies on the right
+q = expm_so3(h * omega) @ q              # S^2
+R = R @ expm_so3(h * Omega)              # SO(3), body-frame Omega multiplies on the right
 ```
 
 Sample `Omega` and `omega` at the midpoint of the step when they are available there. This raises the kinematic step from first to second order.
@@ -98,7 +98,7 @@ Sample `Omega` and `omega` at the midpoint of the step when they are available t
 2. Tangency: for random states, `dot(q, q_dot) < 1e-12` and `R.T @ R_dot` is skew-symmetric.
 3. Invariants after 10^4 steps of a tumbling test motion: `abs(norm(q) - 1) < 1e-10`, `norm(R.T @ R - I) < 1e-10`, `abs(det(R) - 1) < 1e-10`.
 4. Exactness: with constant `Omega`, one step of size `T` equals `T / h` steps of size `h` to rounding error.
-5. Round trip: `log_so3(exp_so3(phi)) == phi` for `norm(phi) < pi`, and `exp_so3` agrees with a general matrix exponential.
+5. Round trip: `log_so3(expm_so3(phi)) == phi` for `norm(phi) < pi`, and `expm_so3` agrees with a general matrix exponential.
 6. Order: halving `h` halves the attitude error with start-of-step sampling and quarters it with midpoint sampling.
 7. Adjoint: the two identities of step 7 hold numerically at random points.
 
@@ -106,9 +106,9 @@ Sample `Omega` and `omega` at the midpoint of the step when they are available t
 
 - **Euler step on a curved factor.** `q + h * q_dot` multiplies `norm(q)^2` by `1 + h^2 * norm(omega)^2` each step. `R + h * R @ hat(Omega)` has determinant `1 + h^2 * norm(Omega)^2`. Replace with step 6.
 - **Normalizing as the only fix.** Projection restores the constraint and hides the integration error. If you must project a rotation, use the orthogonal polar factor (`U @ Vt` from the SVD), not Gram-Schmidt.
-- **Wrong side.** Body-frame `Omega` multiplies on the right, `R @ exp_so3(h * Omega)`. World-frame `omega` multiplies on the left, `exp_so3(h * omega) @ R`.
+- **Wrong side.** Body-frame `Omega` multiplies on the right, `R @ expm_so3(h * Omega)`. World-frame `omega` multiplies on the left, `expm_so3(h * omega) @ R`.
 - **Adding rotation vectors.** `exp(a) exp(b) != exp(a + b)`. The difference starts at `cross(a, b) / 2`.
 - **Logarithm near half a turn.** `log_so3` divides by `sin(theta)` and is two-valued at `theta = pi`. Do not build a controller or a cost on `log` without handling this.
-- **Treating S^2 as a group.** There is no `q_d^{-1} q` and no unconstrained 2-vector velocity valid everywhere. Keep `omega` in R^3 with `dot(omega, q) = 0`. Compare velocities at different points only through a transport map.
+- **Treating S^2 as a group.** There is no `qd^{-1} q` and no unconstrained 2-vector velocity valid everywhere. Keep `omega` in R^3 with `dot(omega, q) = 0`. Compare velocities at different points only through a transport map.
 - **On the manifold, still wrong.** A perfect rotation matrix can be the wrong rotation. Check accuracy against a fine-step reference, not only the invariants.
 - **Silent constraint violation in the hardware.** A slack cable or a lifted foot changes the configuration manifold. Switch models. Do not keep integrating the old one.

@@ -11,16 +11,16 @@ Here are the equations of motion of a quadrotor carrying a load on a cable. They
 
 $$
 \begin{aligned}
-(m_Q + m_L)\,(\ddot x_L + g\,e_3) &= \big(q \cdot f R e_3 \;-\; m_Q\, l\; \dot q \cdot \dot q\big)\, q, \\
+(m_Q + m_L)\,(\ddot x_L + g\,e_3) &= \big(q \cdot f R e_3 \;-\; m_Q\, l\; \|\dot q\|^2\big)\, q, \\
 m_Q\, l\; \dot\omega &= -\,q \times f R e_3, \\
 J \dot\Omega + \Omega \times J\Omega &= \tau .
 \end{aligned}
 \label{eq5-wu}
 $$
 
-The load is at $x_L$. The unit vector $q$ points from the quadrotor down the cable to the load, with $\dot q = \omega \times q$. The quadrotor has attitude $R$, thrust $f$ and torque $\tau$. Now one question. Look at the term $m_Q\, l\; \dot q \cdot \dot q$ in the first line. It is printed with a minus sign. Should it be a plus?
+They are [](#eq4-load) again. The load is at $x_L$. The unit vector $q$ points from the quadrotor down the cable to the load, with $\dot q = \omega \times q$. The quadrotor has attitude $R$, thrust $f$ and torque $\tau$. Now one question. Look at the term $m_Q\, l\; \|\dot q\|^2$ in the first line. It is printed with a minus sign. Should it be a plus?
 
-Try to decide before reading on. Staring does not help. You could re-derive the equations, as [](#ch-dynamics) does over several pages. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
+Try to decide before reading on. Staring does not help. You could re-derive the equations, as [](#sec4-products) does. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
 
 So one sign can pass every bench test and fail in the first aggressive maneuver. This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
 
@@ -63,7 +63,7 @@ $$
 \label{eq5-quad-rows}
 $$
 
-There is the disputed term, with a minus sign. (Since $\omega \perp q$, $\dot q\cdot\dot q = \omega\cdot\omega$.) The third equation, for the cable, has seven terms and waits in [](#sec5-verify). The last line sets `err` to $4.1\times10^{-8}$. That number will matter more than the equations.
+There is the disputed term, with a minus sign. (Since $\omega \perp q$, $\|\dot q\|^2 = \omega\cdot\omega$.) The third equation, for the cable, has seven terms and waits in [](#sec5-verify). The last line sets `err` to $4.1\times10^{-8}$. That number will matter more than the equations.
 
 Two things should bother you. Why believe a program over a thesis? And what did the program actually do?
 
@@ -71,9 +71,9 @@ Two things should bother you. Why believe a program over a thesis? And what did 
 
 Take the second question first. Computer algebra systems have differentiated Lagrangians for decades. Why a separate tool?
 
-A general system differentiates functions of real variables. Ask it for $\partial L / \partial R$ and it wants to know what $R$ is a function of. You can answer with three angles, and you are back in [](#ch-why) with a singularity. You can answer with nine matrix entries and six constraints, and you now carry Lagrange multipliers for constraints the geometry already knows. Either way you have left the manifold to please the software.
+A general system differentiates functions of real variables. Ask it for $\partial L / \partial R$ and it wants to know what $R$ is a function of. You can answer with three angles, and you are back in [](#sec-euler) with a singularity. You can answer with nine matrix entries and six constraints, and you now carry Lagrange multipliers for constraints the geometry already knows. Either way you have left the manifold to please the software.
 
-Now look again at the recipe of [](#ch-dynamics). It never differentiates with respect to $R$. It does four things. Apply $\delta$ with the product rule. Replace the variation of each manifold quantity with a known expression. Integrate by parts. Read off what multiplies each variation. None of these steps needs coordinates. Each one replaces a pattern of symbols with another pattern.
+Now look again at the three moves of [](#sec4-hamilton). It never differentiates with respect to $R$. It does four things. Apply $\delta$ with the product rule. Replace the variation of each manifold quantity with a known expression. Integrate by parts. Read off what multiplies each variation. None of these steps needs coordinates. Each one replaces a pattern of symbols with another pattern.
 
 So the right object is not a function of numbers. It is a **tree** ([](#fig5-tree)). Interior nodes are operations: `Add`, `Mul`, `Dot`, `Cross`. Leaves are symbols, and every leaf carries a type that says where it lives.
 
@@ -84,13 +84,13 @@ The type is what lets a rewrite rule do geometry. The program does not know what
 ::: {.table #tbl5-leaves}
 | Declared as | Lives on | Velocity | Variation | Variation of the velocity |
 | :-- | :-- | :-- | :-- | :-- |
-| `Scalar("s")` | $\R$ | $\dot s$ | $\delta s$ | $\tfrac{\dd}{\dd t}\delta s$ |
-| `Vector("x")` | $\R^3$ | $\dot x$ | $\delta x$ | $\tfrac{\dd}{\dd t}\delta x$ |
-| `S1("q", axis=e)` | circle about $e$ | $\dot q = \omega\, e \times q$ | $\delta q = \gamma\, e\times q$ | $\delta\omega = \dot\gamma$ |
+| `Scalar("s")` | $\R$ | $\dot s$ | $\delta s$ | $\ddt\delta s$ |
+| `Vector("x")` | $\R^3$ | $\dot x$ | $\delta x$ | $\ddt\delta x$ |
+| `S1("q", axis=a)` | circle about the unit axis $a$ | $\dot q = \omega\, a \times q$ | $\delta q = \gamma\, a\times q$ | $\delta\omega = \dot\gamma$ |
 | `S2("q")` | $S^2$ | $\dot q = \omega \times q$ | $\delta q = \xi \times q$ | $\delta\omega = \dot\xi - 2\,\omega\times\xi$ |
 | `SO3("R")` | $\SO(3)$ | $\dot R = R\,\Omega^\wedge$ | $\delta R = R\,\eta^\wedge$ | $\delta\Omega = \dot\eta + \Omega\times\eta$ |
 
-The five leaf types and the rules attached to them. The last column is the content of [](#ch-variations), stored as data.
+The five leaf types and the rules attached to them. The last column is [](#tbl3-summary), stored as data.
 :::
 
 Nodes cannot be modified once built. A rewrite never edits a tree. It builds a new one. So every intermediate stage of a derivation still exists afterwards, and you can ask to see it.
@@ -132,7 +132,7 @@ vector.dot_cross_orthogonal: <cross(v:\omega_{q}, v:\xi_{q}), v:\omega_{q}> ==> 
 ibp.dot: <d/dt(v:\xi_{q}), v:\omega_{q}> ==> <-v:\xi_{q}, d/dt(v:\omega_{q})>
 ```
 
-**Integrate by parts.** The term $m l^2\, \dot\xi\cdot\omega$ becomes $-m l^2\, \xi\cdot\dot\omega$. The boundary term is dropped, because variations vanish at the end times. For a larger system this stage first has to rearrange each term until $\dot\xi$ stands alone on one side of a dot product. It uses $(a\times b)\cdot c = a\cdot(b\times c)$ and $(Af)\cdot w = f\cdot(A\T w)$ to get there.
+**Integrate by parts.** The term $m l^2\, \dot\xi\cdot\omega$ becomes $-m l^2\, \xi\cdot\dot\omega$. The boundary term is dropped, because variations vanish at the end times. For a larger system this stage first has to rearrange each term until $\dot\xi$ stands alone on one side of a dot product. It uses $(x\times y)\cdot z = x\cdot(y\times z)$ and $(Ax)\cdot y = x\cdot(A\T y)$ to get there.
 
 **Extract.** Every term is now $\xi$ dotted with something. The gravity term needs one last turn of the triple product, $(\xi\times q)\cdot e_3 = \xi\cdot(q\times e_3)$. Collect what multiplies $\xi$:
 
@@ -140,10 +140,10 @@ $$
 E_\xi \;=\; -\,m\, l^2\, \dot\omega \;-\; m\, g\, l\; q\times e_3 \;+\; \tau \;=\; 0 . \label{eq5-pendulum}
 $$
 
-Sanity check: hang the rod straight down, $q = -e_3$, and $q\times e_3 = 0$. No torque, no acceleration.
+Sanity check: hang the rod straight down, $q = -e_3$, and $q\times e_3 = 0$. No torque, no acceleration. With $\tau = 0$ this is [](#eq4-sph), with every term moved to one side.
 
 ::: {.thought #thought5-clerk name="The clerk who knows no mechanics"}
-Hand the five boxes of [](#fig5-pipeline) to a careful clerk who has never seen a pendulum. Give them one card with the rules: the product rule, the $S^2$ row of [](#tbl5-leaves), $a\cdot(a\times b)=0$, the triple product, and "move the dot from $\xi$ to its partner and flip the sign". Ask them to check that each box follows from the one above.
+Hand the five boxes of [](#fig5-pipeline) to a careful clerk who has never seen a pendulum. Give them one card with the rules: the product rule, the $S^2$ row of [](#tbl5-leaves), $x\cdot(x\times y)=0$, the triple product, and "move the dot from $\xi$ to its partner and flip the sign". Ask them to check that each box follows from the one above.
 
 They can. Nothing on the card mentions energy, force or a sphere. That is what it means for the derivation to be mechanical, and it is why a machine can do it. It is also a warning. The clerk will apply a wrong card just as carefully as a right one.
 :::
@@ -154,9 +154,9 @@ The clerk's warning is the open problem. Exact is not the same as right. A rule 
 
 ## Trust, but verify {#sec5-verify}
 
-A skeptic wants a second derivation that shares nothing with the first. There is one. The Euler–Lagrange equations can be evaluated numerically from $L$ alone, with no algebra at all.
+A skeptic wants a second derivation that shares nothing with the first. There is one. The Euler-Lagrange equations can be evaluated numerically from $L$ alone, with no algebra at all.
 
-That is what `check_eom` does. It draws a random state: a random point on each manifold, random velocities, random accelerations, random inputs, random values for every constant. It evaluates the number $L$ at nearby states and forms $\tfrac{\dd}{\dd t}\,\partial L/\partial v - \partial L/\partial q$ by central differences, in the constrained forms that hold on $S^2$ and $\SO(3)$. It adds the forcing read from $\delta W$. Then it evaluates the symbolic $E$ at the same state and compares. No product rule, no manifold rule, no integration by parts. The only thing the two computations share is $L$. The function returns the worst relative error over five random states.
+That is what `check_eom` does. It draws a random state: a random point on each manifold, random velocities, random accelerations, random inputs, random values for every constant. It evaluates the number $L$ at nearby states and forms the Euler-Lagrange expression, the time derivative of $\partial L/\partial\dot x$ minus $\partial L/\partial x$, by central differences, in the constrained forms that hold on $S^2$ and $\SO(3)$. It adds the forcing read from $\delta W$. Then it evaluates the symbolic coefficients at the same state and compares. No product rule, no manifold rule, no integration by parts. The only thing the two computations share is $L$. The function returns the worst relative error over five random states.
 
 For the quadrotor it returned $4.1\times10^{-8}$. That is the noise floor of a finite difference. Now run the experiment from the opening. Type in the load equation as if from a page of algebra, once with each sign.
 
@@ -203,17 +203,17 @@ The first line has a counterpart in the thesis. The bracket has none. Three term
 ::: {.thought #thought5-rod name="Pushing along the rod"}
 Hold a pendulum by its pivot and push the bob straight along the rod, toward the pivot. Nothing happens. The rod takes the push. Only the part of a force that lies across the rod can move the bob.
 
-The equations inherit this. A variation $\xi$ is always perpendicular to $q$, so $\xi\cdot E$ only ever tests the part of $E$ that lies in the tangent plane. Whatever $E$ has along $q$ is multiplied by zero in $\delta S$. It is not an equation. It is not anything.
+The equations inherit this. A variation $\xi$ is always perpendicular to $q$, so $\xi\cdot E_\xi$ only ever tests the part of $E_\xi$ that lies in the tangent plane. Whatever $E_\xi$ has along $q$ is multiplied by zero in $\delta S$. It is not an equation. It is not anything.
 :::
 
-![The coefficient $E$ of $\xi$ for the cable, evaluated at one state and drawn at $q$. Only its tangent part is an equation of motion. The program does not remove the part along $q$, and two correct answers may differ there.](figures/ch05-tangent.svg){#fig5-tangent}
+![The coefficient $E_\xi$ of $\xi$ for the cable, evaluated at one state and drawn at $q$. Only its tangent part is an equation of motion. The program does not remove the part along $q$, and two correct answers may differ there.](figures/ch05-tangent.svg){#fig5-tangent}
 
 Apply the Jacobi identity to the bracket in [](#eq5-cable) and it collapses to $-(\omega\cdot\dot x_L)\,q$. It points along $q$ ([](#fig5-tangent)). It is the push along the rod. The simplifier has no Jacobi rule, so the three terms survive, and they are harmless. The check compares tangent parts only. Add any multiple of $q$ to the cable equation and it still passes, as it should.
 
 ::: {.warning #warn5-conventions name="Two conventions that will bite"}
-*Signs.* Every equation is $E = 0$ with $E = -(\text{Euler–Lagrange expression}) + \text{forcing}$. A point mass gives $-m\ddot x + F = 0$. If you copy an equation into a paper, move the inertia across yourself.
+*Signs.* Every equation sets the coefficient of a variation to zero, $E_\xi = 0$, with $E_\xi = -(\text{Euler-Lagrange expression}) + \text{forcing}$. A point mass gives $-m\ddot x + F = 0$. If you copy an equation into a paper, move the inertia across yourself.
 
-*Tangent plane.* For a variable on $S^2$ the equation is $(I - qq\T)\,E = 0$, together with $q\cdot\dot\omega = 0$. Never solve $E = 0$ as three equations in three unknowns. The answer will have $q\cdot\dot\omega \neq 0$ and the trajectory will leave the sphere.
+*Tangent plane.* For a variable on $S^2$ the equation is $(I - qq\T)\,E_\xi = 0$, together with $q\cdot\dot\omega = 0$, as in [](#warn4-projection). Never solve $E_\xi = 0$ as three equations in three unknowns. The answer will have $q\cdot\dot\omega \neq 0$ and the trajectory will leave the sphere.
 :::
 
 Some mistakes never reach the check. The library refuses, with a message that names the culprit. Two you will meet in your first week:
@@ -234,13 +234,13 @@ Verified equations are still only symbols. To see whether they describe a quadro
 
 ## From equations to motion {#sec5-simulate}
 
-An integrator needs accelerations. Each $E$ is linear in them and in the inputs, so it splits as
+An integrator needs accelerations. Each coefficient is linear in them and in the inputs, so the equations split as
 
 $$
-M(q)\,a \;+\; b(q, v) \;+\; G(q)\,u \;=\; 0, \label{eq5-standard}
+M\,\dot v \;+\; b \;+\; G\,u \;=\; 0, \label{eq5-standard}
 $$
 
-with $a = (\ddot x_L, \dot\omega, \dot\Omega)$ and $u = (f, \tau)$. The function `to_standard_form` performs the split symbolically. Because of the sign convention, $M$ is minus the physical inertia: the load row has $-(m_Q + m_L) I$, the attitude row has $-J$. The cable row has $m_Q l^2\, q^\wedge q^\wedge = -m_Q l^2 (I - qq\T)$, which has rank two. That is the tangent plane again, showing up as a singular block.
+with the velocities stacked as $v = (\dot x_L, \omega, \Omega)$ and the inputs as $u = (f, \tau)$. The mass matrix $M$ and the input matrix $G$ depend on the configuration, and $b$ on the configuration and the velocities. The function `to_standard_form` performs the split symbolically. Because of the sign convention, $M$ is minus the physical inertia: the load row has $-(m_Q + m_L) I$, the attitude row has $-J$. The cable row has $m_Q l^2\, q^\wedge q^\wedge = -m_Q l^2 (I - qq\T)$, which has rank two. That is the tangent plane again, showing up as a singular block.
 
 ```python
 from geomech.codegen import StateLayout, collect_params, load_module, module_source
@@ -265,7 +265,7 @@ E = free.energy()
 print(np.max(np.abs(E - E[0])) / abs(E[0]), free.max_drift())
 ```
 
-`module_source` writes [](#eq5-standard) out as a plain NumPy module, 311 lines for this system, with functions for $M$, $b$, $G$, the kinematics and the energy. It no longer needs the symbolic library. `simulate` integrates it with a fourth-order Runge–Kutta–Munthe-Kaas scheme. The idea is a familiar one: do not add increments to $q$ and $R$. Each step moves $q$ by a rotation and $R$ by a matrix exponential, so the state cannot leave the manifold. The $S^2$ rows are projected as the pitfall above demands.
+`module_source` writes [](#eq5-standard) out as a plain NumPy module, 311 lines for this system, with functions for $M$, $b$, $G$, the kinematics and the energy. It no longer needs the symbolic library. `simulate` integrates it with a fourth-order Runge-Kutta-Munthe-Kaas scheme. The idea is a familiar one: do not add increments to $q$ and $R$. Each step moves $q$ by a rotation and $R$ by a matrix exponential, so the state cannot leave the manifold. The $S^2$ rows are projected as [](#warn5-conventions) demands.
 
 The run in the listing holds the thrust at the total weight, with zero torque. The cable starts 0.8 rad from vertical and circling, and the center of mass coasts at 0.45 m/s ([](#fig5-quadload)).
 
@@ -278,14 +278,14 @@ A trajectory figure proves little. Conserved quantities prove more.
 
 *Energy.* With no inputs the system falls freely and energy must be constant. The relative drift is $1.0\times10^{-12}$. Coarser steps of 0.04, 0.02 and 0.01 s give $1.0\times10^{-8}$, $6.5\times10^{-10}$ and $4.1\times10^{-11}$: a factor of 16 per halving, the signature of a fourth-order method.
 
-*Work.* With thrust on, energy is not conserved. It varies over a range of 0.75 J. But a constant vertical force has a potential, so $E - f\,e_3\cdot x_Q$ should be constant. It is, to $7\times10^{-12}$ J.
+*Work.* With thrust on, energy is not conserved. It varies over a range of 0.75 J. But a constant vertical force has a potential, so the energy minus $f\,e_3\cdot x_Q$ should be constant. It is, to $7\times10^{-12}$ J.
 
 *Momentum.* The center of mass stays on its straight line to $1.3\times10^{-10}$ m. The quadrotor circles it at 0.167 m, the load at 0.833 m. The ratio is $m_Q/m_L = 5$.
 :::
 
 Now settle the opening question. Equation [](#eq5-wu) is solved for the accelerations. The program's rows [](#eq5-quad-rows) and [](#eq5-cable) are coupled. Substitute one into the other and two lines of algebra give the thesis form. Numerically, the accelerations from the generated code and from [](#eq5-wu) agree to $2.5\times10^{-14}$ at 50 random states. The thesis is right. The sign is a minus.
 
-A controller needs one more thing: the dynamics linearized about a trajectory. That is one more variation. Apply $\delta$ to $E$ itself, with the same rules, and collect terms. The function `linearize` does this and returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ in the variation coordinates $(\delta x_L, \xi, \eta)$. [](#ch-linearization) develops it.
+A controller needs one more thing: the dynamics linearized about a trajectory. That is one more variation. Apply $\delta$ to each coefficient $E_\xi$ itself, with the same rules, and collect terms. The function `linearize` does this and returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ in the variations $(\delta x_L, \xi, \eta)$ and their rates. [](#ch-linearization) develops it, and its [](#thm7-s2) and [](#thm7-so3) are checked against this function.
 
 ## More bodies {#sec5-scaling}
 
@@ -341,7 +341,7 @@ A tool you trust is a tool whose edges you know.
 
 The Lagrangian must depend on configurations and velocities only. Put an acceleration in it and the library stops with "the Lagrangian depends on accelerations ... higher-order Lagrangians are not supported". (Any power of the velocity is fine. A quartic kinetic term derives and checks.)
 
-The manifolds are $\R$, $\R^3$, $S^1$, $S^2$, $\SO(3)$ and their products. $\SE(3)$ exists only as $\R^3\times\SO(3)$ with the inertial velocity $\dot x$. There is no way to declare a new manifold from outside.
+The manifolds are $\R$, $\R^3$, $S^1$, $S^2$, $\SO(3)$ and their products. $\SE(3)$ exists only as $\R^3\times\SO(3)$ with the world-frame velocity $\dot x$. There is no way to declare a new manifold from outside.
 
 Constraints must be built into the configuration space, as the cable is built into $S^2$. Rolling constraints, closed kinematic chains and contact are out of scope. The cable here is always taut. A cable that goes slack is a different model with a different configuration space, and switching between them is your job.
 
@@ -352,15 +352,15 @@ And once more: the check certifies the equations against $L$. It cannot certify 
 ## Exercises {#sec5-exercises .unnumbered}
 
 ::: {.exercise #exr5-sign-physical}
-Settle the sign in [](#eq5-wu) by physics alone. Cut the thrust, $f = 0$, so that both bodies fall freely while whirling about their center of mass. Which way must the cable pull the load? Compare with the first line of [](#eq5-wu) and with the tension the thesis gives, $T = \frac{m_L}{m_Q + m_L}\,(m_Q\, l\,\dot q\cdot\dot q - q\cdot fRe_3)$.
+Settle the sign in [](#eq5-wu) by physics alone. Cut the thrust, $f = 0$, so that both bodies fall freely while whirling about their center of mass. Which way must the cable pull the load? Compare with the first line of [](#eq5-wu) and with the tension [](#eq4-load-tension).
 :::
 
 ::: {.exercise #exr5-factor-two}
-Derive the $S^2$ rule $\delta\omega = \dot\xi - 2\,\omega\times\xi$ from $\omega = q\times\dot q$ and $\delta q = \xi\times q$ with $\xi\cdot q = 0$. Show that the second term points along $q$. Then find a Lagrangian for which it does not drop out, derive its equations in the notebook, and locate the stage of the trace where the term survives.
+Derive the $S^2$ rule [](#eq3-delta-omega), $\delta\omega = \dot\xi - 2\,\omega\times\xi$, from $\omega = q\times\dot q$ and $\delta q = \xi\times q$ with $\xi\cdot q = 0$. Show that the second term points along $q$. Then find a Lagrangian for which it does not drop out, derive its equations in the notebook, and locate the stage of the trace where the term survives.
 :::
 
 ::: {.exercise #exr5-rigid-pendulum}
-Walk the 3D pendulum, $L = \tfrac12\,\Omega\cdot J\Omega - m g\, e_3\cdot R\rho$ with $\delta W = \eta\cdot\tau$, through the pipeline by hand, one box per stage as in [](#fig5-pipeline). Then run it with a trace and compare. You should reach $-J\dot\Omega - \Omega\times J\Omega - m g\,\rho\times R\T e_3 + \tau = 0$. Which term comes from $\delta\Omega = \dot\eta + \Omega\times\eta$, and why does it not vanish here as it did on the sphere?
+Walk the 3D pendulum, $L = \tfrac12\,\Omega\cdot J\Omega - m g\, e_3\cdot R\rho$ with $\delta W = \eta\cdot\tau$, through the pipeline by hand, one box per stage as in [](#fig5-pipeline). Then run it with a trace and compare. You should reach $-J\dot\Omega - \Omega\times J\Omega - m g\,\rho\times R\T e_3 + \tau = 0$, which is [](#eq4-pendulum). Which term comes from $\delta\Omega = \dot\eta + \Omega\times\eta$, and why does it not vanish here as it did on the sphere?
 :::
 
 ::: {.exercise #exr5-jacobi}
@@ -379,10 +379,10 @@ Replace the rigid cable by a spring: add a scalar variable for the cable length,
 
 The variational method that the pipeline automates, the rules of [](#tbl5-leaves) and the chain of pendulums behind [](#eq5-chain) are set out by Lee, Leok and McClamroch (2018). Bittner and Sreenath (2016) were the first to automate the derivation of coordinate-free equations on manifolds, with a package written in Scala. `geomech` (Kotaru, 2026) is a Python library in the same line. It adds the numerical check, linearization, code generation, simulation and sums over a symbolic number of bodies. The numbers in this chapter were produced with version 1.1.0.
 
-The quadrotor with a suspended load, [](#eq5-wu), and the multi-quadrotor rigid-payload model are taken from Wu (2017, ch. 3). The single-quadrotor model was first derived by Sreenath, Lee and Kumar (2013). For a sense of what the automation replaces, see the reaction mass biped of Siravuru (2019, ch. 5): thirteen degrees of freedom, with three attitudes on $\SO(3)$, leg lengths and sliding reaction masses, derived by hand from a variational principle over several pages. The integrator is due to Munthe-Kaas (1999).
+The quadrotor with a cable-suspended load, [](#eq5-wu), and the multi-quadrotor rigid-payload model are taken from Wu (2017, ch. 3). The single-quadrotor model was first derived by Sreenath, Lee and Kumar (2013). For a sense of what the automation replaces, see the Reaction Mass Biped of Siravuru (2019, ch. 5): a configuration manifold of dimension fourteen, with three attitudes on $\SO(3)$, two leg lengths and three pairs of sliding reaction masses, derived by hand from a variational principle over several pages. The integrator is due to Munthe-Kaas (1999).
 
 - B. Bittner and K. Sreenath, ["Symbolic computation of dynamics on smooth manifolds"](https://doi.org/10.1007/978-3-030-43089-4_22), *Workshop on the Algorithmic Foundations of Robotics (WAFR)*, 2016.
-- P. Kotaru, [*geomech: symbolic equations of motion on smooth manifolds*](https://github.com/vkotaru/geomech), version 1.1.0, 2026. https://github.com/vkotaru/geomech
+- P. Kotaru, [*geomech: symbolic equations of motion on smooth manifolds*](https://github.com/vkotaru/geomech), version 1.1.0, 2026.
 - T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
 - H. Munthe-Kaas, ["High order Runge–Kutta methods on manifolds"](https://doi.org/10.1016/S0168-9274%2898%2900030-0), *Applied Numerical Mathematics* 29(1), 1999.
 - A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.

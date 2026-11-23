@@ -121,7 +121,7 @@ def expmap():
     s.dot(P(0, 1), color=INK, size=5)
     s.label(P(0, 1), "identity", dy=12, size=9.5, **SANS)
     s.label(P(1.3, 1.0), r"$\theta$", dx=4, dy=11, color=INDIGO, size=12)
-    s.label(P(np.sin(1.3), np.cos(1.3)), r"$\exp(\theta J)$", dx=-32, dy=-6, color=INDIGO)
+    s.label(P(np.sin(1.3), np.cos(1.3)), r"$\exp(\theta \Lambda)$", dx=-32, dy=-6, color=INDIGO)
     s.label(P(-1.1, 1), "tangent line", dx=0, dy=11, size=9.5, color=MUTED, **SANS)
     s.label(P(0, 0), r"$\mathrm{SO}(2)$", size=12)
     s.label(P(0, -1.32), "equal lengths, wrapped", size=9.5, color=MUTED, **SANS)
@@ -183,7 +183,7 @@ def noncommute():
     s.save(OUT / "ch02-noncommute.svg", pad=0.1)
 
 
-# ------------------------------------- quadrotor with a suspended load
+# ------------------------------------- quadrotor with a cable-suspended load
 def quadload():
     s = Scene(width=6.6, height=4.2, azim=-50, elev=22)
     L = 1.55
