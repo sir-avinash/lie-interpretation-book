@@ -36,6 +36,7 @@
     "min": 4.587652645813144,
     "max": 64.02611672812294
   },
+  "first_order_eta_norm": 0.8637145060430579,
   "first_order_table_SO3": [
     {
       "eps": 0.4,

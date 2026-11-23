@@ -45,18 +45,18 @@ from geomech import *
 half = Scalar("0.5", value=0.5, attr=["Constant"])
 m, g, l = getScalars("m g l", attr=["Constant"])
 e3 = Vector("e3", attr=["Constant"])
-q, M = S2("q"), Vector("M")                      # rod direction, moment at the pivot
+q, tau = S2("q"), Vector("\\tau")               # rod direction, torque at the pivot
 omega, xi = q.get_tangent_vector(), q.get_variation_vector()
 
 L = half * m * l * l * Dot(omega, omega) - m * g * l * Dot(q, e3)
-dW = Dot(xi, M)
+dW = Dot(xi, tau)
 variables = SystemVariables(vectors=[q])
 
 trace = EOMTrace()
 eom = compute_eom(L, dW, variables, trace=trace)
 # --- end
 
-pend = dict(L=L, dW=dW, variables=variables, eom=eom, q=q, M=M, omega=omega, xi=xi)
+pend = dict(L=L, dW=dW, variables=variables, eom=eom, q=q, tau=tau, omega=omega, xi=xi)
 _, summary = captured(trace.summary, chars=200)
 print(summary)
 stages = dict(trace.stages)
@@ -84,11 +84,11 @@ ck.true("stage ibp: -m l l (xi . omega_dot)",
         tex["ibp"].startswith("\\left(-m l l \\left(\\xi_{q} \\cdot \\dot{\\omega_{q}}\\right)"))
 final = str(eom["\\xi_{q}"][1])
 ck.true("pendulum equation string",
-        final == "(\\frac{d}{dt}(\\omega_{q})*m*l*l*(-1)+Cross(q,e3)*m*g*l*(-1)+M)", final)
+        final == "(\\frac{d}{dt}(\\omega_{q})*m*l*l*(-1)+Cross(q,e3)*m*g*l*(-1)+\\tau)", final)
 _, printed = captured(print_eom, eom)
 ck.true("print_eom gives the LaTeX integral form",
         printed.strip() == "\\int \\xi_{q} \\cdot \\left(-m l l \\dot{\\omega_{q}} -m g l \\left(q \\times e3\\right)"
-                           " + M\\right) \\, dt = 0", printed.strip())
+                           " + \\tau\\right) \\, dt = 0", printed.strip())
 
 # Each stage can be rerun by hand from the one before it.
 ck.true("apply_manifold_rules(dS) reproduces the stage",
@@ -104,7 +104,7 @@ xin = np.cross(qn, rng.normal(size=3))
 col = lambda v: np.asarray(v, float).reshape(3, 1)  # noqa: E731
 env = {"q": col(qn), str(omega): col(wn), str(xi): col(xin), str(xi.t_diff()): col(rng.normal(size=3)),
        str(omega.t_diff()): col(np.cross(qn, rng.normal(size=3))), "m": 1.3, "g": 9.81, "l": 0.7,
-       "e3": col([0, 0, 1]), "M": col(rng.normal(size=3))}
+       "e3": col([0, 0, 1]), "\\tau": col(rng.normal(size=3))}
 vals = [evaluate(stages[k], dict(env)) for k in ("manifold_rules", "simplify")]
 ck.close("simplify preserves the value of delta S", vals[0], vals[1], tol=1e-12)
 ck.close("omega . (omega x xi) = 0, the identity that kills the factor-2 term", wn @ np.cross(wn, xin), 0.0)
@@ -131,7 +131,7 @@ ck.true("the logged S2 rule line",
         rule_lines[0] == "manifold.s2_variation_omega: δ(v:\\omega_{q}) ==> (d/dt(v:\\xi_{q}) + "
                          "cross(v:\\omega_{q}, v:\\xi_{q})·(-2))", rule_lines[0])
 
-pend_err = check_eom(L, dW, variables, eom, inputs=[M])
+pend_err = check_eom(L, dW, variables, eom, inputs=[tau])
 ck.true("pendulum: check_eom < 1e-5", pend_err < 1e-5, f"{pend_err:.1e}")
 ck.record("pendulum_check_eom", pend_err)
 
@@ -144,14 +144,14 @@ except dataclasses.FrozenInstanceError:
 ck.true("expression nodes are frozen dataclasses", frozen)
 
 # Standard form of the pendulum: M = -(physical inertia).
-sf_p = to_standard_form(eom, variables, [M])["\\xi_{q}"]
+sf_p = to_standard_form(eom, variables, [tau])["\\xi_{q}"]
 ck.true("pendulum standard form: mass block prints I*m*l*l*(-1)",
         str(sf_p.M["\\frac{d}{dt}(\\omega_{q})"]) == "I*m*l*l*(-1)", str(sf_p.M["\\frac{d}{dt}(\\omega_{q})"]))
 
 # The 3D pendulum of the exercises, and what an undeclared symmetry costs.
 Jm = Matrix("J", attr=["Constant", "SymmetricMatrix"])
 rho = Vector("\\rho", attr=["Constant"])
-Rp, Mp = SO3("R"), Vector("M")
+Rp, Mp = SO3("R"), Vector("\\tau")
 Omp = Rp.get_tangent_vector()
 Lp = half * Dot(Omp, Jm * Omp) - m * g * Dot(e3, Rp * rho)
 Vp = SystemVariables(matrices=[Rp])
@@ -159,7 +159,7 @@ eom_p = compute_eom(Lp, Dot(Rp.get_variation_vector(), Mp), Vp)
 s3 = str(eom_p["\\eta_{R}"][1])
 ck.true("3D pendulum: -J Omega_dot - Omega x J Omega - m g rho x R^T e3 + M",
         s3 == "(J*\\frac{d}{dt}(\\Omega_{R})*(-1)+Cross(\\Omega_{R},J*\\Omega_{R})*(-1)"
-              "+Cross(\\rho,(R)'*e3)*m*g*(-1)+M)", s3)
+              "+Cross(\\rho,(R)'*e3)*m*g*(-1)+\\tau)", s3)
 ck.true("3D pendulum: check_eom < 1e-5",
         check_eom(Lp, Dot(Rp.get_variation_vector(), Mp), Vp, eom_p, inputs=[Mp]) < 1e-5)
 Jn = Matrix("J", attr=["Constant"])
@@ -228,7 +228,7 @@ mQ, mL, g, l = getScalars("m_Q m_L g l", attr=["Constant"])
 J = Matrix("J", attr=["Constant", "SymmetricMatrix"])
 e3 = Vector("e3", attr=["Constant"])
 xL, q, R = Vector("x_L"), S2("q"), SO3("R")       # load position, cable direction, attitude
-f, M = Scalar("f"), Vector("M")                   # thrust, moment
+f, tau = Scalar("f"), Vector("\\tau")            # thrust, torque
 omega, xi = q.get_tangent_vector(), q.get_variation_vector()
 Omega, eta = R.get_tangent_vector(), R.get_variation_vector()
 
@@ -236,9 +236,9 @@ xQ = xL - q * l                                   # the quadrotor sits one cable
 vQ, vL = xQ.t_diff(), xL.t_diff()
 L = (half * mQ * Dot(vQ, vQ) + half * mL * Dot(vL, vL) + half * Dot(Omega, J * Omega)
      - mQ * g * Dot(e3, xQ) - mL * g * Dot(e3, xL))
-dW = Dot(xL.delta() - Cross(xi, q) * l, (R * e3) * f) + Dot(eta, M)
+dW = Dot(xL.delta() - Cross(xi, q) * l, (R * e3) * f) + Dot(eta, tau)
 
-variables, inputs = SystemVariables(vectors=[xL, q], matrices=[R]), [f, M]
+variables, inputs = SystemVariables(vectors=[xL, q], matrices=[R]), [f, tau]
 eom = compute_eom(L, dW, variables)
 err = check_eom(L, dW, variables, eom, inputs=inputs)
 # --- end
@@ -256,7 +256,7 @@ ck.true("load equation string", sx == (
     "+e3*m_Q*g*(-1)+e3*m_L*g*(-1)+R*e3*f)"), sx)
 ck.true("cable equation has seven terms", len(eom[kq][1].nodes) == 7, f"{len(eom[kq][1].nodes)}")
 ck.true("attitude equation string",
-        sR == "(J*\\frac{d}{dt}(\\Omega_{R})*(-1)+Cross(\\Omega_{R},J*\\Omega_{R})*(-1)+M)", sR)
+        sR == "(J*\\frac{d}{dt}(\\Omega_{R})*(-1)+Cross(\\Omega_{R},J*\\Omega_{R})*(-1)+\\tau)", sR)
 
 worst = [check_eom(L, dW, variables, eom, inputs=inputs, seed=s) for s in range(20)]
 ck.true("correct equation: error below 1e-6 for 20 seeds", max(worst) < 1e-6, f"max {max(worst):.1e}")
@@ -357,11 +357,12 @@ plant = load_module(module_source(sf, layout, lagrangian=L), "quadrotor_load")
 p = {"m_Q": 1.5, "m_L": 0.3, "l": 1.0, "g": 9.81,
      "J": np.diag([0.02, 0.025, 0.04]), "e3": np.array([0.0, 0.0, 1.0])}
 q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])   # cable swung out by 0.8 rad
-w0 = np.cross(q0, [0.0, 0.0, 1.6])                # and moving sideways
-v0 = p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)   # centre of mass at rest
+w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))  # and circling: e3 spin, made tangent to q0
+v_cm = np.array([0.45, 0.0, 0.0])                 # the centre of mass will coast at this velocity
+v0 = v_cm + p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)
 x0 = layout.pack(x_L=np.zeros(3), q=q0, R=np.eye(3), omega_q=w0, x_L_dot=v0)
 
-hover = np.r_[(p["m_Q"] + p["m_L"]) * p["g"], 0.0, 0.0, 0.0]        # u = [f, M]
+hover = np.r_[(p["m_Q"] + p["m_L"]) * p["g"], 0.0, 0.0, 0.0]        # u = [f, tau]
 traj = simulate(plant, x0, 6.0, p, u=hover)
 free = simulate(plant, x0, 6.0, p)                # no inputs: energy must be conserved
 E = free.energy()
@@ -392,9 +393,10 @@ ck.close("forced run: E - f e3.x_Q is conserved", Ef - work, Ef[0] * np.ones_lik
 ck.record("forced_energy_range_J", float(np.ptp(Ef)))
 ck.record("forced_modified_energy_drift_J", float(np.max(np.abs(Ef - work - Ef[0]))))
 com = (p["m_Q"] * xQn + p["m_L"] * traj["x_L"]) / (p["m_Q"] + p["m_L"])
-ck.close("forced run: centre of mass stays put", com, com[0] * np.ones_like(com), tol=1e-9)
+ck.close("forced run: centre of mass coasts on a straight line at v_cm", com, com[0] + np.outer(traj.t, v_cm), tol=1e-9)
 ck.true("forced run: constraint drift below 1e-12", traj.max_drift() < 1e-12, f"{traj.max_drift():.1e}")
-ck.record("forced_load_excursion_m", float(np.max(np.linalg.norm(traj["x_L"] - traj["x_L"][0], axis=1))))
+ck.record("forced_quad_wobble_m", float(np.max(np.linalg.norm(xQn - com, axis=1))))
+ck.record("forced_load_radius_m", float(np.max(np.linalg.norm(traj["x_L"] - com, axis=1))))
 
 # Step-size study for the figure and the text: fourth order until round-off.
 drifts = {}

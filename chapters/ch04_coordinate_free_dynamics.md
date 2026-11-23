@@ -1,175 +1,391 @@
-Chapter 4: Coordinate-Free Dynamics: Riemannian Mechanics, Lagrange–d'Alembert & Multi-Body Formulations
-Chapter Roadmap. Classical Euler–Lagrange equations written in local coordinates $q \in \mathbb{R}^n$ suffer from chart singularities (such as gimbal lock on $SO(3)$ or polar singularities on $S^2$) and obscure the geometric structure of mechanical energy and constraints. This chapter develops coordinate-free equations of motion directly on configuration manifolds: (1) Riemannian simple mechanical systems via the Levi-Civita covariant derivative, (2) the Lagrange–d'Alembert principle on $SE(3) \times S^2$ for a quadrotor with a cable-suspended load (including taut/slack hybrid transitions), (3) Newton–Euler flexible-cable chains on $SO(3) \times \mathbb{R}^3 \times (S^2)^n$ and modular Boltzmann–Hamel whole-body dynamics on $SE(3) \times \mathbb{R}^{N_T}$, and (4) worked examples and exercises.
+---
+title: Dynamics without coordinates
+short: Dynamics
+id: ch-dynamics
+summary: Hamilton's principle carried out on the sphere and on the rotation group, and the equations of motion of pendulums, rigid bodies, quadrotors and cable-suspended loads that come out of it.
+notebook: notebooks/ch04_lagrange_dalembert_sim.ipynb
+verify: verify/ch04.py
+---
 
+Pin a rigid body at one point and let it swing under gravity. This is the 3D pendulum. Write its equations of motion twice.
 
-________________
+First with yaw, pitch and roll. Substitute $\Omega = E(\theta,\phi)\,\dot\eta$ from [](#eq-euler-jacobian) into the kinetic energy $\tfrac12\Omega\cdot J\Omega$, apply the Euler-Lagrange equations, and expand. For a general inertia matrix you get three coupled equations with 105 terms between them, each a product of sines and cosines. Their mass matrix is $E\T J E$, and it has to be inverted at every time step.
 
+Then with the rotation matrix. The whole model is
 
-4.1 Notation and Lie-Algebraic Conventions
-Throughout this chapter, we adhere to the following canonical conventions:
+$$
+J\dot\Omega + \Omega\times J\Omega = m g\,(R\T e_3)\times\rho, \qquad \dot R = R\,\Omega^\wedge ,
+$$
 
+where $\rho$ is the body-frame vector from the pivot to the centre of mass. One line. The mass matrix is $J$, a constant.
 
-* Hat and Vee Maps. The hat map $(\cdot)^\wedge : \mathbb{R}^3 \to \mathfrak{so}(3)$ is the Lie algebra isomorphism defined by $$x^\wedge y = x \times y, \qquad \forall x, y \in \mathbb{R}^3, \tag{4.1}$$ explicitly given for $x = [x_1, x_2, x_3]^T$ by $$x^\wedge = \begin{bmatrix} 0 & -x_3 & x_2 \ x_3 & 0 & -x_1 \ -x_2 & x_1 & 0 \end{bmatrix}, \tag{4.2}$$ with inverse $(\cdot)^\vee : \mathfrak{so}(3) \to \mathbb{R}^3$.
-* Kinematics on $SO(3)$. For a rigid body with attitude $R \in SO(3) := {R \in \mathbb{R}^{3\times 3} \mid R^T R = I,, \det(R) = +1}$, the body-fixed angular velocity $\Omega \in \mathbb{R}^3$ satisfies $$\dot{R} = R \Omega^\wedge. \tag{4.3}$$
-* Kinematics on $S^2$. For a unit direction vector $q \in S^2 := {q \in \mathbb{R}^3 \mid q \cdot q = 1}$, its angular velocity $\omega \in \mathbb{R}^3$ satisfies $$\dot{q} = \omega \times q = \omega^\wedge q, \qquad \omega \cdot q = 0. \tag{4.4}$$ The orthogonality condition $\omega \cdot q = 0$ ensures uniqueness of $\omega$ in the tangent plane $T_q S^2 \cong {v \in \mathbb{R}^3 \mid v \cdot q = 0}$.
+Where both work they give the same motion. But take a body with $J = \operatorname{diag}(0.20, 0.25, 0.10)$ kg·m² and look at how hard each mass matrix is to invert ([](#fig4-euler-cond)). The condition number of $J$ is 2.5 at every attitude. The condition number of $E\T J E$ is 2.5 when the body is level, 25 at 60° of pitch, 974 at 85°, and $2.4\times10^4$ at 89°. At 90° the matrix is singular and cannot be inverted at all.
 
+![Condition number of the mass matrix of a 3D pendulum against pitch angle, at 20° of roll. In Euler angles it grows like $1/\cos^2\theta$. In the body frame it is the constant 2.5.](figures/ch04-euler-cond.svg){#fig4-euler-cond}
 
-Symbol
-	Space
-	Physical Meaning
-	$M$, $T_q M$, $T_q^* M$
-	Manifold, tangent, cotangent
-	Configuration space and dual velocity/force fibers
-	$\llangle \cdot, \cdot \rrangle_q$
-	$T_q M \times T_q M \to \mathbb{R}$
-	Inertia Riemannian metric $\langle M_q \dot{q}_1, \dot{q}_2 \rangle$
-	$\nabla_X Y$
-	$\Gamma(TM)$
-	Levi-Civita covariant derivative compatible with $M_q$
-	$R, \Omega$
-	$SO(3), \mathbb{R}^3$
-	Quadrotor/base attitude and body angular velocity
-	$q, \omega$
-	$S^2, \mathbb{R}^3$
-	Cable/pendulum unit direction and angular velocity ($\omega \cdot q = 0$)
-	$x_Q, v_Q, x_L, v_L$
-	$\mathbb{R}^3$
-	Quadrotor and load inertial positions and velocities
-	$f, M$
-	$\mathbb{R}, \mathbb{R}^3$
-	Quadrotor scalar thrust and body-frame moment
-	$g_b, \theta$
-	$SE(3), \mathbb{R}^{N_T}$
-	Floating-base pose and $N_T$ internal joint angles
-	
+Nothing happens to the pendulum at 90° of pitch. So where did the hundred terms go, and why does the short equation never blow up? To answer, we need to derive equations of motion without ever choosing a chart.
 
-Table 4.1: Summary of coordinate-free geometric and mechanical notation used in Chapter 4.
+## Hamilton's principle, on flat ground {#sec4-hamilton}
 
+Start where there is nothing to fix. Throw a ball of mass $m$. Its position is $x \in \R^3$, its **Lagrangian** is kinetic minus potential energy,
 
-________________
+$$
+L(x,\dot x) = \tfrac12 m\,\dot x\cdot\dot x - m g\,e_3\cdot x ,
+$$
 
+and the **action** of a path $x(t)$ over $[0,t_f]$ is the number $S = \int_0^{t_f} L\,\dd t$.
 
-4.2 Riemannian Simple Mechanical Systems
-Following the geometric control formulation in Wu & Sreenath (IEEE TAC 2016), a mechanical system evolving on a smooth $m$-dimensional configuration manifold $M$ is modeled directly on the tangent bundle $TM = \bigcup_{q \in M} T_q M$ without choosing local charts.
+::: {.definition #def4-hamilton name="Hamilton's principle"}
+Among all paths with the same endpoints $x(0)$ and $x(t_f)$, the motion is a path whose action is stationary: $\delta S = 0$ for every variation that vanishes at the endpoints.
+:::
 
+A **variation** is a one-parameter family of nearby paths, $x_\epsilon(t) = x(t) + \epsilon\,\delta x(t)$ with $\delta x(0) = \delta x(t_f) = 0$, and $\delta S$ is the derivative of $S$ along the family at $\epsilon = 0$. Three moves turn the principle into an equation.
 
-Def. 4.1 (Simple Mechanical System on a Riemannian Manifold). A simple mechanical system is a tuple $(M, M_q, V_q, {F_i}_{i=1}^m)$ consisting of:
+*Vary.* Differentiate under the integral. Since $\epsilon$ and $t$ are independent, $\delta\dot x = \ddt\delta x$, and
 
+$$
+\delta S = \int_0^{t_f} \big(m\,\dot x\cdot\delta\dot x - m g\,e_3\cdot\delta x\big)\,\dd t .
+$$
 
-1. A smooth configuration manifold $M$ with state $(q, \dot{q}) \in TM$.
-2. An inertia tensor $M_q : T_q M \to T_q^* M$ that induces a Riemannian metric (the kinetic-energy metric): $$\llangle \dot{q}_1, \dot{q}_2 \rrangle_q = \langle M_q \dot{q}_1, \dot{q}_2 \rangle, \qquad \forall \dot{q}_1, \dot{q}_2 \in T_q M, \tag{4.5}$$ so that the kinetic energy is $T(q, \dot{q}) = \frac{1}{2} \llangle \dot{q}, \dot{q} \rrangle_q$.
-3. The unique torsion-free, metric-compatible Levi-Civita connection $\nabla$ determined by $\llangle \cdot, \cdot \rrangle_q$, which defines the geometric acceleration $\nabla_{\dot{q}} \dot{q} \in T_q M$.
-4. A smooth potential energy function $V_q : M \to \mathbb{R}$ whose differential $dV_q(q) \in T_q^* M$ is a one-form acting on $X \in T_q M$ via $\langle dV_q, X \rangle_q = \left.\frac{d}{dt}\right|_{t=0} V_q(\alpha(t))$ for a curve $\alpha(0)=q, \dot{\alpha}(0)=X$.
-5. A collection of input force one-forms $F_i(q, \dot{q}) \in T_q^* M$ ($i = 1, \dots, m$) paired with scalar control inputs $u_i \in \mathbb{R}$.
+*Integrate by parts*, to move the time derivative off $\delta x$. The boundary term vanishes because $\delta x$ does:
 
+$$
+\delta S = -\int_0^{t_f} \big(m\ddot x + m g\,e_3\big)\cdot\delta x\;\dd t .
+$$
 
-Prop. 4.1 (Coordinate-Free Equations of Motion). The dynamics of a simple mechanical system $(M, M_q, V_q, {F_i})$ are governed by the second-order geometric differential equation $$\nabla_{\dot{q}} \dot{q} = M_q^{-1}!\left(-dV_q(q) + \sum_{i=1}^m F_i(q, \dot{q}) u_i\right). \tag{4.6}$$
+*Use that $\delta x$ is arbitrary.* The bracket must then vanish at every instant, and $m\ddot x = -m g\,e_3$.
 
+::: {.thought #thought4-ball name="Bump the parabola"}
+Throw a 1 kg ball so that it lands one second later. Imagine it had flown a path 10 cm higher in the middle, between the same two points: add $\epsilon\sin(\pi t/t_f)\,e_3$ with $\epsilon = 0.1$ m. It moves faster, and it sits higher. Which effect wins?
 
-Remark 4.1 (Why Covariant Acceleration Matters). In Euclidean space $M = \mathbb{R}^n$ with constant mass $M_q = m I$, the Christoffel symbols vanish and $\nabla_{\dot{q}} \dot{q} = \ddot{q}$. On curved manifolds such as $S^2$ or $SO(3)$, $\nabla_{\dot{q}} \dot{q}$ automatically incorporates the centripetal/Coriolis curvature terms needed to keep the trajectory tangent to $M$. For example, on $S^2$ with the standard round metric $\llangle \dot{q}_1, \dot{q}_2 \rrangle = \dot{q}_1 \cdot \dot{q}2$, the covariant acceleration of a curve $q(t) \in S^2$ is the orthogonal projection of $\ddot{q}$ onto $T_q S^2$: $$\nabla{\dot{q}} \dot{q} = \ddot{q} + (\dot{q} \cdot \dot{q}) q = -q^\wedge q^\wedge \ddot{q}. \tag{4.7}$$
-4.2.1 Configuration Errors and Transport Maps
-To compare velocities at a current configuration $q \in M$ and a reference configuration $q_d \in M$—which live in different tangent spaces $T_q M$ and $T_{q_d} M$—we pair a smooth quadratic configuration error function $\Psi : M \times M \to [0, \infty)$ with a compatible transport map $T_{(q, q_d)} : T_{q_d} M \to T_q M$ (Wu & Sreenath, IEEE TAC 2016): $$e_q = d_1 \Psi(q, q_d), \qquad d_2 \Psi(q, q_d) = -T_{(q, q_d)}^* d_1 \Psi(q, q_d), \qquad e_{\dot{q}} = \dot{q} - T_{(q, q_d)} \dot{q}_d. \tag{4.8}$$
+Neither, to first order. The kinetic and potential changes cancel exactly, and what is left is second order: the action rises by $m\epsilon^2\pi^2/(4t_f) = 0.0247$ J·s. Bump it downward by 10 cm and the action rises by the same amount. The parabola sits at the bottom of a bowl.
+:::
 
+Every step used the fact that $x + \epsilon\,\delta x$ is again a valid position. On a curved configuration space that is false, and the first move has to change.
 
-Manifold $M$
-	Error Function $\Psi(q, q_d)$
-	Configuration Error $e_q = d_1\Psi$
-	Velocity Error $e_{\dot{q}}$
-	$\mathbb{R}^3$
-	$\frac{1}{2}|q - q_d|^2$
-	$q - q_d$
-	$\dot{q} - \dot{q}_d$
-	$S^2$
-	$1 - q \cdot q_d$
-	$(q_d \times q)$ (or $q^\wedge q^\wedge q_d$ in $T_q S^2$)
-	$\dot{q} - (q_d \times \dot{q}_d) \times q$
-	$SO(3)$
-	$\frac{1}{2}\operatorname{tr}(I - R_d^T R)$
-	$\frac{1}{2}(R_d^T R - R^T R_d)^\vee$
-	$\Omega - R^T R_d \Omega_d$
-	
+## The same three moves on a sphere {#sec4-sphere}
 
-Table 4.2: Canonical configuration errors and compatible transport maps on $\mathbb{R}^3$, $S^2$, and $SO(3)$.
+A spherical pendulum is a bob of mass $m$ on a rigid massless rod of length $l$. The bob sits at $l q$ with $q \in S^2$, and
 
+$$
+L(q,\dot q) = \tfrac12 m l^2\,\dot q\cdot\dot q - m g l\,e_3\cdot q .
+$$
 
-________________
+Try $q + \epsilon\,\delta q$ and the bob leaves the sphere: the rod has stretched. A variation must be a family of curves that all stay on $S^2$. The simplest way to stay on a sphere is to rotate. Pick any vector field $\xi(t)$ along the path and set
 
+$$
+q_\epsilon(t) = \exp\!\big(\epsilon\,\xi(t)^\wedge\big)\,q(t)
+\qquad\Longrightarrow\qquad
+\delta q = \xi\times q, \qquad \delta\dot q = \dot\xi\times q + \xi\times\dot q . \label{eq4-var-s2}
+$$
 
-4.3 Lagrange–d'Alembert Principle on $SE(3) \times S^2$
-We now derive the coordinate-free dynamics of a quadrotor UAV carrying a point-mass payload via a massless cable, following Sreenath, Lee, & Kumar (CDC 2013).
-4.3.1 Configuration Space and Kinematics (Taut Mode)
-When the cable of length $l > 0$ is taut, the system has $8$ degrees of freedom and evolves on the product manifold $$Q_n = SE(3) \times S^2 \cong \mathbb{R}^3 \times SO(3) \times S^2, \tag{4.9}$$ with $4$ control inputs $(f, M) \in \mathbb{R} \times \mathbb{R}^3$ ($4$ degrees of underactuation). Using the $z$-up inertial frame ($e_3 = [0, 0, 1]^T$ pointing upward) and letting $q \in S^2$ denote the unit vector from the quadrotor center of mass $x_Q \in \mathbb{R}^3$ to the load position $x_L \in \mathbb{R}^3$, the kinematic constraint is $$x_Q = x_L - l q, \qquad v_Q = v_L - l \dot{q}. \tag{4.10}$$
+Each $q_\epsilon(t)$ is $q(t)$ turned by the angle $\epsilon\|\xi\|$ about $\xi$, so its length is still one ([](#fig4-variation)). A component of $\xi$ along $q$ turns $q$ about itself and does nothing, so we take $\xi\cdot q = 0$. The fixed endpoints become $\xi(0) = \xi(t_f) = 0$.
 
+![Hamilton's principle on the sphere. The path $q(t)$ is a computed pendulum swing. Each neighbouring curve is $q(t)$ rotated about $\xi(t)$, so it stays on the sphere. The arrows are the variation $\delta q = \xi\times q$, tangent to the sphere and zero at both ends.](figures/ch04-variation-s2.svg){#fig4-variation}
 
-The kinetic energy $T : TQ_n \to \mathbb{R}$ and potential energy $U : Q_n \to \mathbb{R}$ are $$T = \frac{1}{2} m_Q v_Q \cdot v_Q + \frac{1}{2} m_L v_L \cdot v_L + \frac{1}{2} \langle \Omega, J_Q \Omega \rangle, \tag{4.11}$$ $$U = m_Q g e_3 \cdot x_Q + m_L g e_3 \cdot x_L, \tag{4.12}$$ with Lagrangian $L = T - U$. Here $m_Q, m_L > 0$ are the quadrotor and load masses, and $J_Q \in \mathbb{R}^{3\times 3}$ is the symmetric positive-definite quadrotor inertia tensor in the body frame.
-4.3.2 Manifold Variations and the Lagrange–d'Alembert Principle
-To take variations directly on $SE(3) \times S^2$ without local coordinates, we define infinitesimal variations parameterized by $(\delta x_L, \eta, \xi)$ where $\eta \in \mathbb{R}^3$ and $\xi \in \mathbb{R}^3$ with $\xi \cdot q = 0$: $$\delta R = R \hat{\eta}, \qquad \delta \Omega = \hat{\Omega}\eta + \dot{\eta}, \tag{4.13}$$ $$\delta q = \xi \times q, \qquad \delta \dot{q} = \dot{\xi} \times q + \xi \times \dot{q}, \qquad \delta x_Q = \delta x_L - l \delta q. \tag{4.14}$$ All variations vanish at the endpoints $t = 0$ and $t = \tau$.
+Now the three moves. Varying and integrating by parts work exactly as before and give
 
+$$
+\delta S = -\int_0^{t_f} \big(m l^2\ddot q + m g l\,e_3\big)\cdot\delta q\;\dd t
+= -\int_0^{t_f} \xi\cdot\Big(q\times\big(m l^2\ddot q + m g l\,e_3\big)\Big)\,\dd t ,
+$$
 
-Def. 4.2 (Lagrange–d'Alembert Principle). In the presence of non-conservative actuator forces $(f, M)$, the physical trajectory on $[0, \tau]$ satisfies $$\delta \int_0^\tau L , dt + \int_0^\tau \left( \langle W_1, \hat{M} \rangle_{\mathfrak{so}(3)} + W_2 \cdot f R e_3 \right) dt = 0, \tag{4.15}$$ where $W_1 = R^T \delta R = \hat{\eta}$ and $W_2 = \delta x_Q = \delta x_L - l \delta q$ are the virtual displacement vector fields.
-4.3.3 Equations of Motion in Taut Mode ($\Sigma_n$)
-Evaluating Eq. (4.15) using Eqs. (4.13)–(4.14), integrating by parts, and applying the fundamental lemma of the calculus of variations yields the coordinate-free equations of motion on $SE(3) \times S^2$ (Sreenath, Lee, & Kumar, CDC 2013):
+using $a\cdot(\xi\times q) = \xi\cdot(q\times a)$. The third move is where the sphere shows. $\xi$ is arbitrary, but only among vectors perpendicular to $q$. The vector $q\times(\cdots)$ is already perpendicular to $q$, so it must vanish:
 
+$$
+q\times\big(m l^2\ddot q + m g l\,e_3\big) = 0 . \label{eq4-sph-cross}
+$$
 
-$$\dot{x}_L = v_L, \tag{4.16}$$ $$(m_Q + m_L)(\dot{v}_L + g e_3) = \big(q \cdot f R e_3 - m_Q l (\dot{q} \cdot \dot{q})\big) q, \tag{4.17}$$ $$\dot{q} = \omega \times q, \qquad (\omega \cdot q = 0), \tag{4.18}$$ $$m_Q l \dot{\omega} = -q \times f R e_3, \tag{4.19}$$ $$\dot{R} = R \Omega^\wedge, \tag{4.20}$$ $$J_Q \dot{\Omega} + \Omega \times J_Q \Omega = M. \tag{4.21}$$
+Read this carefully. It does not say that $m l^2\ddot q + m g l\,e_3$ is zero. It says that vector is parallel to $q$. Only its tangent part must vanish:
 
+$$
+(I - q q\T)\big(m l\,\ddot q + m g\,e_3\big) = 0 . \label{eq4-sph-proj}
+$$
 
-Remark 4.2 (Decoupling and Second-Order Form on $S^2$). Notice from Eq. (4.19) that gravity does not directly enter the cable attitude dynamics $\dot{\omega}$, and the quadrotor attitude dynamics Eq. (4.21) are decoupled from the load. Differentiating Eq. (4.18) and substituting Eq. (4.19) gives the equivalent second-order form on $S^2$: $$m_Q l \ddot{q} + m_Q l (\dot{q} \cdot \dot{q}) q = q \times (q \times f R e_3) = -(I - q q^T) f R e_3, \tag{4.22}$$ which matches the Riemannian covariant acceleration $\nabla_{\dot{q}}\dot{q}$ in Eq. (4.7) driven by the tangential projection of the thrust vector.
-4.3.4 Hybrid Dynamics: Taut ($\Sigma_n$) vs. Slack ($\Sigma_z$) Modes
-When the cable tension $T := |m_L (\dot{v}_L + g e_3)|$ drops to zero, the cable goes slack and the system transitions to $Q_z = SE(3) \times \mathbb{R}^3$, where the quadrotor and load evolve as decoupled rigid-body and free-fall point-mass systems (Sreenath, Lee, & Kumar, CDC 2013): $$\dot{x}_L = v_L, \qquad m_L(\dot{v}_L + g e_3) = 0, \tag{4.23}$$ $$\dot{x}_Q = v_Q, \qquad m_Q(\dot{v}_Q + g e_3) = f R e_3, \tag{4.24}$$ $$\dot{R} = R \Omega^\wedge, \qquad J_Q \dot{\Omega} + \Omega \times J_Q \Omega = M. \tag{4.25}$$
+The part along $q$ is fixed by the constraint alone. Differentiate $q\cdot q = 1$ twice to get the centripetal acceleration $q\cdot\ddot q = -\|\dot q\|^2$. Together:
 
+$$
+\ddot q = -\|\dot q\|^2\,q - \frac{g}{l}\,(I - q q\T)\,e_3 . \label{eq4-sph-qdd}
+$$
 
-       +---------------------------------------------------+
-       |  Taut Mode Sigma_n on SE(3) x S^2                 |
-       |  State: X_n = (x_L, v_L, q, omega, R, Omega)      |
-       +---------------------------------------------------+
-          |                                             ^
-Guard S_z: T == 0                           Guard S_n: ||x_Q - x_L|| == l
-Delta_{n->z} = id                           and d/dt ||x_Q - x_L|| > 0
-          v                                 Delta_{z->n}: inelastic impact
-       +---------------------------------------------------+
-       |  Slack Mode Sigma_z on SE(3) x R^3                |
-       |  State: X_z = (x_L, v_L, x_Q, v_Q, R, Omega)      |
-       +---------------------------------------------------+
-
-Fig. 4.1: Hybrid automaton switching between the taut cable mode $\Sigma_n$ on $SE(3) \times S^2$ and the slack free-fall mode $\Sigma_z$ on $SE(3) \times \mathbb{R}^3$.
+With the angular velocity of [](#ch-manifolds), $\dot q = \omega\times q$ and $\omega\cdot q = 0$, one finds $q\times\ddot q = \dot\omega$, and [](#eq4-sph-cross) becomes
 
+$$
+m l^2\,\dot\omega = -m g l\; q\times e_3, \qquad \dot q = \omega\times q . \label{eq4-sph}
+$$
 
-________________
+No angles, and nothing special about the bottom or the top of the sphere.
 
+What is the component along $q$ that the principle refused to constrain? Draw the free-body diagram ([](#fig4-forces)). Gravity $-m g\,e_3$ acts on the bob, and the rod pulls along itself with some tension $T$. Newton says $m l\,\ddot q = -m g\,e_3 - T q$. Project onto the tangent plane and the tension disappears, leaving [](#eq4-sph-proj). Project onto $q$ and you get the tension:
 
-4.4 Multi-Body Formulations
-4.4.1 Flexible-Cable Chains on $SO(3) \times \mathbb{R}^3 \times (S^2)^n$
-When cable mass and deformation cannot be neglected, Kotaru, Wu, & Sreenath (arXiv:1711.04895) model the flexible cable as a finite-element chain of $n$ massless rigid links of lengths $l_i$ connected by spherical joints $q_i \in S^2$, with lumped masses $m_i$ at the end of each link ($m_n = m_L$). The configuration space is $$Q_{\text{flex}} = SO(3) \times \mathbb{R}^3 \times (S^2)^n, \tag{4.26}$$ having $6 + 2n$ degrees of freedom and $2n + 2$ degrees of underactuation. The link positions satisfy the kinematic chain $$x_i = x_{i-1} + l_i q_i, \qquad i \in {1, \dots, n}, \tag{4.27}$$ with $x_0 = x_Q$ and $x_n = x_L$. Applying the Newton–Euler method with internal cable tensions $T_i \in \mathbb{R}$ yields $$m_Q(\ddot{x}0 + g e_3) = f R e_3 + T_1 q_1, \tag{4.28}$$ $$m_j(\ddot{x}j + g e_3) = -T_j q_j + T{j+1} q{j+1}, \qquad j \in {1, \dots, n-1}, \tag{4.29}$$ $$m_n(\ddot{x}n + g e_3) = -T_n q_n, \tag{4.30}$$ $$J_Q \dot{\Omega} + \Omega \times J_Q \Omega = M. \tag{4.31}$$ Eliminating the internal tensions $T_1, \dots, T_n$ by projecting onto the tangent spaces $T{q_i} S^2$ produces a coupled block-matrix system in $(\ddot{x}_0, \ddot{q}_1, \dots, \ddot{q}n)$ directly on $Q{\text{flex}}$, which remains differentially flat with flat outputs $Y = (x_n, \psi)$ requiring $(2n + 4)$ derivatives of $x_n$.
-4.4.2 Modular Boltzmann–Hamel Dynamics on $SE(3) \times \mathbb{R}^{N_T}$
-For floating-base multi-legged robots with $N$ limbs and $N_T = \sum_{i=1}^N n_i$ internal joints, the configuration space is $SE(3) \times \mathbb{R}^{N_T}$ with base pose $g_b \in SE(3)$, body twist $\xi_b = [v_b^T, \Omega_b^T]^T \in \mathbb{R}^6$, and joint angles $\theta \in \mathbb{R}^{N_T}$. Using the screw-theoretic framework of Fast & Modular Whole-Body Lagrangian Dynamics (arXiv:2504.16383), we define the $SE(3)$ Adjoint and Lie-bracket operators: $$\mathbf{Ad}{g{a,b}} := \begin{bmatrix} R_{a,b} & P_{a,b}^\wedge R_{a,b} \ \mathbf{0}{3\times 3} & R{a,b} \end{bmatrix}, \qquad \mathbf{ad}\xi := \begin{bmatrix} \omega^\wedge & v^\wedge \ \mathbf{0}{3\times 3} & \omega^\wedge \end{bmatrix}. \tag{4.32}$$
+$$
+T = m l\,\|\dot q\|^2 - m g\,e_3\cdot q . \label{eq4-tension}
+$$
 
+Hamilton's principle never needed $T$. A variation that stays on the sphere does no work against the rod, so the rod's force drops out unnamed.
 
-Prop. 4.2 (Modular Boltzmann–Hamel Equations). The whole-body dynamics on $SE(3) \times \mathbb{R}^{N_T}$ take the singularity-free quasi-coordinate form $$M(\theta) \begin{bmatrix} \dot{\xi}b \ \ddot{\theta} \end{bmatrix} + C(\theta, \xi_b, \dot{\theta}) \begin{bmatrix} \xi_b \ \dot{\theta} \end{bmatrix} + G(g_b, \theta) = \begin{bmatrix} \mathbf{0}{6\times 1} \ \tau \end{bmatrix} + \mathcal{J}^T F_{\text{ext}}, \tag{4.33}$$ where the mass matrix decomposes additively across individual link modules $(i, j)$: $$M(\theta) = \begin{bmatrix} I_b & \mathbf{0}{6\times N_T} \ \mathbf{0}{N_T\times 6} & \mathbf{0}{N_T\times N_T} \end{bmatrix} + \sum{i=1}^N \sum_{j=1}^{n_i} M_{ij}(\theta), \tag{4.34}$$ and the contact Jacobian $\mathcal{J} \in \mathbb{R}^{6N \times (6+N_T)}$ has block rows $[\mathbf{Ad}{g{b,it}}^{-1},, \mathbf{Ad}{g{b,it}}^{-1} J_{it}]$.
+![The spherical pendulum as a free-body diagram. Gravity splits into a part in the tangent plane $T_qS^2$, which moves the bob, and a part along the rod, which the tension absorbs. Equation [](#eq4-sph-proj) is the tangent part.](figures/ch04-pendulum-forces.svg){#fig4-forces}
 
+::: {.example #ex4-tension name="Three times the weight"}
+A 1 kg bob on a 1 m rod is released from rest with the rod horizontal, $q = e_1$. At that instant [](#eq4-tension) gives $T = 0$: the bob is in free fall. At the bottom of the swing $q = -e_3$ and $\|\dot q\|^2 = 2g/l$ by energy conservation, so $T = 3mg = 29.4$ N. Integrating [](#eq4-sph) reproduces it to ten digits.
+:::
 
-Because every link $(i,j)$ contributes additively to $M(\theta)$ and $C(\theta, \xi_b, \dot{\theta})$, morphological changes—such as a locked joint or lost limb—are handled by matrix addition, subtraction, and reshaping without re-deriving symbolic derivatives.
+::: {.warning #warn4-projection name="An equation on the sphere is only its tangent part"}
+Any equation of motion for $q \in S^2$ is meaningful only after projection by $I - q q\T$. Solve the unprojected three equations for $\dot\omega$ and you can get a component along $q$: the state walks off the sphere. Symbolic tools return the equation as derived and leave the projection to you. Solve the tangent part together with $q\cdot\dot\omega = 0$.
+:::
 
+The sphere was easy because $\delta\dot q$ was just the time derivative of $\delta q$. On the rotation group the velocity we use is $\Omega$, and that changes the first move.
 
-________________
+## Rotations: where $\Omega\times J\Omega$ comes from {#sec4-so3}
 
+A free rigid body has attitude $R \in \SO(3)$ and Lagrangian $L = \tfrac12\,\Omega\cdot J\Omega$, with $\Omega^\wedge = R\T\dot R$ as in [](#eq-kinematics). Vary the attitude by rotating it, again so that the family stays on the manifold:
 
-4.5 Worked Examples
-Example 4.1: Unforced Conservation Laws on $SE(3) \times S^2$
-Consider the unforced ($f = 0, M = 0$) quadrotor-load system in taut mode Eqs. (4.16)–(4.21).
+$$
+R_\epsilon(t) = R(t)\exp\!\big(\epsilon\,\eta(t)^\wedge\big), \qquad \delta R = R\,\eta^\wedge , \qquad \eta(0) = \eta(t_f) = 0 .
+$$
 
+The Lagrangian is written in $\Omega$, so we need $\delta\Omega$. [](#ch-variations) derives it. The calculation is two lines: vary $\Omega^\wedge = R\T\dot R$ and use $\delta\dot R = \dot R\,\eta^\wedge + R\,\dot\eta^\wedge$,
 
-1. Unit-norm invariance ($|q(t)| = 1$). From Eq. (4.18), $\frac{d}{dt}(q \cdot q) = 2 q \cdot (\omega \times q) = 0$. Furthermore, from Eq. (4.19) with $f = 0$, $\dot{\omega} = 0$, so $\frac{d}{dt}(\omega \cdot q) = \omega \cdot (\omega \times q) = 0$.
-2. Total mechanical energy conservation. Differentiating $E = T + U$ from Eqs. (4.11)–(4.12) along trajectories of Eqs. (4.16)–(4.21) with $f = 0, M = 0$ yields $\dot{E} = 0$. Specifically, $v_Q = v_L - l(\omega \times q)$ satisfies $\dot{v}_L + g e_3 = -\frac{m_Q l}{m_Q + m_L}(\omega \cdot \omega) q$ and $\dot{v}_Q + g e_3 = \frac{m_L l}{m_Q + m_L}(\omega \cdot \omega) q$, so all internal tension work cancels identically.
-Example 4.2: Hover Equilibrium and Cable Tension
-At hover ($\dot{x}L = 0, \dot{v}L = 0, \omega = 0, \Omega = 0$), Eq. (4.17) gives $$(m_Q + m_L) g e_3 = (q \cdot f R e_3) q. \tag{4.35}$$ With $q{\text{eq}} = -e_3$ (load hanging directly below the quadrotor) and $R{\text{eq}} = I$, we have $q_{\text{eq}} \cdot f R_{\text{eq}} e_3 = -f$, yielding $f_{\text{eq}} = (m_Q + m_L) g$ and cable tension $T_{\text{eq}} = |m_L g e_3| = m_L g > 0$.
+$$
+\delta\Omega^\wedge = -\eta^\wedge\,\Omega^\wedge + \Omega^\wedge\eta^\wedge + \dot\eta^\wedge
+\qquad\Longrightarrow\qquad
+\delta\Omega = \dot\eta + \Omega\times\eta . \label{eq4-var-omega}
+$$
 
+For the ball, $\delta\dot x = \ddt\delta x$ and nothing else. Here there is an extra term $\Omega\times\eta$. It is the commutator of two rotations, the one the body is making and the one we vary by. It is there because rotations do not commute.
 
-________________
+Now the three moves:
 
+$$
+\delta S = \int_0^{t_f} J\Omega\cdot\big(\dot\eta + \Omega\times\eta\big)\,\dd t
+= -\int_0^{t_f} \eta\cdot\big(J\dot\Omega + \Omega\times J\Omega\big)\,\dd t .
+$$
 
-4.6 Exercises
-1. Covariant Acceleration on $S^2$. Starting from the constrained Lagrangian $L(q, \dot{q}) = \frac{1}{2} m l^2 (\dot{q} \cdot \dot{q}) - m g l (e_3 \cdot q)$ with $q \in S^2$, use the variation $\delta q = \xi \times q$ ($\xi \cdot q = 0$) to derive $\nabla_{\dot{q}}\dot{q} = \ddot{q} + (\dot{q}\cdot\dot{q})q = \frac{g}{l}(q \times (q \times e_3))$.
-2. Degrees of Underactuation. Verify that a $p$-quadrotor system carrying a rigid-body payload via $p$ flexible cables of $n_i$ links each has $6 + 3p + 2\sum_{i=1}^p n_i$ DOF and $6 - p + 2\sum_{i=1}^p n_i$ degrees of underactuation (Kotaru, Wu, & Sreenath, arXiv:1711.04895).
-3. Lie-Group Numerical Integration. Implement a geometric RK4 integrator for Eqs. (4.16)–(4.21) that updates $R \in SO(3)$ via $\exp(\Delta t,\Omega^\wedge)$ and $q \in S^2$ via Rodrigues' rotation $\exp(\Delta t,\omega^\wedge)q$. Verify that $|q(t)| - 1$ remains at machine precision ($\sim 10^{-15}$) and compare energy drift $\Delta E / E_0$ against naive Euler integration.
-4. Modular Mass Matrix. Using Eq. (4.34) from arXiv:2504.16383, show how removing leg $k$ from a hexapod reduces to subtracting $\sum_{j=1}^{n_k} M_{kj}(\theta)$ and slicing the corresponding joint rows/columns without recomputing $\partial M / \partial \theta_i$ for the remaining legs.
+The first term was integrated by parts. The second used $J\Omega\cdot(\Omega\times\eta) = -\eta\cdot(\Omega\times J\Omega)$. Since $\eta$ is an arbitrary vector in $\R^3$, with no constraint this time,
+
+$$
+J\dot\Omega + \Omega\times J\Omega = 0 . \label{eq4-euler-free}
+$$
+
+This is Euler's equation, and the derivation shows where its nonlinear term is born. The integration by parts produced $J\dot\Omega$. The commutator in [](#eq4-var-omega) produced $\Omega\times J\Omega$. A body whose rotations commuted would have no gyroscopic term at all.
+
+A free body is not yet a robot. We need forces.
+
+## Forces and torques {#sec4-forces}
+
+Thrust, motor torque and drag do not come from a potential. They enter through the work they do on a variation.
+
+::: {.definition #def4-dalembert name="Lagrange-d'Alembert principle"}
+Let $\delta W$ be the **virtual work**: the work the applied forces would do on the variation. The motion satisfies
+$$
+\delta\!\int_0^{t_f} L\,\dd t + \int_0^{t_f} \delta W\,\dd t = 0 \label{eq4-dalembert}
+$$
+for every variation that stays on the manifold and vanishes at the endpoints.
+:::
+
+The job is to write $\delta W$ for each actuator. Two cases cover almost everything.
+
+A torque $\tau$ in the body frame does work on a body-frame rotation $\eta$: $\delta W = \tau\cdot\eta$. That puts $\tau$ on the right of Euler's equation.
+
+A force $F$ in the world frame, applied at the body point $x + R r$, does work on the displacement of that point. Vary the point: $\delta(x + R r) = \delta x + R\,(\eta\times r)$. Then
+
+$$
+\delta W = F\cdot\delta x + F\cdot R\,(\eta\times r) = F\cdot\delta x + \eta\cdot\big(r\times R\T F\big) . \label{eq4-virtual-work}
+$$
+
+The coefficient of $\delta x$ is the force. The coefficient of $\eta$ is the moment arm crossed with the force, both in the body frame. The rule "$r\times F$" has been derived, frames included.
+
+::: {.proposition #thm4-rigid-body name="Rigid body with a force and a torque"}
+For a body of mass $m$ and inertia $J$ about its centre of mass $x$, with $L = \tfrac12 m\|\dot x\|^2 + \tfrac12\Omega\cdot J\Omega - m g\,e_3\cdot x$ and the virtual work [](#eq4-virtual-work) plus $\tau\cdot\eta$,
+$$
+m\ddot x = F - m g\,e_3, \qquad J\dot\Omega + \Omega\times J\Omega = \tau + r\times R\T F, \qquad \dot R = R\,\Omega^\wedge . \label{eq4-rigid-body}
+$$
+:::
+
+The 3D pendulum of the opening is now a short exercise. Take $J$ about the pivot. Gravity acts at the centre of mass $R\rho$, with potential $m g\,e_3\cdot R\rho$, whose variation is $m g\,\eta\cdot(\rho\times R\T e_3)$. Therefore
+
+$$
+J\dot\Omega + \Omega\times J\Omega = m g\,(R\T e_3)\times\rho + \tau . \label{eq4-pendulum}
+$$
+
+That resolves the puzzle. The physics of the pendulum is the three terms of [](#eq4-pendulum). The other hundred terms of the Euler-angle model are $E$, its derivative and their products with $J$: a description of how the chart is bent. The blow-up in [](#fig4-euler-cond) is $E$ losing rank: $\det(E\T J E) = \cos^2\theta\,\det J$. The body-frame velocity $\Omega$ is defined at every attitude, so there was never anything to invert.
+
+You may know these equations from another route. **Newton-Euler** mechanics says that force is the rate of change of linear momentum, and moment about the centre of mass is the rate of change of angular momentum, both in the world frame. The world-frame angular momentum is $R J\Omega$. Differentiate it with $\dot R = R\,\Omega^\wedge$:
+
+$$
+\ddt\big(R J\Omega\big) = R\big(J\dot\Omega + \Omega\times J\Omega\big) = R\,\tau . \label{eq4-newton-euler}
+$$
+
+The same equation, and the same origin for the gyroscopic term: it comes from differentiating $R$. The two methods always agree. Newton-Euler is quicker when the free-body diagram is simple. Lagrange-d'Alembert is safer when constraint forces are many, because it never introduces them. We use each where it is shorter.^[[](#ch-symbolic) automates the variational route with the `geomech` library. Every equation of motion in this chapter was derived a second time that way and compared numerically.]
+
+## A sanity check you can throw in the air {#sec4-conservation}
+
+Before trusting a model, ask what it must conserve. With no torque, [](#eq4-newton-euler) says the world-frame angular momentum $R J\Omega$ is constant, all three components. The energy $\tfrac12\Omega\cdot J\Omega$ is constant too. The body-frame momentum $J\Omega$ is *not* constant: only its length is, because $R$ is a rotation. These are tests a simulation passes or fails. They also predict something surprising.
+
+::: {.thought #thought4-book name="Toss a book"}
+Put a rubber band round a paperback so it stays shut. It has three natural axes: through the covers, along the spine, and across the width. Toss it spinning about the axis through the covers. It spins cleanly. Toss it spinning along the spine. Clean again. Now toss it spinning about the axis across the width. However carefully you throw, it comes down having flipped over.
+
+Nothing pushed it. There is no torque in the air. Euler's equation [](#eq4-euler-free) is doing this by itself.
+:::
+
+Here is the reason. In the body frame, $J\Omega$ moves on a sphere, since its length is conserved. It must also stay on a level set of the energy. Draw those level sets on the sphere ([](#fig4-polhodes), left). Around the axes of smallest and largest inertia they are closed loops: a spin that starts near those axes stays near. At the intermediate axis the level sets cross. A spin that starts there is carried along the crossing to the opposite side of the sphere, and back.
+
+![The intermediate-axis instability, computed from Euler's equation for a 20 × 13 × 3 cm book. Left: paths of the body angular momentum on its sphere. They circle $e_1$ and $e_3$ and cross at $\pm e_2$. The heavy curve is the simulated spin that starts 1 % away from the middle axis. It leaves $e_2$ (hidden), passes $-e_2$ and returns. Right: the spin component along the starting axis. About $e_2$ it reverses every 1.5 s.](figures/ch04-polhodes.svg){#fig4-polhodes}
+
+::: {.example #ex4-book name="How fast it flips"}
+Model the book as a uniform 0.3 kg block, 20 × 13 × 3 cm. Its principal inertias are $(J_1, J_2, J_3) = (0.445,\ 1.02,\ 1.42)\times10^{-3}$ kg·m², with $e_2$ across the width. Linearize [](#eq4-euler-free) about a steady spin $\Omega_2$ about $e_2$. The wobble in $\Omega_1$ and $\Omega_3$ grows like $e^{\lambda t}$ with
+
+$$
+\lambda = \Omega_2\sqrt{\frac{(J_2 - J_1)(J_3 - J_2)}{J_1 J_3}} . \label{eq4-growth}
+$$
+
+At two revolutions per second, $\lambda = 7.6$ s⁻¹: the wobble multiplies by $e$ every 0.13 s. Start the simulation with 1 % of the spin on each of the other axes. $\Omega_2$ first reverses at 0.88 s and then every 1.5 s ([](#fig4-polhodes), right). Through all of it the energy and all three components of $R J\Omega$ hold to better than one part in $10^{8}$. The same 1 % error on a spin about $e_1$ or $e_3$ never grows beyond 2 %. For those axes the product under the root changes sign and the wobble oscillates.
+:::
+
+This is the tennis racket theorem, or Dzhanibekov effect, after the cosmonaut who saw a wing nut do it in orbit. For us it is a check: a rigid-body simulation that does not flip the book is wrong.
+
+## Robots as products {#sec4-products}
+
+Real robots have several parts, each on its own manifold. The configuration space is the product, the Lagrangian is a sum, and the variations are the ones we already have, one per factor.
+
+**Quadrotor, on $\SE(3)$.** Four rotors produce a total thrust $f$ along the body axis $R e_3$ and a body torque $\tau$. The thrust acts at the centre of mass, so $F = f R e_3$ and $r = 0$ in [](#thm4-rigid-body):
+
+$$
+m\ddot x = f R e_3 - m g\,e_3, \qquad J\dot\Omega + \Omega\times J\Omega = \tau . \label{eq4-quadrotor}
+$$
+
+Six degrees of freedom, four inputs. The force can only point along $R e_3$, so to accelerate sideways the vehicle must first rotate.
+
+**Quadrotor with a cable-suspended load, on $\SE(3)\times S^2$.** Hang a point mass $m_L$ from the quadrotor (mass $m_Q$, inertia $J$) on a massless cable of length $l$. Let $q \in S^2$ point from the quadrotor to the load, so that $x_Q = x_L - l q$ ([](#fig4-quad-load)). The Lagrangian and virtual work are
+
+$$
+L = \tfrac12 m_Q\|\dot x_L - l\dot q\|^2 + \tfrac12 m_L\|\dot x_L\|^2 + \tfrac12\Omega\cdot J\Omega - m_Q g\,e_3\cdot(x_L - l q) - m_L g\,e_3\cdot x_L ,
+$$
+$$
+\delta W = f R e_3\cdot\big(\delta x_L - l\,\xi\times q\big) + \tau\cdot\eta .
+$$
+
+![A quadrotor carrying a point-mass load on a cable. The configuration is the load position $x_L$, the cable direction $q \in S^2$ and the attitude $R$. Thrust acts along $R e_3$. The tension $T$ is internal and does not appear in the equations of motion.](figures/ch04-quad-load.svg){#fig4-quad-load}
+
+The variational route works, with $\delta x_L$, $\xi$ and $\eta$ varied independently ([](#exr4-load)). The free-body route is shorter. The load feels gravity and the cable, $m_L(\ddot x_L + g e_3) = -T q$. The quadrotor feels gravity, thrust and the cable, $m_Q(\ddot x_Q + g e_3) = f R e_3 + T q$. Add them, substitute $\ddot x_Q = \ddot x_L - l\ddot q$, and split along and across $q$ exactly as for the pendulum:
+
+$$
+\begin{aligned}
+(m_Q + m_L)\big(\ddot x_L + g\,e_3\big) &= \big(q\cdot f R e_3 - m_Q l\,\|\dot q\|^2\big)\,q ,\\
+m_Q l\,\dot\omega &= -\,q\times f R e_3 , \qquad \dot q = \omega\times q ,\\
+J\dot\Omega + \Omega\times J\Omega &= \tau , \qquad \dot R = R\,\Omega^\wedge .
+\end{aligned} \label{eq4-load}
+$$
+
+Read three things off. First, the right side of the load equation is a multiple of $q$: measured against free fall, the load can only accelerate along the cable. Second, the load and the cable see the quadrotor only through the vector $f R e_3$, and the attitude equation does not feel the load at all, because the cable is attached at the centre of mass. Torque turns the body, the body aims the thrust, the thrust swings the cable, the cable pulls the load. Controllers for this system, with four inputs for eight degrees of freedom, are built on that cascade. Third, gravity is absent from the cable equation.
+
+::: {.thought #thought4-cut name="Cut the motors"}
+The quadrotor is flying with the load swinging beneath it. Cut the thrust to zero. What does the cable do?
+
+Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its mass centre on a parabola. A pendulum needs something to hang from, and a falling quadrotor is not it.
+:::
+
+The tension is still available. From the load's free-body equation,
+
+$$
+T = \frac{m_L}{m_Q + m_L}\big(m_Q l\,\|\dot q\|^2 - q\cdot f R e_3\big) . \label{eq4-load-tension}
+$$
+
+For $m_Q = 1.5$ kg and $m_L = 0.3$ kg in hover, $q = -e_3$, $R = I$ and $f = (m_Q + m_L)g = 17.7$ N, which gives $T = m_L g = 2.94$ N as it should.
+
+::: {.warning #warn4-slack name="A cable cannot push"}
+Equations [](#eq4-load) assume a taut cable. They stay smooth when [](#eq4-load-tension) goes negative, and will then simulate a cable that pushes. Monitor the sign of $T$. When it reaches zero the load is in free fall, and the model must switch to two separate bodies until the cable snaps taut again.
+:::
+
+**More factors.** The recipe does not change with size. Let $n$ quadrotors carry one point mass, each on its own cable $q_i$ of length $l_i$. The configuration space is $\R^3\times(S^2\times\SO(3))^n$ and the same free-body argument gives
+
+$$
+\Big(m_L I + \sum_{i} m_i\,q_i q_i\T\Big)\big(\ddot x_L + g\,e_3\big) = \sum_{i}\big(q_i\cdot f_i R_i e_3 - m_i l_i\|\dot q_i\|^2\big)\,q_i , \label{eq4-multi}
+$$
+$$
+m_i l_i\,\dot\omega_i = q_i\times\Big(m_i\big(\ddot x_L + g\,e_3\big) - f_i R_i e_3\Big), \qquad J_i\dot\Omega_i + \Omega_i\times J_i\Omega_i = \tau_i .
+$$
+
+With one quadrotor this collapses to [](#eq4-load). Each quadrotor adds inertia to the load only along its own cable, through $m_i q_i q_i\T$. Wu (2017) carries the derivation through for a rigid-body payload, on $\SE(3)\times(S^2\times\SO(3))^n$.
+
+Legged robots fit the same mould. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with a leg length and three mass positions: thirteen degrees of freedom. Its simplest piece already shows something new.
+
+::: {.example #ex4-leg name="A telescoping leg"}
+A leg pivots about its foot with attitude $R$ and inertia $J_0$, and carries a mass $m$ at distance $\rho$ along its axis $R e_3$. A force $f$ extends it and a torque $\tau$ acts at the ankle. The configuration space is $\R\times\SO(3)$, and with $K = I - e_3 e_3\T$,
+
+$$
+\begin{aligned}
+m\ddot\rho &= m\rho\;\Omega\cdot K\Omega - m g\,e_3\cdot R e_3 + f ,\\
+J(\rho)\,\dot\Omega + \Omega\times J(\rho)\,\Omega + 2 m\rho\dot\rho\,K\Omega &= m g\rho\,(R\T e_3)\times e_3 + \tau ,
+\qquad J(\rho) = J_0 + m\rho^2 K .
+\end{aligned} \label{eq4-leg}
+$$
+
+The inertia now depends on the configuration, and its rate $\dot J = 2m\rho\dot\rho\,K$ appears as a new term: extend the leg and the rotation slows, like a skater opening her arms. The variation $\delta\rho$ is the ordinary one and $\delta R = R\,\eta^\wedge$ is that of [](#sec4-so3). Nothing else was needed.
+:::
+
+## Staying on the manifold while integrating {#sec4-integrate}
+
+The naive integration step treats the nine entries of $R$ as nine numbers: $R_{k+1} = R_k + h\,R_k\Omega_k^\wedge$. But then
+
+$$
+R_{k+1}\T R_{k+1} = I - h^2\,(\Omega_k^\wedge)^2 \neq I ,
+$$
+
+so every step stretches the matrix a little, and it is no longer a rotation. The remedy is to move along the manifold with the exponential map, the device we used to build variations:
+
+$$
+R_{k+1} = R_k\exp\!\big(h\,\Omega_k^\wedge\big), \qquad q_{k+1} = \exp\!\big(h\,\omega_k^\wedge\big)\,q_k . \label{eq4-lie-euler}
+$$
+
+Each update is a rotation, so $R_{k+1} \in \SO(3)$ and $\|q_{k+1}\| = 1$ to rounding error, for any step size. Higher-order methods run their Runge-Kutta stages on a rotation vector inside the step and apply its exponential at the end.
+
+[](#fig4-integrators) compares the two fourth-order versions on the pendulum [](#eq4-pendulum), swinging and spinning for 60 s with $h = 0.02$ s. Classical RK4 on the entries of $R$ ends with $\|R\T R - I\| = 4.6\times10^{-4}$ and growing. The exponential version holds $10^{-14}$.
+
+![A 3D pendulum integrated for 60 s at $h = 0.02$ s by two fourth-order methods. Left: the entrywise method drifts off $\SO(3)$, the exponential update does not. Right: the energy error of the two methods is nearly the same.](figures/ch04-integrators.svg){#fig4-integrators}
+
+Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretising Hamilton's principle itself, with an action sum in place of the action integral. They are the subject of the later chapter on variational integrators.
+
+We now have models that are short, global and checkable. What do you do when the system is too large to derive by hand? [](#ch-symbolic) answers that.
+
+## Exercises {#sec4-exercises .unnumbered}
+
+::: {.exercise #exr4-variation-omega}
+For the variation [](#eq4-var-s2) on the sphere, show that the angular velocity $\omega = q\times\dot q$ varies as $\delta\omega = \dot\xi + 2(\xi\cdot\dot q)\,q$, and check that $\delta(\omega\cdot q) = 0$. Then confirm the formula by finite differences in the notebook.
+:::
+
+::: {.exercise #exr4-sph-omega}
+Starting from $\dot q = \omega\times q$ with $\omega\cdot q = 0$, prove $q\cdot\dot\omega = 0$ and $q\times\ddot q = \dot\omega$, and derive [](#eq4-sph) from [](#eq4-sph-cross). Show that the energy and $e_3\cdot\omega$ are conserved.
+:::
+
+::: {.exercise #exr4-heavy-top}
+Apply the three moves to $L = \tfrac12\Omega\cdot J\Omega - m g\,e_3\cdot R\rho$ and derive [](#eq4-pendulum). Show that $e_3\cdot R J\Omega$ is conserved when $\tau = 0$. Why are the other two components of $R J\Omega$ not?
+:::
+
+::: {.exercise #exr4-growth}
+Linearize Euler's equation about a steady spin on each principal axis and derive [](#eq4-growth). Show that the spin is unstable only about the intermediate axis. In the notebook, measure the growth rate for the book of [](#ex4-book) and compare.
+:::
+
+::: {.exercise #exr4-load}
+Derive [](#eq4-load) from the Lagrange-d'Alembert principle, using the Lagrangian and virtual work given in [](#sec4-products) and the variations $\delta x_L$, $\delta q = \xi\times q$, $\delta R = R\,\eta^\wedge$. Where does the term $m_Q l\|\dot q\|^2$ come from? Then show that with $f = 0$ and $\tau = 0$ the total energy is conserved.
+:::
+
+::: {.exercise #exr4-offset}
+The thrust of a quadrotor acts at the body point $r$, measured from the centre of mass. Use [](#thm4-rigid-body) to write its equations of motion. For $r = (0.01, 0, 0)$ m and a 1 kg vehicle, what constant torque must the rotors supply in hover?
+:::
+
+::: {.exercise #exr4-integrator}
+Implement both first-order steps, the naive one and [](#eq4-lie-euler), for the free rigid body. Verify that after $N$ naive steps at constant $\Omega$ the error $\|R\T R - I\|$ is close to $N h^2\|\Omega\|^2$ in the spectral norm. Then tumble the book of [](#ex4-book) with each and plot $\|R J\Omega - R_0 J\Omega_0\|$.
+:::
+
+## Notes and sources {#sec4-notes .unnumbered}
+
+Variations on $S^2$ and $\SO(3)$ are treated as in Lee, Leok and McClamroch (2018), which works through pendulums, rigid bodies and multibody systems in this style. The comparison of Euler-angle and $\SO(3)$ models of the 3D pendulum, with the conditioning of the Euler mass matrix, is from Siravuru (2019, ch. 4). He uses the ZXY angle order, singular at 90° of roll; we used the ZYX order of [](#ch-why). The Reaction Mass Biped is his chapter 5, which also carries out the derivation in discrete time. Sreenath, Lee and Kumar (2013) derived the quadrotor with a cable-suspended load on $\SE(3)\times S^2$. The form [](#eq4-load), the tension [](#eq4-load-tension) and the multi-quadrotor payload models are in Wu (2017, ch. 3). Teng et al. (2026) write rigid-body dynamics on $\SE(3)$ in Euler-Poincaré form for trajectory optimization. Marsden and Ratiu (1999) is the standard reference for the free rigid body and the stability of its steady spins.
+
+- T. Lee, M. Leok and N. H. McClamroch, *Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*, Springer, 2018.
+- T. Lee, M. Leok and N. H. McClamroch, "Geometric tracking control of a quadrotor UAV on SE(3)," *IEEE Conference on Decision and Control*, 2010.
+- J. E. Marsden and T. S. Ratiu, *Introduction to Mechanics and Symmetry*, 2nd ed., Springer, 1999.
+- A. Siravuru, *Geometric Control and Learning for Dynamic Legged Robots*, PhD thesis, Carnegie Mellon University, 2019.
+- K. Sreenath, T. Lee and V. Kumar, "Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load," *IEEE Conference on Decision and Control*, 2013.
+- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, "LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies," arXiv:2606.10579, 2026.
+- G. Wu, *Safety-critical Geometric Control Design with Application to Aerial Transportation*, PhD thesis, Carnegie Mellon University, 2017.

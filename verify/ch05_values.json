@@ -35,16 +35,17 @@
   "sign_error_accel_at_2radps": 6.666666666666668,
   "load_weight_N": 2.943,
   "generated_module_lines": 311,
-  "free_energy_drift": 8.477022853122279e-13,
-  "free_constraint_drift": 2.425837308805967e-13,
-  "free_initial_energy_J": 10.416711151611745,
-  "forced_energy_range_J": 1.0572638742583091,
-  "forced_modified_energy_drift_J": 2.984279490192421e-13,
-  "forced_load_excursion_m": 1.238463858523342,
+  "free_energy_drift": 1.0380974234981515e-12,
+  "free_constraint_drift": 2.3669954885008337e-13,
+  "free_initial_energy_J": 10.598961151611743,
+  "forced_energy_range_J": 0.7534965790828263,
+  "forced_modified_energy_drift_J": 7.0112804451127886e-12,
+  "forced_quad_wobble_m": 0.1666666666666675,
+  "forced_load_radius_m": 0.8333333333333367,
   "energy_drift_vs_dt": {
-    "0.04": 1.826481291084022e-08,
-    "0.02": 1.1410180193905434e-09,
-    "0.01": 7.09656926836448e-11
+    "0.04": 1.0360576642953057e-08,
+    "0.02": 6.474694412236907e-10,
+    "0.01": 4.050322963138494e-11
   },
   "wu_comparison_max_diff": 2.4868995751603507e-14,
   "chain_check_eom": {

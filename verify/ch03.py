@@ -109,6 +109,28 @@ lhs = fd(lambda s: R_ref(s) @ hat(eta_fun(s)), t0)
 rhs = fd(lambda e: fd(lambda s: R_eps(s, e), t0), 0.0, h=1e-4)
 ck.close("d/dt(delta R) = delta(dR/dt)", lhs, rhs, tol=1e-6)
 
+# world-frame version: R_dot = hat(w) R, delta R = hat(zeta) R  gives  delta w = zeta_dot - w x zeta
+def R_eps_world(t, eps):
+    return expm_so3(eps * eta_fun(t)) @ R_ref(t)
+
+
+def w_eps(t, eps):
+    return vee(fd(lambda s: R_eps_world(s, eps), t) @ R_eps_world(t, eps).T)
+
+
+w0 = R0 @ Omega_fun(t0)
+ck.close("world-frame variation: delta w = zeta_dot - w x zeta (sign flips)", fd(lambda e: w_eps(t0, e), 0.0, h=1e-4),
+         fd(eta_fun, t0) - np.cross(w0, eta_fun(t0)), tol=1e-6)
+
+# a slightly remounted gyro
+Om_ex, eta_ex0 = np.array([0.0, 0.0, 1.0]), np.array([0.1, 0.0, 0.0])
+ck.close("remount example: Omega x eta = (0, 0.1, 0)", np.cross(Om_ex, eta_ex0), [0, 0.1, 0])
+ck.close("remount example: exact reading (0, 0.0998, 0.9950)", expm_so3(-eta_ex0) @ Om_ex, [0, 0.0998, 0.9950], tol=5e-5)
+ck.close("remount by a quarter turn gives (0, 1, 0)", expm_so3(-np.pi / 2 * E1) @ Om_ex, [0, 1, 0], tol=1e-12)
+eta_c = np.array([0.4, -0.2, 0.3])
+Rc = lambda s: R_ref(s) @ expm_so3(eta_c)
+ck.close("constant eta: the remounted gyro reads exp(-hat(eta)) Omega", vee(Rc(t0).T @ fd(Rc, t0)), expm_so3(-eta_c) @ Omega_fun(t0), tol=1e-7)
+
 # variation of the rotational kinetic energy: where Omega x J Omega comes from
 J = np.diag([0.05, 0.07, 0.10])
 dT = fd(lambda e: 0.5 * Omega_eps(t0, e) @ J @ Omega_eps(t0, e), 0.0, h=1e-4)
@@ -158,6 +180,8 @@ dom = fd(lambda e: omega_eps(t0, e), 0.0, h=1e-4)
 ck.close("delta omega = xi_dot - 2 omega x xi  (finite differences)", dom, xidot0 - 2 * np.cross(om0, xi0), tol=1e-6)
 ck.true("the 'SO(3)-style' guess xi_dot + omega x xi is wrong on the sphere",
         np.linalg.norm(dom - (xidot0 + np.cross(om0, xi0))) > 0.1)
+ck.close("xi_dot - omega x xi also generates delta(q_dot), without staying perpendicular to q",
+         np.cross(xidot0 - np.cross(om0, xi0), q0) + np.cross(om0, np.cross(xi0, q0)), dqdot, tol=1e-6)
 P = I3 - np.outer(q0, q0)
 ck.close("Lee et al. (5.13): delta omega = -omega x xi + (I - q q^T) xi_dot", dom, -np.cross(om0, xi0) + P @ xidot0, tol=1e-6)
 ck.close("tangential part of delta omega = xi_dot - omega x xi", P @ dom, xidot0 - np.cross(om0, xi0), tol=1e-6)
@@ -290,9 +314,11 @@ def quat_of(Rm):
 
 
 ck.close("quaternion error: q_v = sin(theta/2) u", quat_of(E)[1:], np.sin(th / 2) * u)
-ck.close("Psi = 2(1 - q0) has slope q_v = sin(theta/2) u",
-         fd(lambda e: 2 * (1 - quat_of(E @ expm_so3(e * eta))[0]), 0.0), np.sin(th / 2) * u @ eta, tol=1e-7)
-ck.close("2 - sqrt(1 + tr E) = 2(1 - cos(theta/2))", 2 - np.sqrt(1 + np.trace(E)), 2 * (1 - np.cos(th / 2)))
+ck.close("Psi = 4(1 - q0) has slope 2 q_v = 2 sin(theta/2) u",
+         fd(lambda e: 4 * (1 - quat_of(E @ expm_so3(e * eta))[0]), 0.0), 2 * np.sin(th / 2) * u @ eta, tol=1e-7)
+ck.close("4(1 - q0) = 4(1 - cos(theta/2))", 4 * (1 - quat_of(E)[0]), 4 * (1 - np.cos(th / 2)))
+for f_, name_ in [(np.sin, "trace"), (lambda a: a, "log"), (lambda a: 2 * np.sin(a / 2), "quaternion")]:
+    ck.close(f"{name_} slope has unit stiffness at zero", fd(f_, 0.0), 1.0, tol=1e-9)
 ck.close("sin peaks at 90 degrees", np.sin(np.pi / 2), 1.0)
 ck.record("restoring_at_170deg", {"trace_sin": float(np.sin(np.radians(170))), "log_theta": float(np.radians(170)),
                                   "quat_2sin_half": float(2 * np.sin(np.radians(85)))})
@@ -381,7 +407,10 @@ ck.true("weighted: e_G . (Omega - Omega_d) is NOT d/dt Psi_G", abs(dPsiG - e_G(R
 C = 0.5 * (np.trace(R.T @ Rd) * I3 - R.T @ Rd)
 ck.close("d/dt e_R = 1/2 (tr(R^T Rd) I - R^T Rd) e_Omega", fd(lambda s: e_R(R_ref(s), Rd_ref(s)), t0), C @ e_Om, tol=1e-7)
 ck.close("C = I at zero error", 0.5 * (np.trace(I3) * I3 - I3), I3)
-ck.true("|C e| <= |e| (operator norm of C is at most 1)", np.linalg.norm(C, 2) <= 1 + 1e-12, f"{np.linalg.norm(C, 2):.3f}")
+worst = max(np.linalg.norm(0.5 * (np.trace(Q_) * I3 - Q_), 2) for Q_ in (random_rotation(rng) for _ in range(2000)))
+ck.true("operator norm of C is at most 1 (2000 random rotations)", worst <= 1 + 1e-12, f"max {worst:.4f}")
+A_, x_ = rng.normal(size=(3, 3)), rng.normal(size=3)
+ck.close("(A hat(x) + hat(x) A^T)^vee = (tr(A) I - A^T) x", vee(A_ @ hat(x_) + hat(x_) @ A_.T), (np.trace(A_) * I3 - A_.T) @ x_)
 
 
 # =====================================================================
@@ -571,6 +600,8 @@ ck.close("ad on so(3) is the cross product: [hat(a), hat(b)] = hat(a x b)",
 t0 = 1.0
 Rd, Omd = Rd_ref(t0), Omd_fun(t0)
 eta0, deta0 = eta_fun(t0), fd(eta_fun, t0)
+ck.record("first_order_eta_norm", float(np.linalg.norm(eta0)))
+ck.true("quoted: |eta| = 0.86 in the first-order table", abs(np.linalg.norm(eta0) - 0.86) < 0.005)
 table = []
 for eps in (0.4, 0.2, 0.1, 0.05):
     Rp = lambda s, e=eps: Rd_ref(s) @ expm_so3(e * eta_fun(s))
@@ -594,6 +625,9 @@ ck.close("first order: delta Omega = e_Omega + Omega_d x e_R", (table[-1, 0] * (
              Rd @ expm_so3(0.05 * eta0), vee((Rd @ expm_so3(0.05 * eta0)).T @ fd(lambda s: Rd_ref(s) @ expm_so3(0.05 * eta_fun(s)), t0))),
          tol=2e-3)
 ck.record("first_order_table_SO3", [{"eps": float(r[0]), "eR_minus_eps_eta": float(r[1]), "eOm_minus_eps_etadot": float(r[2])} for r in table])
+ck.true("quoted table: e_R gap 6.8e-3, 8.6e-4, 1.1e-4, 1.3e-5", np.allclose(table[:, 1], [6.8e-3, 8.6e-4, 1.1e-4, 1.3e-5], rtol=0.04))
+ck.true("quoted table: e_Omega gap 3.8e-2, 9.6e-3, 2.4e-3, 6.0e-4", np.allclose(table[:, 2], [3.8e-2, 9.6e-3, 2.4e-3, 6.0e-4], rtol=0.02))
+ck.true("quoted table: e_Omega vs eps delta Omega gap 2.3e-1, 1.1e-1, 5.4e-2, 2.7e-2", np.allclose(table[:, 3], [2.3e-1, 1.1e-1, 5.4e-2, 2.7e-2], rtol=0.03))
 shortfall = lambda deg: 1 - np.sin(np.radians(deg)) / np.radians(deg)
 ck.record("eR_shortfall_percent", {"10deg": float(100 * shortfall(10)), "30deg": float(100 * shortfall(30))})
 ck.true("quoted: e_R is 0.5% short at 10 deg and 4.5% short at 30 deg",

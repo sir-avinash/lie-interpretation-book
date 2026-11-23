@@ -41,6 +41,9 @@ ck.true("cable grows to about 1.22 after 10 s", abs(np.linalg.norm(q) - 1.22) < 
 ck.close("growth is close to exp(h w^2 T / 2)", np.linalg.norm(q), np.exp(h * w**2 * T / 2), tol=1e-4)
 ck.record("puzzle_cable_length", float(np.linalg.norm(q)))
 ck.record("puzzle_steps", N)
+ck.true("each step multiplies |q|^2 by 1.0004, and 1.0004^500 = 1.22", abs(1 + h**2 * w**2 - 1.0004) < 1e-12 and abs(1.0004**500 - 1.22) < 0.005, f"{1.0004**500:.4f}")
+ck.true("exercise: stretch below 1 mm over 10 s needs h below 5e-5 s", np.exp(0.5 * 5e-5 * w**2 * T) - 1 < 1.001e-3)
+ck.close("figure: four Euler steps with h w = 0.42 reach radius 1.38", (1 + 0.42**2) ** 2, 1.38, tol=0.005)
 qr, wr = unit(rng.normal(size=3)), rng.normal(size=3)
 ck.close("one Euler step: |q + h w x q|^2 = 1 + h^2 |w x q|^2",
          np.linalg.norm(qr + h * np.cross(wr, qr)) ** 2, 1 + h**2 * np.linalg.norm(np.cross(wr, qr)) ** 2, tol=1e-14)
@@ -122,6 +125,7 @@ ck.close("tr(exp(theta u)) = 1 + 2 cos(theta)", np.trace(expm_so3(1.1 * u)), 1 +
 phi_ex = (np.pi / 2) * unit([1, 1, 0])
 R_ex = expm_so3(phi_ex)
 s2 = 1 / np.sqrt(2)
+ck.close("example log: (theta/2)(R - R^T)^vee = (1.111, 1.111, 0)", (np.pi / 4) * vee(R_ex - R_ex.T), [1.111, 1.111, 0.0], tol=5e-4)
 ck.close("example exp: closed form", R_ex, [[0.5, 0.5, s2], [0.5, 0.5, -s2], [-s2, s2, 0.0]], tol=1e-14)
 ck.close("example exp: body e3 ends up at (1, -1, 0)/sqrt 2", R_ex @ E3, [s2, -s2, 0], tol=1e-14)
 ck.close("example log: trace gives the angle back", angle_of(R_ex), np.pi / 2, tol=1e-12)
@@ -164,6 +168,10 @@ ck.true("eps = 0.1 rad: leftover rotation is about 0.01 rad (0.57 deg), mostly a
         abs(np.linalg.norm(log_so3(C)) - 0.01) < 2e-4 and unit(log_so3(C)) @ E3 > 0.99,
         f"{np.linalg.norm(log_so3(C)):.5f} rad, {np.degrees(np.linalg.norm(log_so3(C))):.3f} deg")
 ck.record("commutator_angle_deg_eps_0p1", float(np.degrees(np.linalg.norm(log_so3(C)))))
+for eps in (0.1, 0.01):
+    bch = log_so3(expm_so3(eps * x) @ expm_so3(eps * y))
+    resid = np.linalg.norm(bch - eps * (x + y) - 0.5 * eps**2 * np.cross(x, y))
+    ck.true(f"log(exp(a) exp(b)) = a + b + (a x b)/2 + O(3), scale {eps}", resid < 2 * eps**3 * (np.linalg.norm(x) + np.linalg.norm(y)) ** 3, f"{resid:.1e}")
 ck.close("SO(2) is commutative", expm(0.3 * J2) @ expm(1.9 * J2), expm(1.9 * J2) @ expm(0.3 * J2), tol=1e-14)
 # Ad is the derivative of conjugation; ad is the bracket.
 ck.close("d/dt Ad_exp(t x) y at 0 = x cross y", (expm_so3(d * x) @ y - expm_so3(-d * x) @ y) / (2 * d), np.cross(x, y), tol=1e-8)
@@ -224,6 +232,7 @@ ck.close("spatial twist = Ad_g (body twist)", vee6(gdot @ np.linalg.inv(g)), Ad(
 ck.close("SE(3) product: (R1 R2, x1 + R1 x2)", (g @ g2)[:3, 3], p1 + R1 @ p2, tol=1e-13)
 ck.true("which differs from the direct product x1 + x2", np.linalg.norm((g @ g2)[:3, 3] - (p1 + p2)) > 0.1)
 
+ck.close("spatial linear velocity = v + x cross omega (the lever arm)", (Ad(g) @ xi)[:3], R @ xi[:3] + np.cross(p, R @ xi[3:]), tol=1e-13)
 # SE_2(3): 5x5 matrices (R, v, x)
 def se23(Rm, vv, pp):
     X = np.eye(5)

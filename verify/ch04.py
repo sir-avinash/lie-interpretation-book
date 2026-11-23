@@ -623,6 +623,24 @@ qv = unit(rng.normal(size=3))
 ck.close("exp(h hat(omega)) q stays on the sphere", np.linalg.norm(expm_so3(hh * Om) @ qv), 1.0, tol=1e-14)
 
 
+# N naive steps at constant Omega: |R'R - I| (spectral norm) = (1 + h^2 |Om|^2)^N - 1, close to N h^2 |Om|^2
+N_st = 200
+Rn = np.linalg.matrix_power(naive, N_st)
+ck.close("N naive steps: spectral norm of R'R - I is (1 + h^2 |Om|^2)^N - 1", np.linalg.norm(Rn.T @ Rn - np.eye(3), 2),
+         (1 + hh**2 * Om @ Om) ** N_st - 1, tol=1e-12)
+ck.true("... which is close to N h^2 |Om|^2", abs(np.linalg.norm(Rn.T @ Rn - np.eye(3), 2) / (N_st * hh**2 * Om @ Om) - 1) < 0.05)
+
+# 3D pendulum without torque: energy and the vertical component of R J Omega are conserved, the others are not
+solp = solve_ivp(lambda t, s_: np.concatenate([(s_[:9].reshape(3, 3) @ hat(s_[9:])).ravel(), pendulum_accel(s_[:9].reshape(3, 3), s_[9:])]),
+                 [0, 5], np.concatenate([expm_so3(np.array([1.0, 0.4, 0.0])).ravel(), [0.3, -0.5, 2.0]]), rtol=1e-11, atol=1e-12)
+Rp_ = solp.y[:9].T.reshape(-1, 3, 3)
+Hp = np.einsum("tij,jk,tk->ti", Rp_, J_p, solp.y[9:].T)
+Ep = 0.5 * np.einsum("ti,ij,tj->t", solp.y[9:].T, J_p, solp.y[9:].T) + m_p * G * np.einsum("i,tij,j->t", E3, Rp_, rho_p)
+ck.true("3D pendulum: energy conserved", np.ptp(Ep) < 1e-7, f"spread {np.ptp(Ep):.1e}")
+ck.true("3D pendulum: e3 . R J Omega conserved, horizontal components not", np.ptp(Hp[:, 2]) < 1e-7 and np.ptp(Hp[:, 0]) > 0.1,
+        f"spread {np.ptp(Hp[:, 2]):.1e} vs {np.ptp(Hp[:, 0]):.2f}")
+
+
 def dexpinv(th, Om):
     """Rate of the rotation vector theta in R = R_k exp(hat(theta)) when the body rate is Omega (to second order)."""
     return Om + 0.5 * np.cross(th, Om) + np.cross(th, np.cross(th, Om)) / 12
