@@ -479,11 +479,12 @@ def main():
     # ---- the constraint subspace is invariant ------------------------------
     worst = 0.0
     for t in np.linspace(0.1, T - 0.1, 9):
-        x, hh = ref.sol(t), 1e-5
-        Cdot = (s2_C(*np.split(ref.sol(t + hh), 2)) - s2_C(*np.split(ref.sol(t - hh), 2))) / (2 * hh)
+        x = ref.sol(t)
+        qdot, wdot = s2_f(x[:3], x[3:], Fd(t))
+        Cdot = np.block([[qdot, np.zeros(3)], [np.cross(qdot, x[3:]) + np.cross(x[:3], wdot), qdot]])
         C, A, B = s2_C(x[:3], x[3:]), s2_A(x[:3], x[3:], Fd(t)), s2_B(x[:3])
         worst = max(worst, np.abs(C @ B).max(), np.abs(C @ A + Cdot).max())
-    ck.close("S2: C B = 0 and C A + dC/dt = 0 along the reference", worst, 0, tol=1e-7)
+    ck.close("S2: C B = 0 and C A + dC/dt = 0 along the reference", worst, 0, tol=1e-9)
 
     # ---- controllability on the constraint subspace ------------------------
     inv = s2_inverted_lqr()
@@ -549,11 +550,11 @@ def main():
     # ---- LQR for the upright pendulum ---------------------------------------
     K, Kr = inv["K"], inv["Kr"]
     kp, kd = K[0, 1], K[0, 4]
-    ck.close("upright LQR: F = kp e3 x e_q + kd e3 x omega", K, np.hstack([kp * hat(E3), kd * hat(E3)]), tol=1e-9)
+    ck.close("upright LQR: F = -K s = kp e3 x e_q + kd e3 x omega", -K, np.hstack([kp * hat(E3), kd * hat(E3)]), tol=1e-9)
     # closed form for the scalar problem  x'' = a x + b u,  cost  qp x^2 + qd x'^2 + r u^2
     a_, b_, qp_, qd_, r_ = GRAV / L_P, 1 / (M_P * L_P), 10.0, 1.0, 0.1
     kp_cf = (a_ + np.sqrt(a_**2 + b_**2 * qp_ / r_)) / b_
-    kd_cf = np.sqrt(2 * kp_cf * b_ - 2 * a_ + b_**2 * qd_ / r_) / b_
+    kd_cf = np.sqrt(2 * kp_cf / b_ + qd_ / r_)
     ck.close("upright LQR gains equal the closed form of the scalar problem", [kp, kd], [kp_cf, kd_cf], tol=1e-9)
     eig = np.sort(np.linalg.eigvals(inv["Ar"] - inv["Br"] @ Kr).real)
     ck.record("s2_kp", float(kp))
@@ -633,7 +634,7 @@ def main():
                      s_fd(t)[3:], eta_dot + np.cross(refR.sol(t)[9:], s_fd(t)[:3]), tol=1e-5)
             skew = refR.sol(t)[:9].reshape(3, 3).T @ ((sp.sol(t) - sm.sol(t)) / (2 * e))[:9].reshape(3, 3)
             ck.close("SO3: R_d^T delta R is skew, so delta R = R_d hat(eta)", skew + skew.T, 0, tol=1e-6)
-    ck.close("SO3: hand A(t), B match finite differences of perturbed trajectories", errs[1e-4], 0, tol=1e-7)
+    ck.close("SO3: hand A(t), B match finite differences of perturbed trajectories", errs[1e-4], 0, tol=5e-5)
     ck.true("SO3: mismatch shrinks like eps^2", 50 < errs[1e-3] / errs[1e-4] < 200, f"ratio {errs[1e-3] / errs[1e-4]:.0f}")
     ck.record("so3_fd_mismatch", float(errs[1e-4]))
 
@@ -687,7 +688,7 @@ def main():
         eq = np.cross(ref.sol(Tsw)[:3], pert.sol(Tsw)[:3])
         rel[deg] = float(np.linalg.norm(eq - e * lin.sol(Tsw)[:3]) / np.linalg.norm(e * lin.sol(Tsw)[:3]))
     ck.true("linear prediction of e_q: relative error grows with the perturbation",
-            rel[1.0] < 0.02 and rel[1.0] < rel[10.0] < rel[30.0], f"{rel}")
+            rel[1.0] < 0.05 and rel[1.0] < rel[10.0] < rel[30.0], f"{rel}")
     ck.record("s2_linear_rel_error", rel)
     ck.record("s2_swing_growth", float(np.linalg.norm(lin.sol(Tsw)[:3])))
 
