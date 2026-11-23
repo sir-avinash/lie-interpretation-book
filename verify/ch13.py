@@ -61,6 +61,11 @@ def dexp_inv(x):
 # =====================================================================
 # Section 2. Newton's method on the sphere and on SO(3): the mean
 # =====================================================================
+def angle_between(q, p):
+    """Angle between two unit vectors, accurate for small angles."""
+    return float(np.arctan2(np.linalg.norm(np.cross(q, p)), q @ p))
+
+
 def s2_log(q, p):
     """Tangent vector at q that points to p, with length the angle between them."""
     c = np.clip(q @ p, -1, 1)
@@ -152,6 +157,12 @@ def so3_mean_iterate(R0, Rs, method="newton", iters=8):
             R = R + R @ hat(eta)
         out.append(R)
     return out
+
+
+def opening_start(pts):
+    """The start used in the opening figure: 58 degrees from the mean, so that the first step is long."""
+    qm = s2_mean_newton(pts[0], pts, 6)[0][-1]
+    return expm_so3(np.radians(58.0) * unit(np.cross(qm, [0.2, -0.5, 1.0]))) @ qm
 
 
 def mean_data():
@@ -519,7 +530,7 @@ def closed_loop(ctrl, ref, R0, Om0, T_end, h=H_MPC):
 class Reorient:
     """Minimum-effort rest-to-rest reorientation with torque bounds and a keep-out cone."""
 
-    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, cone_deg=30.0, tau_max=0.2, J=J_B):
+    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, cone_deg=30.0, tau_max=0.15, J=J_B):
         self.N, self.h, self.J, self.tau_max = N, h, J, tau_max
         self.R0 = np.array(R0, float)
         self.RN = Rz(np.radians(120.0)) if RN is None else np.array(RN, float)
@@ -737,6 +748,17 @@ def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, sta
                 converged=(hist[-1]["E0"] <= tol) if fixed_mu is None else (hist[-1]["Emu"] <= tol))
 
 
+def stage_order(prob):
+    """Permutation of (tangent variables, dynamics multipliers) that groups them by stage."""
+    order = []
+    for k in range(prob.N):
+        order += list(range(9 * k, 9 * k + 3))                               # tau_k
+        order += list(range(prob.n + 6 * k, prob.n + 6 * k + 6))             # multipliers of stage k
+        if k + 1 <= prob.N - 1:
+            order += list(range(9 * k + 3, 9 * k + 9))                       # eta_{k+1}, dOmega_{k+1}
+    return np.array(order)
+
+
 def central_path(prob, x0, mus):
     """Solve the barrier problem for each mu in turn, each started from the previous one."""
     out, state, x = [], None, x0
@@ -868,7 +890,7 @@ def main():
     ck.close("S2 mean: Hessian on the tangent plane by finite differences", Pq @ H @ Pq, Pq @ Hfd @ Pq, tol=1e-5)
     qs, steps = s2_mean_newton(pts[0], pts, 6)
     ck.close("S2 Newton: every iterate is a unit vector", np.linalg.norm(qs, axis=1), 1, tol=1e-14)
-    s2_err = [float(np.arccos(np.clip(qq @ qs[-1], -1, 1))) for qq in qs[:4]]
+    s2_err = [angle_between(qq, qs[-1]) for qq in qs[:4]]
     ck.true("S2 Newton: the error is at least squared at each step", s2_err[1] < s2_err[0] ** 2 and s2_err[2] < 5 * s2_err[1] ** 2,
             " ".join(f"{np.degrees(v):.2e}" for v in s2_err[:3]) + " deg")
     avg = sum(pts) / len(pts)
@@ -876,6 +898,13 @@ def main():
     ck.record("s2_err_deg", [float(np.degrees(v)) for v in s2_err[:3]])
     ck.record("s2_average_vs_mean_deg", float(np.degrees(np.arccos(unit(avg) @ qs[-1]))))
     ck.record("s2_first_step_deg", float(np.degrees(np.linalg.norm(steps[0]))))
+
+    qo, so = s2_mean_newton(opening_start(pts), pts, 6)
+    eo = [float(np.degrees(angle_between(qq, qo[-1]))) for qq in qo[:4]]
+    ck.true("S2 Newton from 58 deg away (the opening figure): converges the same way", eo[2] < np.radians(eo[1]) ** 2 * 60 and eo[3] < 1e-9, " ".join(f"{v:.2e}" for v in eo))
+    ck.record("opening_err_deg", eo)
+    ck.record("opening_step_deg", float(np.degrees(np.linalg.norm(so[0]))))
+    ck.record("opening_tip_radius", float(np.sqrt(1 + np.linalg.norm(so[0]) ** 2)))
 
     # ---- Newton on SO(3) -----------------------------------------------------
     R = Rs[0] @ expm_so3(0.4 * rng.normal(size=3))
@@ -1366,6 +1395,10 @@ def main():
     Hs = prob.lag_hess(xs, sol["y"], sol["z"])
     Ar = prob.eq_jac(xs)
     Kmat = np.block([[Hs + prob.ineq_jac(xs).T @ prob.ineq_jac(xs), Ar.T], [Ar, np.zeros((prob.n_eq, prob.n_eq))]])
+    od_ = stage_order(prob)
+    ii, jj = np.nonzero(np.abs(Kmat[np.ix_(od_, od_)]) > 1e-12)
+    ck.true("ordered by stage, the KKT matrix is banded", np.abs(ii - jj).max() <= 20, f"half bandwidth {np.abs(ii - jj).max()} of {Kmat.shape[0]}")
+    ck.record("kkt_bandwidth", int(np.abs(ii - jj).max()))
     ck.record("kkt_size", int(Kmat.shape[0]))
     ck.record("kkt_fill", float(np.mean(np.abs(Kmat) > 1e-12)))
     ck.true("the KKT matrix is sparse", np.mean(np.abs(Kmat) > 1e-12) < 0.05, f"{100 * np.mean(np.abs(Kmat) > 1e-12):.1f}% nonzero")

@@ -125,7 +125,7 @@ def dist_camera_gust(t):
 
 # ---- projection operator ---------------------------------------------
 def proj(theta, y, bound, eps=0.1):
-    """Smooth projection of Lavretsky and Gibson: keeps |theta| <= bound sqrt(1 + eps)."""
+    """Smooth projection of Lavretsky and Gibson: acts for |theta| > bound / sqrt(1 + eps), keeps |theta| <= bound."""
     f = ((1 + eps) * theta @ theta - bound**2) / (eps * bound**2)
     grad = 2 * (1 + eps) * theta / (eps * bound**2)
     if f > 0 and y @ grad > 0:
@@ -186,6 +186,9 @@ class L1Attitude:
         eRt, eOmt, _ = self.errors(R, Om)
         y = -(U.T @ eOmt + self.c * U.T @ self.Ji.T @ eRt)
         Dhat_new = self.Dhat + h * self.gamma * proj(self.Dhat, y, self.bound)
+        size = np.linalg.norm(Dhat_new)
+        if size > self.bound:                               # a finite step can overshoot the ball: pull it back
+            Dhat_new = Dhat_new * (self.bound / size)
         mu_p = mu_p + U @ (Dhat_new - self.Dhat)
         self.Dhat = Dhat_new
         Omp_dot = self.Ji @ mu_p - (hat(self.Omp) @ self.Rp.T @ Rd @ Omd - self.Rp.T @ Rd @ Omd_dot)
@@ -893,7 +896,7 @@ def main():
     for _ in range(30):
         R, Rd = random_rotation(rng), random_rotation(rng)
         Om, Omd, Omd_dot, De = rng.normal(size=3), rng.normal(size=3), rng.normal(size=3), rng.normal(size=3)
-        l1 = L1Attitude(random_rotation(rng), rng.normal(size=3), h)
+        l1 = L1Attitude(random_rotation(rng), rng.normal(size=3), h, kR=1.3, kOm=0.4, kRt=2.2, kOmt=0.31)
         l1.Dhat, l1.Df = rng.normal(size=3), rng.normal(size=3)
         Rp, Omp = l1.Rp, l1.Omp
         tau, mu, mu_p = l1.torques(R, Om, Rd, Omd, Omd_dot)
@@ -915,14 +918,14 @@ def main():
                + J0 @ R.T @ Rp @ hat(eOmt) @ Rp.T @ R @ e_Omega(R, Om, Rd, Omd))
         worst_rel = max(worst_rel, np.max(np.abs(rel - mu)))
     for _ in range(2000):
-        th_true = unit(rng.normal(size=3)) * rng.uniform(0, 3.0)
-        th_hat = unit(rng.normal(size=3)) * rng.uniform(0, 3.0 * np.sqrt(1.1))
+        th_true = unit(rng.normal(size=3)) * rng.uniform(0, 3.0 / np.sqrt(1.1))
+        th_hat = unit(rng.normal(size=3)) * rng.uniform(2.5, 3.0)
         y = rng.normal(size=3)
         worst_proj = max(worst_proj, (th_hat - th_true) @ (proj(th_hat, y, 3.0) - y))
     ck.close("predictor: J0 e^p_Omega_dot = mu_p", worst_pred, 0, tol=1e-9)
     ck.close("prediction error: J0 e~_Omega_dot = -k~_R e~_R - k~_Omega e~_Omega + U Delta~ (eq8-pred-dyn)", worst_dyn, 0, tol=1e-9)
     ck.close("plant and predictor inputs are related as in Kotaru (2022, eq. 3.32)", worst_rel, 0, tol=1e-9)
-    ck.true("projection: Delta~ . (Proj(Delta^, y) - y) <= 0 whenever |Delta| <= bound", worst_proj < 1e-12, f"max {worst_proj:.1e}")
+    ck.true("projection: Delta~ . (Proj(Delta^, y) - y) <= 0 whenever |Delta| <= 0.95 Delta_max", worst_proj < 1e-12, f"max {worst_proj:.1e}")
 
     # ------------------------------------------------------------------
     # 4. Geometric L1: closed loop
@@ -937,7 +940,14 @@ def main():
     ck.true("the torque that tumbled PD is absorbed by L1", deg(o_l1big["angle"].max()) < 20 and deg(o_l1big["angle"][-1]) < 1e-2,
             f"peak {deg(o_l1big['angle'].max()):.1f} deg")
     ck.record("l1_big_peak_deg", float(deg(o_l1big["angle"].max())))
-    ck.true("projection keeps the estimate inside its ball", np.linalg.norm(o_l1big["Dhat"], axis=1).max() <= 3.0 * np.sqrt(1.1) + 1e-9)
+    ck.true("projection keeps the estimate inside its ball", np.linalg.norm(o_l1big["Dhat"], axis=1).max() <= 3.0 + 1e-6,
+            f"max |Dhat| {np.linalg.norm(o_l1big['Dhat'], axis=1).max():.3f} N m, ball radius 3")
+    o_clip = run_attitude("l1", ref_hover, lambda t: big, 6.0, bound=1.0)
+    left_over = deg(np.arcsin((np.linalg.norm(big) - 1.0) / K_R))
+    ck.true("a ball that is too small clips the estimate, and an offset comes back",
+            np.linalg.norm(o_clip["Dhat"], axis=1).max() <= 1.0 + 1e-9 and abs(deg(o_clip["angle"][-1]) - left_over) < 0.1,
+            f"max |Dhat| {np.linalg.norm(o_clip['Dhat'], axis=1).max():.4f}, final error {deg(o_clip['angle'][-1]):.1f} deg")
+    ck.record("clip_final_deg", float(deg(o_clip["angle"][-1])))
 
     track = {}
     for name, dist in (("camera", dist_camera), ("camera_gust", dist_camera_gust)):
@@ -951,6 +961,8 @@ def main():
             error_stats(track["camera", "l1"], 3)[0] * 100 < error_stats(track["camera", "pd"], 3)[0])
     ck.true("moving reference, camera and gust: L1 error at least 10 times below PD",
             error_stats(track["camera_gust", "l1"], 3)[0] * 10 < error_stats(track["camera_gust", "pd"], 3)[0])
+    a_pd = deg(track["camera_gust", "pd"]["angle"][3000:])
+    ck.record("track_camera_gust_pd_min_deg", float(a_pd.min()))
     o = track["camera_gust", "l1"]
     ck.true("prediction error stays far below tracking error", o["Psi_pred"].max() < 1e-6 and o["Psi"][3000:].max() > 1e-5,
             f"max Psi~ {o['Psi_pred'].max():.1e}, max Psi {o['Psi'][3000:].max():.1e}")
@@ -964,6 +976,16 @@ def main():
     ck.true("prediction error shrinks as the adaptation gain grows", pred[250.0] > pred[1000.0] > pred[4000.0] > pred[16000.0],
             ", ".join(f"{v:.1e}" for v in pred.values()))
 
+    o = run_attitude("l1", ConingReference(h), dist_camera_gust, 5.0, noise=0.02, kappa=10.0)
+    sel = o["t"] > 1
+    raw_swing = float(np.ptp(o["Dhat"][sel, 1]))
+    true_swing = float(np.ptp(o["Delta"][sel, 1]))
+    ck.true("with gyroscope noise the raw estimate swings over 1 N m while the truth moves by about 0.2",
+            raw_swing > 1.0 and true_swing < 0.3, f"raw {raw_swing:.2f}, true {true_swing:.2f} N m")
+    ck.true("the filtered estimate stays within 0.1 N m of the truth", np.abs(o["Df"][sel, 1] - o["Delta"][sel, 1]).max() < 0.1,
+            f"{np.abs(o['Df'][sel, 1] - o['Delta'][sel, 1]).max():.3f}")
+    ck.record("raw_estimate_swing_Nm", raw_swing)
+    ck.record("true_uncertainty_swing_Nm", true_swing)
     # the filter: cutoff against tracking error and torque activity, with gyroscope noise
     kappas = (1.0, 3.0, 10.0, 30.0, 100.0, 300.0)
     study = {}

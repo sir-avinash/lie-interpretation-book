@@ -141,7 +141,7 @@ def filter_tradeoff():
     axr.tick_params(colors=TEAL, width=0.8, length=3, labelsize=9, which="both")
     for lab in axr.get_yticklabels():
         lab.set_fontfamily("Source Sans 3")
-    ax0.text(300, 0.33, "torque rate\n(N·m/s, right)", color=TEAL, fontsize=9.5, ha="right", va="top", linespacing=1.15, **SANS)
+    ax0.text(1.0, 0.062, "torque rate (N·m/s, right axis)", color=TEAL, fontsize=9.5, ha="left", va="center", **SANS)
     ax0.set_xlabel("filter cutoff  κ  (rad/s)", fontsize=9.5, **SANS)
     ax0.set_title("too low is slow, too high is rough", fontsize=10, loc="left", color=INK, **SANS)
 
@@ -151,7 +151,7 @@ def filter_tradeoff():
     ax1.plot([30, 30], [vals["delay_margin_gamma_1000_ms"], vals["delay_margin_gamma_16000_ms"]], "o", ms=9, mfc="none", mec=TEAL, mew=1.1)
     ax1.axhline(vals["delay_margin_pd_ms"], color=TERRACOTTA, lw=1.0, ls=DASHED)
     ax1.text(1.2, vals["delay_margin_pd_ms"] + 1.5, "no adaptation", color=TERRACOTTA, fontsize=9.5, **SANS)
-    ax1.annotate("same for adaptation gains\nγ = 1000, 4000, 16000", (30, dm[1]), xytext=(34, 34), fontsize=9.5, color=TEAL, ha="left",
+    ax1.annotate("same for adaptation gains\nγ = 1000, 4000, 16000", (30, dm[1]), xytext=(1.25, 10), fontsize=9.5, color=TEAL, ha="left",
                  va="center", linespacing=1.15, arrowprops=dict(arrowstyle="-", color=TEAL, lw=0.7, shrinkB=5), **SANS)
     ax1.set_xlim(1, 500)
     ax1.set_ylim(0, 54)
@@ -226,7 +226,7 @@ def _cone_data():
 
 def cone_frame(t):
     o, lap = _cone_data()
-    s = Scene(width=6.4, height=3.9, azim=-58, elev=-52, xlim=(-1.95, 1.95), ylim=(-1.38, 1.0))
+    s = Scene(width=6.4, height=3.9, azim=-58, elev=-66, xlim=(-1.75, 1.75), ylim=(-1.36, 1.08))
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     n = len(o["t"])
     k = int(round((0.02 + 0.98 * (0.15 * ease(t) + 0.85 * t)) * (n - 1)))
@@ -256,8 +256,8 @@ def cone_frame(t):
     s.label(1.004 * q, r"$q$", dx=-11, dy=9, size=12, color=INDIGO)
     edge = small_circle(-E3, m.CONE_ANGLE)[150]
     s.label(edge, r"$H = 0$", dx=-26, dy=-4, size=11)
-    s.text2d(-1.42, 0.82, "inside the cone:\nsafe", fontsize=9.5, color=INK, linespacing=1.2, **SANS)
-    s.text2d(1.45, 0.82, "outside:\nmust never happen", fontsize=9.5, color=TERRACOTTA, linespacing=1.2, **SANS)
+    s.label(unit(-E3 + 0.38 * s.up - 0.12 * s.right), "safe", size=9.5, color=INK, **SANS)
+    s.label(unit(-E3 + 1.25 * s.up - 0.3 * s.right), "must never be here", size=9.5, color=TERRACOTTA, **SANS)
     if not bad[k] and k < a:
         msg, col = "the reference is safe: the state follows it", INDIGO
     elif bad[k]:
@@ -296,15 +296,15 @@ def glyph(s, x, b3, color, size=0.2, lw=1.5):
 
 def obstacle_frame(t):
     naive, aug = _quad_data()
-    s = Scene(width=6.6, height=3.3, azim=-90, elev=0, xlim=(-3.25, 3.25), ylim=(-1.55, 1.7))
+    s = Scene(width=6.6, height=3.3, azim=-90, elev=0, xlim=(-2.7, 4.3), ylim=(-1.6, 1.9))
     s.sphere(m.OBS_C, m.OBS_R, color=PEACH)
     ring = np.array([m.OBS_C + np.sqrt(m.AUG_BETA) * m.OBS_R * (np.cos(a) * E1 + np.sin(a) * E3) for a in np.linspace(0, 2 * np.pi, 120)])
     s.curve(ring, color=MUTED, lw=0.8, linestyle=DASHED, alpha=0.9)
-    s.curve(np.array([[-3.2, 0, -0.1], [3.2, 0, -0.1]]), color=MUTED, lw=0.9, linestyle=DASHED, zorder=15)
-    s.label((2.55, 0, -0.1), r"reference $x_d(t)$", dy=-10, size=10, color=MUTED)
+    s.curve(np.array([[-2.65, 0, -0.1], [4.25, 0, -0.1]]), color=MUTED, lw=0.9, linestyle=DASHED, zorder=15)
+    s.label((3.5, 0, -0.1), r"reference $x_d(t)$", dy=-10, size=10, color=MUTED)
     n = len(aug["t"])
     tt = 0.12 * ease(t) + 0.88 * t
-    k = int(round((0.12 + 0.6 * tt) * (n - 1)))
+    k = int(round((0.05 + 0.55 * tt) * (n - 1)))
     # the plain barrier: stops being drawn where it enters the obstacle
     hit = int(np.argmax(naive["dist"] < m.OBS_R))
     kn = min(k, hit)
@@ -314,31 +314,31 @@ def obstacle_frame(t):
         s.dot(naive["x"][hit], color=TERRACOTTA, size=7, zorder=45)
         s.label(naive["x"][hit], "hits", dx=-15, dy=-10, size=9.5, color=TERRACOTTA, **SANS)
     s.curve(aug["x"][: k + 1], color=INDIGO, lw=1.9, alpha=1.0, zorder=26)
-    step = int(0.3 / (aug["t"][1] - aug["t"][0]))
-    for j in range(step * 3, k, step):
-        if 0.9 < aug["dist"][j] < 1.9 or j % (2 * step) == 0:
-            glyph(s, aug["x"][j], aug["b3"][j], INDIGO, size=0.13, lw=1.0)
+    arc = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(aug["x"], axis=0), axis=1))])
+    for mark in np.arange(1.0, arc[k] - 0.3, 0.55):
+        j = int(np.searchsorted(arc, mark))
+        glyph(s, aug["x"][j], aug["b3"][j], INDIGO, size=0.12, lw=0.9)
     glyph(s, aug["x"][k], aug["b3"][k], INDIGO)
     s.label(m.OBS_C, "obstacle", size=10, **SANS, halo="none")
-    s.text2d(-2.2, 1.5, "plain barrier, thrust only", fontsize=9.5, color=TERRACOTTA, **SANS)
-    s.text2d(-2.2, 1.25, "augmented barrier, thrust and torque", fontsize=9.5, color=INDIGO, **SANS)
+    s.text2d(-1.55, 1.68, "plain barrier, thrust only", fontsize=9.5, color=TERRACOTTA, **SANS)
+    s.text2d(-1.55, 1.42, "augmented barrier, thrust and torque", fontsize=9.5, color=INDIGO, **SANS)
     d = aug["dist"][k]
     xk = aug["x"][k, 0]
-    if xk < -1.6:
+    if xk < -1.45:
         msg, col = "both fly level toward the obstacle, 10 cm below its center", INK
     elif k < hit:
         msg, col = "thrust alone cannot push away: it points the wrong way", TERRACOTTA
-    elif xk < 0.9 and d < 1.4:
+    elif xk < 1.6:
         msg, col = "torque tilts the thrust axis away first, and the vehicle goes around", INDIGO
     else:
-        msg, col = "past the obstacle: back on the reference", INDIGO
-    s.text2d(0.0, -1.4, msg, fontsize=10.5, color=col, **SANS)
+        msg, col = "past the obstacle: returning to the reference", INDIGO
+    s.text2d(0.8, -1.42, msg, fontsize=10.5, color=col, **SANS)
     return s
 
 
 def obstacle():
     animate(obstacle_frame, OUT / "ch08-obstacle.gif", OUT / "ch08-obstacle-strip.png", n=84, fps=13,
-            width_px=720, stills=(0.12, 0.42, 0.66, 1.0), strip_px=900, strip_cols=2)
+            width_px=720, stills=(0.1, 0.4, 0.62, 1.0), strip_px=900, strip_cols=2)
 
 
 if __name__ == "__main__":

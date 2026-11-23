@@ -2040,13 +2040,13 @@ L 468.072 161.28
     </g>
    </g>
    <g id="patch_8">
-    <path d="M 401.495638 95.94326 
-Q 394.934989 99.172441 388.374339 102.401622 
+    <path d="M 365.72991 117.899469 
+Q 372.794427 112.729393 379.858945 107.559316 
 " style="fill: none; stroke: #2a6f73; stroke-width: 0.7; stroke-linecap: round"/>
    </g>
    <g id="text_23">
     <!-- same for adaptation gains -->
-    <g style="fill: #2a6f73" transform="translate(387.636712 72.1004) scale(0.095 -0.095)">
+    <g style="fill: #2a6f73" transform="translate(288.800871 131.2364) scale(0.095 -0.095)">
      <use xlink:href="#SourceSans3-Regular-2e"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(41.90625 0)"/>
      <use xlink:href="#SourceSans3-Regular-28" transform="translate(92.3125 0)"/>
@@ -2074,7 +2074,7 @@ Q 394.934989 99.172441 388.374339 102.401622
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(1038.546875 0)"/>
     </g>
     <!-- γ = 1000, 4000, 16000 -->
-    <g style="fill: #2a6f73" transform="translate(387.636712 87.519553) scale(0.095 -0.095)">
+    <g style="fill: #2a6f73" transform="translate(288.800871 146.655553) scale(0.095 -0.095)">
      <defs>
       <path id="SourceSans3-Regular-2db" d="M 1254 -1146 
 Q 1267 -1005 1273 -893 

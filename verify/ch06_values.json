@@ -14,15 +14,15 @@
   "poles_per_axis": [
     [
       -26.995761931768946,
-      0.0
+      -3.9798478243286155
     ],
     [
       -26.058098584065668,
-      0.0
+      -4.001073013567468
     ],
     [
       -13.81458343733226,
-      0.0
+      -4.631313439937165
     ]
   ],
   "natural_freq_per_axis": [
@@ -109,5 +109,100 @@
     0.9450000000000001,
     0.9450000000000001,
     0.9450000000000001
-  ]
+  ],
+  "s2_params": {
+    "m": 1.0,
+    "l": 1.0,
+    "k_q": 16.0,
+    "k_omega": 5.6
+  },
+  "s2_omega_d_bound": 0.6882917236212551,
+  "s2_example": {
+    "psi_bar": 1.984807753012208,
+    "beta_guaranteed": 0.004204329603019214,
+    "c_max": 3.461376821614069
+  },
+  "s2_time_to_5deg_s": {
+    "60": 0.745,
+    "170": 1.965,
+    "179.9": 4.155
+  },
+  "s2_antipode_rate": 2.0826222462934814,
+  "cascade_triangular_gap": 1.133507450297444e-07,
+  "inverted": {
+    "tilt0_deg": 178.00000000000006,
+    "Psi_R0": 1.5526394489680206,
+    "t_Psi_below_1_s": 0.264,
+    "t_tilt_below_90_s": 0.301,
+    "max_drop_m": 0.9357500913268206,
+    "max_e_x_m": 1.5479014128918889,
+    "t_e_x_below_5cm_s": 1.937,
+    "max_thrust_N": 143.91038555996764,
+    "hover_thrust_N": 42.5754,
+    "max_torque_Nm": 18.394051357030342,
+    "e_x_0_m": 0.8774964387392122,
+    "thrust_zero_until_s": 0.202
+  },
+  "feedforward_study": {
+    "1": {
+      "diverged": true,
+      "t_end_s": 14.58,
+      "max_e_x_last_5s_m": null
+    },
+    "0.5": {
+      "diverged": false,
+      "t_end_s": 20.0,
+      "max_e_x_last_5s_m": 0.014046149335536058
+    },
+    "0.25": {
+      "diverged": false,
+      "t_end_s": 20.0,
+      "max_e_x_last_5s_m": 0.0069933912325035805
+    },
+    "exact_1": {
+      "diverged": false,
+      "max_e_x_last_5s_m": 2.8242651444535627e-11
+    }
+  },
+  "slow_inner_exact_e_x_20s": 4.631476978337554e-10,
+  "loop_rates": {
+    "position_wn": 4.0,
+    "position_zeta": 0.7,
+    "attitude_slowest_pole": 3.9798478243286155
+  },
+  "load_params": {
+    "m_Q": 4.34,
+    "m_L": 0.5,
+    "l": 1.0,
+    "k_x": 19.36,
+    "k_v": 13.552,
+    "k_q": 25.0,
+    "k_omega": 7.0
+  },
+  "load_study": {
+    "1": {
+      "converged": false,
+      "t_end_s": 7.365,
+      "e_x_end_m": 19.944929936309116,
+      "swing_end_deg": 84.45652616329068,
+      "t_e_x_below_5cm_s": null,
+      "max_swing_deg": 121.68755782172032,
+      "min_tension_N": 3.5316762319667903
+    },
+    "0.5": {
+      "converged": true,
+      "t_end_s": 12.0,
+      "e_x_end_m": 0.0010563081935702644,
+      "swing_end_deg": 0.09090493801479678,
+      "t_e_x_below_5cm_s": 5.285,
+      "max_swing_deg": 43.68655596576401,
+      "min_tension_N": 4.171443804779525
+    }
+  },
+  "load_loop_rates": {
+    "position_wn": 2.0,
+    "cable_wn": 5.0,
+    "attitude_slowest_pole_eps1": 3.9798478243286155,
+    "attitude_slowest_pole_eps05": 7.959695648657231
+  }
 }

@@ -880,12 +880,11 @@ for _ in range(200):
     x, v, xd = rng.normal(size=3), rng.normal(size=3), rng.normal(size=3)
     F, qd, A, om_des = load_force(x, v, q, om, xd)
     w1 = max(w1, np.max(np.abs(-np.cross(q, F) / (m_Q * l_c) - om_des)))
-    # if q = q_d, the load equation becomes the PD law
-    F2, qd2, A2, _ = load_force(x, v, qd, tangent(qd, om), xd)
-    lhs = ((qd @ F2) - m_Q * l_c * (tangent(qd, om) @ tangent(qd, om))) * qd
-    w2 = max(w2, np.max(np.abs(lhs - (-kxL * (x - xd) - kvL * v + (m_Q + m_L) * G * E3))))
+    # the load receives the part of the PD force A0 that lies along the cable
+    A0 = -kxL * (x - xd) - kvL * v + (m_Q + m_L) * G * E3
+    w2 = max(w2, np.max(np.abs(((q @ F) - m_Q * l_c * (om @ om)) * q - (q @ A0) * q)))
 ck.true("load cascade: with thrust vector F the cable obeys omega_dot = -k_q e_q - k_omega omega", w1 < 1e-10, f"err {w1:.1e}")
-ck.true("load cascade: when q = q_d the load obeys (m_Q+m_L)(a + g e3) = -k_x e_x - k_v e_v + (m_Q+m_L) g e3", w2 < 1e-9, f"err {w2:.1e}")
+ck.true("load cascade: the load obeys (m_Q+m_L)(a + g e3) = (q q')(-k_x e_x - k_v e_v + (m_Q+m_L) g e3)", w2 < 1e-9, f"err {w2:.1e}")
 
 
 def load_rhs(t, s, xd, eps):
@@ -932,6 +931,239 @@ ck.true("load cascade, attitude loop 2x faster: load reaches the target, cable h
 ck.record("load_loop_rates", {"position_wn": float(np.sqrt(kxL / (m_Q + m_L))), "cable_wn": float(np.sqrt(kqL)),
                               "attitude_slowest_pole_eps1": float(-slowest_pole),
                               "attitude_slowest_pole_eps05": float(-max(np.roots([J[0, 0], k_Om / 0.5, k_R / 0.25]).real))})
+
+# =========================================================================
+# 8. Feedback linearization: geometric against Euler angles on the 3D pendulum (Siravuru 2019, ch. 4)
+# =========================================================================
+rp_mod, rp_layout, rp_p = library("rigid_pendulum")
+m_3, rho_3 = 1.0, np.array([0.0, 0.0, -0.5])
+J_3 = np.diag([0.1625, 0.1625, 0.01])
+J3inv = np.linalg.inv(J_3)
+K_P, K_D = 100.0, 20.0
+rp_p.update({"J": J_3, "m": m_3, "g": G, "\\rho": rho_3})
+ck.record("fl_params", {"m": m_3, "J_diag": np.diag(J_3).tolist(), "rho": rho_3.tolist(), "K_p": K_P, "K_d": K_D})
+
+
+def grav_3(R):
+    return m_3 * G * np.cross(R.T @ E3, rho_3)
+
+
+worst = 0.0
+for _ in range(20):
+    R, Om, tau = random_rotation(rng), rng.normal(size=3), rng.normal(size=3)
+    a_g = accelerations(rp_mod, rp_layout.pack(R=R, Omega_R=Om), tau, rp_p)
+    worst = max(worst, np.max(np.abs(a_g - J3inv @ (tau + grav_3(R) - np.cross(Om, J_3 @ Om)))))
+ck.true("3D pendulum: J Om_dot + Om x J Om = m g (R'e3) x rho + tau equals geomech", worst < 1e-9, f"err {worst:.1e}")
+
+
+def euler_zyx(R):
+    return np.array([np.arctan2(R[1, 0], R[0, 0]), -np.arcsin(np.clip(R[2, 0], -1, 1)), np.arctan2(R[2, 1], R[2, 2])])
+
+
+def E_mat(th, ph):
+    return np.array([[-np.sin(th), 0, 1], [np.cos(th) * np.sin(ph), np.cos(ph), 0], [np.cos(th) * np.cos(ph), -np.sin(ph), 0]])
+
+
+def E_dot(th, ph, th1, ph1):
+    d_th = np.array([[-np.cos(th), 0, 0], [-np.sin(th) * np.sin(ph), 0, 0], [-np.sin(th) * np.cos(ph), 0, 0]])
+    d_ph = np.array([[0, 0, 0], [np.cos(th) * np.cos(ph), -np.sin(ph), 0], [-np.cos(th) * np.sin(ph), -np.cos(ph), 0]])
+    return d_th * th1 + d_ph * ph1
+
+
+# Omega = E Theta_dot for R = Rz(psi) Ry(theta) Rx(phi), by finite differences
+Th, Th1 = np.array([0.4, -0.7, 1.1]), np.array([0.3, 0.5, -0.2])
+d = 1e-6
+Rp = Rz(Th[0] + d * Th1[0]) @ Ry(Th[1] + d * Th1[1]) @ Rx(Th[2] + d * Th1[2])
+Rm = Rz(Th[0] - d * Th1[0]) @ Ry(Th[1] - d * Th1[1]) @ Rx(Th[2] - d * Th1[2])
+R0 = Rz(Th[0]) @ Ry(Th[1]) @ Rx(Th[2])
+ck.close("Omega = E(theta, phi) Theta_dot", vee(R0.T @ (Rp - Rm) / (2 * d)), E_mat(Th[1], Th[2]) @ Th1, tol=1e-8)
+ck.close("euler_zyx inverts Rz Ry Rx", euler_zyx(R0), Th)
+
+
+def tau_geo(R, Om):
+    """Geometric feedback linearization: e_Omega_dot = -K_p e_R - K_d e_Omega (target R_d = I)."""
+    return J_3 @ (-K_P * e_R(R, I3) - K_D * Om) + np.cross(Om, J_3 @ Om) - grav_3(R)
+
+
+def tau_euler(R, Om):
+    """Euler-angle feedback linearization: Theta_ddot = -K_p Theta - K_d Theta_dot."""
+    Th = euler_zyx(R)
+    if abs(np.cos(Th[1])) < 1e-9:
+        return np.full(3, np.nan)
+    Em = E_mat(Th[1], Th[2])
+    Th1 = np.linalg.solve(Em, Om)
+    return J_3 @ (Em @ (-K_P * Th - K_D * Th1) + E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1) + np.cross(Om, J_3 @ Om) - grav_3(R)
+
+
+# both laws do what they claim at random states
+w1 = w2 = 0.0
+for _ in range(50):
+    R, Om = random_rotation(rng), rng.normal(size=3)
+    Om_dot = J3inv @ (tau_geo(R, Om) + grav_3(R) - np.cross(Om, J_3 @ Om))
+    w1 = max(w1, np.max(np.abs(Om_dot + K_P * e_R(R, I3) + K_D * Om)))
+    Th = euler_zyx(R)
+    Em = E_mat(Th[1], Th[2])
+    Th1 = np.linalg.solve(Em, Om)
+    Om_dot = J3inv @ (tau_euler(R, Om) + grav_3(R) - np.cross(Om, J_3 @ Om))
+    Th2 = np.linalg.solve(Em, Om_dot - E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1)
+    w2 = max(w2, np.max(np.abs(Th2 + K_P * Th + K_D * Th1)))
+ck.true("geometric law gives Omega_dot = -K_p e_R - K_d Omega exactly", w1 < 1e-10, f"err {w1:.1e}")
+ck.true("Euler law gives Theta_ddot = -K_p Theta - K_d Theta_dot exactly", w2 < 1e-8, f"err {w2:.1e}")
+
+
+def fl_run(R0, Om0, law, t_f=3.0):
+    """Returns final Psi_R, effort (integral of |tau|^2), peak |tau|, time to stay within 5 degrees."""
+    if not np.all(np.isfinite(law(R0, Om0))):
+        return np.nan, np.nan, np.inf, np.nan
+
+    def rhs(t, s):
+        R, Om = s[:9].reshape(3, 3), s[9:12]
+        tau = law(R, Om)
+        return np.concatenate([(R @ hat(Om)).ravel(), J3inv @ (tau + grav_3(R) - np.cross(Om, J_3 @ Om)), [tau @ tau]])
+
+    ts = np.linspace(0, t_f, 1501)
+    sol = solve_ivp(rhs, [0, t_f], np.concatenate([R0.ravel(), Om0, [0.0]]), t_eval=ts, rtol=1e-8, atol=1e-10)
+    Rs_ = sol.y[:9].T.reshape(-1, 3, 3)
+    peak = max(np.linalg.norm(law(R, Om)) for R, Om in zip(Rs_, sol.y[9:12].T))
+    ang = np.degrees(np.arccos(np.clip((np.trace(Rs_, axis1=1, axis2=2) - 1) / 2, -1, 1)))
+    out = np.nonzero(ang > 5)[0]
+    t5 = 0.0 if not len(out) else (ts[out[-1] + 1] if out[-1] + 1 < len(ts) else np.inf)
+    return 1 - np.cos(np.radians(ang[-1])), sol.y[12, -1], peak, t5
+
+
+grid = np.radians(np.arange(-180, 181, 45))
+fl_R0, fl_labels = [], []
+for ps in grid:
+    for th in grid:
+        for ph in grid:
+            Rg = Rz(ps) @ Ry(th) @ Rx(ph)
+            if not any(np.allclose(Rg, Q, atol=1e-9) for Q in fl_R0):
+                fl_R0.append(Rg)
+                fl_labels.append((ps, th, ph))
+n_lab, n_att = len(grid)**3, len(fl_R0)
+ck.true("the 729 grid labels name 208 distinct attitudes", (n_lab, n_att) == (729, 208), f"{n_lab} labels, {n_att} attitudes")
+ck.close("the label (180, 180, 180) degrees is the target attitude itself", Rz(np.pi) @ Ry(np.pi) @ Rx(np.pi), I3)
+half = np.array([abs(np.trace(Rg) + 1) < 1e-9 for Rg in fl_R0])
+sing = np.array([abs(abs(Rg[2, 0]) - 1) < 1e-9 for Rg in fl_R0])
+fl = {}
+for name, Om0 in (("rest", np.zeros(3)), ("moving", np.array([1.0, -1.0, 1.0]))):
+    res_g = np.array([fl_run(Rg, Om0, tau_geo) for Rg in fl_R0])
+    res_e = np.array([fl_run(Rg, Om0, tau_euler) for Rg in fl_R0])
+    ok_g, ok_e = res_g[:, 0] < 1e-3, res_e[:, 0] < 1e-3
+    both = ok_g & ok_e & ~np.all(np.isclose(np.array(fl_R0), I3), axis=(1, 2))
+    fl[name] = {"geo_converged": int(ok_g.sum()), "euler_converged": int(ok_e.sum()), "euler_undefined": int(np.isnan(res_e[:, 0]).sum()),
+                "geo_stuck_are_half_turns": bool(np.array_equal(~ok_g, half)) if name == "rest" else None,
+                "geo_peak_median": float(np.median(res_g[both, 2])), "euler_peak_median": float(np.median(res_e[both, 2])),
+                "geo_peak_max": float(np.max(res_g[both, 2])), "euler_peak_max": float(np.max(res_e[both, 2])),
+                "effort_ratio_median": float(np.median(res_e[both, 1] / res_g[both, 1])),
+                "geo_t5_median": float(np.median(res_g[both, 3])), "euler_t5_median": float(np.median(res_e[both, 3])),
+                "geo_t5_max": float(np.max(res_g[both, 3])), "euler_t5_max": float(np.max(res_e[both, 3])),
+                "n_both": int(both.sum())}
+    if name == "rest":
+        fl_rest = (res_g, res_e)
+ck.record("fl_grid", {"labels": n_lab, "attitudes": n_att, "half_turns": int(half.sum()), "singular": int(sing.sum()), **fl})
+ck.true("grid at rest: the geometric law fails exactly on the 29 half turns (zero torque there) and nowhere else",
+        fl["rest"]["geo_stuck_are_half_turns"] and int(half.sum()) == 29 and fl["rest"]["geo_converged"] == 179)
+ck.true("grid: the Euler law is undefined at the 16 attitudes with 90 degrees of pitch, converges from the other 192",
+        int(sing.sum()) == 16 and fl["rest"]["euler_undefined"] == 16 and fl["rest"]["euler_converged"] == 192)
+ck.true("grid with an initial rate (1,-1,1) rad/s: geometric leaves the half turns", fl["moving"]["geo_converged"] >= 205,
+        f"{fl['moving']['geo_converged']}/208 within 3 s")
+ck.true("grid: Euler law uses several times the peak torque and effort of the geometric law",
+        fl["rest"]["euler_peak_median"] > 3 * fl["rest"]["geo_peak_median"] and fl["rest"]["effort_ratio_median"] > 2,
+        f"peak {fl['rest']['euler_peak_median']:.1f} vs {fl['rest']['geo_peak_median']:.1f} N m, effort x{fl['rest']['effort_ratio_median']:.1f}")
+ck.true("grid: the Euler law is faster where it works", fl["rest"]["euler_t5_max"] < fl["rest"]["geo_t5_median"] + 2.0)
+# the three attitudes not yet inside 1e-3 after 3 s with the initial rate do converge, later
+late = [Rg for Rg in fl_R0 if fl_run(Rg, np.array([1.0, -1.0, 1.0]), tau_geo)[0] >= 1e-3]
+late_final = [fl_run(Rg, np.array([1.0, -1.0, 1.0]), tau_geo, t_f=8.0)[0] for Rg in late]
+ck.true("the late starters of the moving grid converge within 8 s", all(v < 1e-6 for v in late_final), f"{len(late)} attitudes")
+ck.record("fl_late", len(late))
+
+# near the chart singularity with a modest body rate: Euler torque grows like 1/cos(pitch)
+near = {}
+for pitch in (0.0, 60.0, 85.0, 89.0, 89.9):
+    Rg = Ry(np.radians(pitch)) @ Rx(0.3)
+    Om0 = np.array([1.0, -1.0, 1.0])
+    near[f"{pitch:g}"] = {"euler_Nm": float(np.linalg.norm(tau_euler(Rg, Om0))), "geo_Nm": float(np.linalg.norm(tau_geo(Rg, Om0)))}
+ck.record("fl_near_singularity", near)
+ck.true("Euler torque at 89.9 degrees of pitch is over 100 times the geometric one, which stays bounded",
+        near["89.9"]["euler_Nm"] > 100 * near["89.9"]["geo_Nm"] and near["89.9"]["geo_Nm"] < 30,
+        f"{near['89.9']['euler_Nm']:.0f} vs {near['89.9']['geo_Nm']:.1f} N m")
+r = near["89.9"]["euler_Nm"] / near["89"]["euler_Nm"]
+ck.true("between 89 and 89.9 degrees the Euler torque grows by about cos(89)^2/cos(89.9)^2 or cos ratio (blow-up)", r > 9, f"ratio {r:.1f}")
+ck.record("fl_blowup_ratio_89_to_899", float(r))
+# output linearization of y = e_R itself needs C_R^-1: singular at 90 and 180 degrees
+ck.close("det C_R = 0 at 90 degrees of error", np.linalg.det(C_R(expm_so3(np.pi / 2 * unit([1.0, 2, 3])), I3)), 0.0)
+# range of the two error measures on the grid
+ck.record("fl_error_ranges", {"max_norm_e_R": 1.0, "max_norm_Theta": float(max(np.linalg.norm(euler_zyx(Rg)) for Rg in fl_R0))})
+
+
+# =========================================================================
+# 9. Products of rotation groups: add the Lyapunov functions
+# =========================================================================
+Js = [np.diag([0.9, 1.1, 0.4]), np.diag([2.0, 1.6, 0.8]), np.diag([0.9, 1.1, 0.4])]     # stance leg, torso, swing leg
+kRs, kOs = [60.0, 120.0, 60.0], [12.0, 24.0, 12.0]
+
+
+def prod_rhs(t, s):
+    out = []
+    for i in range(3):
+        R, Om = s[12 * i:12 * i + 9].reshape(3, 3), s[12 * i + 9:12 * i + 12]
+        tau = -kRs[i] * e_R(R, I3) - kOs[i] * Om + np.cross(Om, Js[i] @ Om)
+        out += [(R @ hat(Om)).ravel(), np.linalg.solve(Js[i], tau - np.cross(Om, Js[i] @ Om))]
+    return np.concatenate(out)
+
+
+s0 = np.concatenate([np.concatenate([expm_so3(np.radians(a) * unit(rng.normal(size=3))).ravel(), rng.normal(size=3)]) for a in (120, 60, 170)])
+sol = solve_ivp(prod_rhs, [0, 6], s0, t_eval=np.linspace(0, 6, 601), rtol=1e-10, atol=1e-12)
+Vp = np.array([sum(0.5 * s[12 * i + 9:12 * i + 12] @ Js[i] @ s[12 * i + 9:12 * i + 12] + kRs[i] * Psi_R(s[12 * i:12 * i + 9].reshape(3, 3), I3)
+                   for i in range(3)) for s in sol.y.T])
+ck.true("three factors of SO(3): the summed Lyapunov function never increases and all three attitudes converge",
+        np.max(np.diff(Vp)) < 1e-8 and Vp[-1] < 1e-6, f"V(6 s) = {Vp[-1]:.1e}")
+# a step of 0.35 s: how much of a 60 degree error is left at impact, per axis pole
+step_T = 0.35
+left = {}
+for a0 in (10.0, 60.0, 150.0):
+    Rs0 = expm_so3(np.radians(a0) * E2)
+    sol = solve_ivp(lambda t, s: np.concatenate([(s[:9].reshape(3, 3) @ hat(s[9:])).ravel(),
+                                                 np.linalg.solve(Js[0], -kRs[0] * e_R(s[:9].reshape(3, 3), I3) - kOs[0] * s[9:])]),
+                    [0, step_T], np.concatenate([Rs0.ravel(), np.zeros(3)]), rtol=1e-10, atol=1e-12)
+    Rf = sol.y[:9, -1].reshape(3, 3)
+    left[f"{a0:g}"] = float(np.degrees(np.arccos(np.clip((np.trace(Rf) - 1) / 2, -1, 1))))
+ck.record("leg_step", {"step_s": step_T, "angle_left_deg": left, "wn": float(np.sqrt(kRs[0] / Js[0][1, 1])),
+                       "peak_torque_150_Nm": float(kRs[0] * 1.0), "peak_torque_10_Nm": float(kRs[0] * np.sin(np.radians(10)))})
+ck.true("swing leg: a 10 degree error is mostly gone in one 0.35 s step, a 150 degree error is not",
+        left["10"] < 2.5 and left["150"] > 60, f"{left}")
+
+
+# =========================================================================
+# 10. Limits: torque saturation, and the choice of error vector
+# =========================================================================
+def sat_run(tau_max, law="trace", angle=150.0, t_f=12.0):
+    Re0 = expm_so3(np.radians(angle) * unit([1.0, 2.0, -1.0]))
+
+    def rhs(t, s):
+        R, Om = s[:9].reshape(3, 3), s[9:]
+        e = e_R(R, I3) if law == "trace" else log_so3(R)
+        tau = np.clip(-k_R * e - k_Om * Om, -tau_max, tau_max)
+        return np.concatenate([(R @ hat(Om)).ravel(), Jinv @ (tau - np.cross(Om, J @ Om))])
+
+    ts = np.linspace(0, t_f, 4801)
+    sol = solve_ivp(rhs, [0, t_f], np.concatenate([Re0.ravel(), np.zeros(3)]), t_eval=ts, rtol=1e-9, atol=1e-11, max_step=0.01)
+    ang = np.degrees(np.arccos(np.clip((np.trace(sol.y[:9].T.reshape(-1, 3, 3), axis1=1, axis2=2) - 1) / 2, -1, 1)))
+    out = np.nonzero(ang > 5)[0]
+    return float(ts[out[-1] + 1]) if out[-1] + 1 < len(ts) else np.inf, float(ang[-1])
+
+
+sat = {f"{tm:g}": sat_run(tm)[0] for tm in (np.inf, 1.0, 0.2)}
+ck.record("saturation_settle_s", sat)
+ck.true("PD without cancellation, torque clipped per axis: still converges from 150 degrees, more slowly",
+        np.isfinite(sat["0.2"]) and sat["inf"] < sat["1"] < sat["0.2"], f"{sat}")
+# energy argument under per-axis clipping for a fixed target: tau . Omega <= -k_R e_R . Omega is NOT implied; check V0 along the run
+ck.record("trace_vs_log_150deg_s", {"trace": sat_run(np.inf)[0], "log": sat_run(np.inf, law="log")[0]})
+ck.record("peak_torque_demand", {"trace_max_Nm": k_R * 1.0, "log_at_179deg_Nm": float(k_R * np.radians(179))})
+# near the target the two error vectors agree to first order
+eta = 1e-3 * unit([1.0, -2.0, 0.5])
+ck.close("trace and logarithm error vectors agree to first order", e_R(expm_so3(eta), I3), log_so3(expm_so3(eta)), tol=1e-9)
 
 # @@NEXT@@
 
