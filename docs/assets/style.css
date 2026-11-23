@@ -80,7 +80,7 @@ h2, h3, h4 { font-family: var(--sans); font-weight: 600; line-height: 1.25; }
 h2 { font-size: 1.28rem; margin: 3rem 0 0.8rem; }
 h3 { font-size: 1.02rem; margin: 2rem 0 0.5rem; }
 .secnum { color: var(--accent); margin-right: 0.35em; font-variant-numeric: lining-nums; }
-p { margin: 0 0 0.95rem; hyphens: auto; }
+p { margin: 0 0 0.95rem; }
 .assets, .subtitle { font-family: var(--sans); font-size: 0.82rem; color: var(--muted); }
 .subtitle { font-size: 1rem; }
 article > p:first-of-type::first-line { font-variant-caps: normal; }
@@ -187,6 +187,8 @@ ol.toc li.planned em { font-family: var(--sans); font-size: 0.68rem; margin-left
   .mobile-nav summary { font-weight: 700; cursor: pointer; }
   main { margin-left: 0; padding: 1.4rem 1.1rem 4rem; }
   h1 { font-size: 1.9rem; }
+  .katex-display > .katex { white-space: nowrap; }
+  .katex-display > .katex > .katex-html > .tag { position: relative; margin-left: 1.5rem; }
   .running-head { margin-bottom: 1.6rem; }
 }
 

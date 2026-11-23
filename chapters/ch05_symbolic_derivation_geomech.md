@@ -7,7 +7,7 @@ notebook: notebooks/ch05_geomech_symbolic_pipeline.ipynb
 verify: verify/ch05.py
 ---
 
-Here are the equations of motion of a quadrotor carrying a load on a cable. They are copied from a PhD thesis (Wu, 2017), where controllers for real aircraft are built on them.
+Here are the equations of motion of a quadrotor carrying a load on a cable. They are copied from a PhD thesis on aerial transportation (Wu, 2017), where every controller is designed on them.
 
 $$
 \begin{aligned}
@@ -20,13 +20,13 @@ $$
 
 The load is at $x_L$. The unit vector $q$ points from the quadrotor down the cable to the load, with $\dot q = \omega \times q$. The quadrotor has attitude $R$, thrust $f$ and torque $\tau$. Now one question. Look at the term $m_Q\, l\; \dot q \cdot \dot q$ in the first line. It is printed with a minus sign. Should it be a plus?
 
-Try to decide before reading on. You will find that staring does not help. You could re-derive the equations. Chapter [](#ch-dynamics) does it, and it takes pages. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
+Try to decide before reading on. Staring does not help. You could re-derive the equations, as Chapter [](#ch-dynamics) does over several pages. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
 
-So a single sign can pass every bench test and fail in the first aggressive manoeuvre. This chapter is about a third option. Let a program do the derivation, since a program does not drop signs. Then test the program's answer with a check that shares none of its reasoning.
+So one sign can pass every bench test and fail in the first aggressive manoeuvre. This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
 
 ## Seventeen lines {#sec5-seventeen}
 
-The program is `geomech`, a Python library. You give it a Lagrangian and the virtual work of the inputs, written with the same symbols as the last three chapters. It returns the equations of motion. Here is the whole quadrotor with its load.
+The program is `geomech`, a Python library. You give it a Lagrangian and the virtual work of the inputs. It returns the equations of motion. Here is the whole quadrotor with its load.
 
 ```python
 from geomech import *
@@ -35,15 +35,15 @@ half = Scalar("0.5", value=0.5, attr=["Constant"])
 mQ, mL, g, l = getScalars("m_Q m_L g l", attr=["Constant"])
 J = Matrix("J", attr=["Constant", "SymmetricMatrix"])
 e3 = Vector("e3", attr=["Constant"])
-xL, q, R = Vector("x_L"), S2("q"), SO3("R")       # load position, cable direction, attitude
-f, tau = Scalar("f"), Vector("\\tau")            # thrust, torque
+xL, q, R = Vector("x_L"), S2("q"), SO3("R")     # load, cable direction, attitude
+f, tau = Scalar("f"), Vector("\\tau")          # thrust, torque
 omega, xi = q.get_tangent_vector(), q.get_variation_vector()
 Omega, eta = R.get_tangent_vector(), R.get_variation_vector()
 
-xQ = xL - q * l                                   # the quadrotor sits one cable length up
+xQ = xL - q * l                                 # quadrotor: one cable length up
 vQ, vL = xQ.t_diff(), xL.t_diff()
-L = (half * mQ * Dot(vQ, vQ) + half * mL * Dot(vL, vL) + half * Dot(Omega, J * Omega)
-     - mQ * g * Dot(e3, xQ) - mL * g * Dot(e3, xL))
+L = (half * mQ * Dot(vQ, vQ) + half * mL * Dot(vL, vL)
+     + half * Dot(Omega, J * Omega) - mQ * g * Dot(e3, xQ) - mL * g * Dot(e3, xL))
 dW = Dot(xL.delta() - Cross(xi, q) * l, (R * e3) * f) + Dot(eta, tau)
 
 variables, inputs = SystemVariables(vectors=[xL, q], matrices=[R]), [f, tau]
@@ -51,7 +51,7 @@ eom = compute_eom(L, dW, variables)
 err = check_eom(L, dW, variables, eom, inputs=inputs)
 ```
 
-Read it as you would read the first page of a derivation. The constants are flagged so the program knows their variations vanish. The three configuration variables are declared by the manifold they live on: a position in $\R^3$, a direction on $S^2$, an attitude on $\SO(3)$. The library hands back the matching velocities and variations: `omega` is the $\omega$ of $\dot q = \omega \times q$, `xi` is the $\xi$ of $\delta q = \xi \times q$, and `Omega`, `eta` are the $\Omega$ and $\eta$ of $\dot R = R\,\Omega^\wedge$ and $\delta R = R\,\eta^\wedge$. The Lagrangian is kinetic minus potential energy. The virtual work says the thrust $fRe_3$ acts at the quadrotor, whose virtual displacement is $\delta x_Q = \delta x_L - l\,\xi \times q$, and the torque pairs with $\eta$.
+Read it like the first page of a derivation. Constants are flagged so that their variations vanish. The three configuration variables are declared by the manifold they live on: a position in $\R^3$, a direction on $S^2$, an attitude on $\SO(3)$. The library hands back the matching velocities and variations: `omega` is the $\omega$ of $\dot q = \omega \times q$, `xi` is the $\xi$ of $\delta q = \xi \times q$, and `Omega`, `eta` are the $\Omega$ and $\eta$ of $\dot R = R\,\Omega^\wedge$ and $\delta R = R\,\eta^\wedge$. The Lagrangian is kinetic minus potential energy. The virtual work says the thrust $fRe_3$ acts at the quadrotor, whose virtual displacement is $\delta x_Q = \delta x_L - l\,\xi \times q$, and the torque pairs with $\eta$.
 
 The derivation and the check together run in well under a second. The result is one equation per variation. Two of them, in our notation:
 
@@ -63,13 +63,13 @@ $$
 \label{eq5-quad-rows}
 $$
 
-There is the disputed term, with a minus sign. (Since $\omega \perp q$, $\dot q\cdot\dot q = \omega\cdot\omega$.) The third equation, for the cable, has seven terms and we will meet it in [](#sec5-verify). The last line of the listing sets `err` to $4.1\times10^{-8}$, and that number will turn out to matter more than the equations.
+There is the disputed term, with a minus sign. (Since $\omega \perp q$, $\dot q\cdot\dot q = \omega\cdot\omega$.) The third equation, for the cable, has seven terms and waits in [](#sec5-verify). The last line sets `err` to $4.1\times10^{-8}$. That number will matter more than the equations.
 
 Two things should bother you. Why believe a program over a thesis? And what did the program actually do?
 
 ## Why not ask a computer algebra system? {#sec5-trees}
 
-Take the second question first. Computer algebra systems have differentiated Lagrangians for decades. Why is this a separate tool?
+Take the second question first. Computer algebra systems have differentiated Lagrangians for decades. Why a separate tool?
 
 A general system differentiates functions of real variables. Ask it for $\partial L / \partial R$ and it wants to know what $R$ is a function of. You can answer with three angles, and you are back in Chapter [](#ch-why) with a singularity. You can answer with nine matrix entries and six constraints, and you now carry Lagrange multipliers for constraints the geometry already knows. Either way you have left the manifold to please the software.
 
@@ -93,7 +93,7 @@ The type is what lets a rewrite rule do geometry. The program does not know what
 The five leaf types and the rules attached to them. The last column is the content of Chapter [](#ch-variations), stored as data.
 :::
 
-Nodes cannot be modified once built. A rewrite never edits a tree. It builds a new one. That sounds like a programming detail, but it has a consequence you can use: every intermediate stage of a derivation still exists afterwards, and you can ask to see it.
+Nodes cannot be modified once built. A rewrite never edits a tree. It builds a new one. So every intermediate stage of a derivation still exists afterwards, and you can ask to see it.
 
 ## One pendulum, every stage {#sec5-pipeline}
 
@@ -140,7 +140,7 @@ $$
 E_\xi \;=\; -\,m\, l^2\, \dot\omega \;-\; m\, g\, l\; q\times e_3 \;+\; \tau \;=\; 0 . \label{eq5-pendulum}
 $$
 
-A quick sanity check: hang the rod straight down, $q = -e_3$, and $q\times e_3 = 0$. No torque, no acceleration. Good.
+Sanity check: hang the rod straight down, $q = -e_3$, and $q\times e_3 = 0$. No torque, no acceleration.
 
 ::: {.thought #thought5-clerk name="The clerk who knows no mechanics"}
 Hand the five boxes of [](#fig5-pipeline) to a careful clerk who has never seen a pendulum. Give them one card with the rules: the product rule, the $S^2$ row of [](#tbl5-leaves), $a\cdot(a\times b)=0$, the triple product, and "move the dot from $\xi$ to its partner and flip the sign". Ask them to check that each box follows from the one above.
@@ -148,9 +148,9 @@ Hand the five boxes of [](#fig5-pipeline) to a careful clerk who has never seen 
 They can. Nothing on the card mentions energy, force or a sphere. That is what it means for the derivation to be mechanical, and it is why a machine can do it. It is also a warning. The clerk will apply a wrong card just as carefully as a right one.
 :::
 
-Notice the form of [](#eq5-pendulum). Everything is on one side, and the inertia term is negative. The library does not rearrange: $E_\xi$ is literally the coefficient of $\xi$ in $\delta S$. Keep that in mind, because it sets every sign you will read from now on.
+Notice the form of [](#eq5-pendulum). Everything is on one side and the inertia term is negative, because $E_\xi$ is literally the coefficient of $\xi$ in $\delta S$. The library does not rearrange.
 
-The clerk's warning is the open problem. The pipeline is exact, but exact is not the same as right. A rule in the library could be wrong. More likely, the Lagrangian you typed is not the one you meant, or the equation you are holding came from somewhere else. What would convince a sceptic?
+The clerk's warning is the open problem. Exact is not the same as right. A rule in the library could be wrong. Or the equation you are holding came from somewhere else. What would convince a sceptic?
 
 ## Trust, but verify {#sec5-verify}
 
@@ -164,7 +164,7 @@ For the quadrotor it returned $4.1\times10^{-8}$. That is the noise floor of a f
 aL, domega = xL.t_diff().t_diff(), omega.t_diff()
 
 
-def load_equation(sign):                          # the x_L row, typed in from a page of algebra
+def load_equation(sign):            # the x_L row, typed in from a page of algebra
     return ((aL + e3 * g) * (mQ + mL) * (-1) + Cross(domega, q) * (mQ * l)
             + q * (Dot(omega, omega) * mQ * l) * sign + (R * e3) * f)
 
@@ -208,7 +208,7 @@ The equations inherit this. A variation $\xi$ is always perpendicular to $q$, so
 
 ![The coefficient $E$ of $\xi$ for the cable, evaluated at one state and drawn at $q$. Only its tangent part is an equation of motion. The program does not remove the part along $q$, and two correct answers may differ there.](figures/ch05-tangent.svg){#fig5-tangent}
 
-Apply the Jacobi identity to the bracket in [](#eq5-cable) and it collapses to $-(\omega\cdot\dot x_L)\,q$. It points along $q$ ([](#fig5-tangent)). It is the push along the rod. The simplifier has no Jacobi rule, so the three terms survive, and they are harmless. The check compares tangent parts only, so it passes. Add $5\,m_Q l\,(\omega\cdot\dot x_L)\,q$ to the cable equation by hand and it still passes, as it should.
+Apply the Jacobi identity to the bracket in [](#eq5-cable) and it collapses to $-(\omega\cdot\dot x_L)\,q$. It points along $q$ ([](#fig5-tangent)). It is the push along the rod. The simplifier has no Jacobi rule, so the three terms survive, and they are harmless. The check compares tangent parts only. Add any multiple of $q$ to the cable equation and it still passes, as it should.
 
 ::: {.warning #warn5-conventions name="Two conventions that will bite"}
 *Signs.* Every equation is $E = 0$ with $E = -(\text{Euler–Lagrange expression}) + \text{forcing}$. A point mass gives $-m\ddot x + F = 0$. If you copy an equation into a paper, move the inertia across yourself.
@@ -216,7 +216,7 @@ Apply the Jacobi identity to the bracket in [](#eq5-cable) and it collapses to $
 *Tangent plane.* For a variable on $S^2$ the equation is $(I - qq\T)\,E = 0$, together with $q\cdot\dot\omega = 0$. Never solve $E = 0$ as three equations in three unknowns. The answer will have $q\cdot\dot\omega \neq 0$ and the trajectory will leave the sphere.
 :::
 
-When something is wrong before the check even runs, the library refuses with a message that names the culprit. Two you will meet in your first week:
+Some mistakes never reach the check. The library refuses, with a message that names the culprit. Two you will meet in your first week:
 
 ```text
 ValueError: compute_eom: δS still contains the variation symbols '\delta{e3}' of the
@@ -226,9 +226,9 @@ TypeError: compute_eom: SystemVariables.vectors entry '\omega_{q}' is a tangent 
 variation vector, not a configuration variable; list the manifold point 'q' instead
 ```
 
-The first means you forgot `attr=["Constant"]` on $e_3$, so the program dutifully varied it. The second means you listed a velocity where a configuration was wanted. Forgetting a flag does not always raise an error. Leave `"SymmetricMatrix"` off the inertia and you get a correct equation with $\tfrac12(J + J\T)$ everywhere, because the program will not assume what you did not declare.
+The first means you forgot `attr=["Constant"]` on $e_3$, so the program varied it. The second means you listed a velocity where a configuration was wanted. A forgotten flag does not always raise an error. Leave `"SymmetricMatrix"` off the inertia and you get a correct equation with $\tfrac12(J + J\T)$ throughout. The program will not assume what you did not declare.
 
-Be clear about what the check does not do. It measures error relative to the size of the whole equation, so a wrong term that is tiny next to its neighbours can hide. Leave parameters symbolic and they are drawn of order one, which avoids this. And it compares the equation with the Lagrangian, not the Lagrangian with the robot. If you typed the wrong kinetic energy, you get the right equations for the wrong machine, verified to eight digits.
+The check has two blind spots. It measures error relative to the size of the whole equation, so a wrong term that is tiny next to its neighbours can hide. Leave parameters symbolic and they are drawn of order one, which avoids this. And it compares the equation with the Lagrangian, not the Lagrangian with the robot. Type the wrong kinetic energy and you get the right equations for the wrong machine, verified to eight digits.
 
 Verified equations are still only symbols. To see whether they describe a quadrotor, they have to move.
 
@@ -252,20 +252,20 @@ plant = load_module(module_source(sf, layout, lagrangian=L), "quadrotor_load")
 
 p = {"m_Q": 1.5, "m_L": 0.3, "l": 1.0, "g": 9.81,
      "J": np.diag([0.02, 0.025, 0.04]), "e3": np.array([0.0, 0.0, 1.0])}
-q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])   # cable swung out by 0.8 rad
-w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))  # and circling: e3 spin, made tangent to q0
-v_cm = np.array([0.45, 0.0, 0.0])                 # the centre of mass will coast at this velocity
+q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])     # cable swung out by 0.8 rad
+w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))    # circling about the vertical
+v_cm = np.array([0.45, 0.0, 0.0])                   # centre-of-mass velocity
 v0 = v_cm + p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)
 x0 = layout.pack(x_L=np.zeros(3), q=q0, R=np.eye(3), omega_q=w0, x_L_dot=v0)
 
-hover = np.r_[(p["m_Q"] + p["m_L"]) * p["g"], 0.0, 0.0, 0.0]        # u = [f, tau]
+hover = np.r_[(p["m_Q"] + p["m_L"]) * p["g"], 0.0, 0.0, 0.0]     # u = [f, tau]
 traj = simulate(plant, x0, 6.0, p, u=hover)
-free = simulate(plant, x0, 6.0, p)                # no inputs: energy must be conserved
+free = simulate(plant, x0, 6.0, p)                  # no inputs: energy is conserved
 E = free.energy()
 print(np.max(np.abs(E - E[0])) / abs(E[0]), free.max_drift())
 ```
 
-`module_source` writes [](#eq5-standard) out as a plain NumPy module, 311 lines for this system, with functions for $M$, $b$, $G$, the kinematics and the energy. It no longer depends on the symbolic library. `simulate` integrates it with a fourth-order Runge–Kutta–Munthe-Kaas scheme. The idea is the one this book keeps returning to: do not add increments to $q$ and $R$. Each step moves $q$ by a rotation and $R$ by multiplying with a matrix exponential, so the state cannot leave the manifold. The $S^2$ rows are projected as the warning above demands.
+`module_source` writes [](#eq5-standard) out as a plain NumPy module, 311 lines for this system, with functions for $M$, $b$, $G$, the kinematics and the energy. It no longer needs the symbolic library. `simulate` integrates it with a fourth-order Runge–Kutta–Munthe-Kaas scheme. The idea is a familiar one: do not add increments to $q$ and $R$. Each step moves $q$ by a rotation and $R$ by a matrix exponential, so the state cannot leave the manifold. The $S^2$ rows are projected as the pitfall above demands.
 
 The run in the listing holds the thrust at the total weight, with zero torque. The cable starts 0.8 rad from vertical and circling, and the centre of mass coasts at 0.45 m/s ([](#fig5-quadload)).
 
@@ -283,18 +283,19 @@ A trajectory figure proves little. Conserved quantities prove more.
 *Momentum.* The centre of mass stays on its straight line to $1.3\times10^{-10}$ m. The quadrotor circles it at 0.167 m, the load at 0.833 m. The ratio is $m_Q/m_L = 5$.
 :::
 
-We can now settle the opening question properly. Equation [](#eq5-wu) is solved for the accelerations. The program's rows [](#eq5-quad-rows) and [](#eq5-cable) are coupled. Substitute the cable equation into the load row and two lines of algebra give the thesis form. Numerically, the accelerations from the generated code and from [](#eq5-wu) agree to $2.5\times10^{-14}$ at 50 random states. The thesis is right. The sign is a minus.
+Now settle the opening question. Equation [](#eq5-wu) is solved for the accelerations. The program's rows [](#eq5-quad-rows) and [](#eq5-cable) are coupled. Substitute one into the other and two lines of algebra give the thesis form. Numerically, the accelerations from the generated code and from [](#eq5-wu) agree to $2.5\times10^{-14}$ at 50 random states. The thesis is right. The sign is a minus.
 
-One more consumer of the equations deserves a mention. A controller needs the dynamics linearized about a trajectory, and that is one more variation: apply $\delta$ to $E$ itself, with the same rules, and collect terms. The function `linearize` does this and returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ in the variation coordinates $(\delta x_L, \xi, \eta)$. Chapter [](#ch-linearization) develops the idea and uses it for LQR.
+A controller needs one more thing: the dynamics linearized about a trajectory. That is one more variation. Apply $\delta$ to $E$ itself, with the same rules, and collect terms. The function `linearize` does this and returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ in the variation coordinates $(\delta x_L, \xi, \eta)$. Chapter [](#ch-linearization) develops it.
 
 ## More bodies {#sec5-scaling}
 
-Nothing in the pipeline cared that the quadrotor system lives on a product, $\R^3\times S^2\times\SO(3)$. We listed three variables and got three equations. Larger products cost typing and little else. The second model of Wu's thesis has several quadrotors carrying one rigid body by cables. It is among the 30 systems in the library's catalogue. With three quadrotors it has 21 degrees of freedom and eight coupled equations. They derive in a fraction of a second and check at $9.0\times10^{-8}$.
+Nothing in the pipeline cared that the quadrotor lives on a product, $\R^3\times S^2\times\SO(3)$. We listed three variables and got three equations. Larger products cost typing and little else. The second model of Wu's thesis has several quadrotors carrying one rigid body by cables. It is among the 30 systems in the library's catalogue. With three quadrotors it has 21 degrees of freedom and eight coupled equations. They derive in a fraction of a second and check at $9.0\times10^{-8}$.
 
 A harder request: a chain of $n$ spherical pendulums, where $n$ is a symbol. There are $n$ equations and you cannot type them. The `geomech.indexed` module lets you write the Lagrangian with sums.
 
 ```python
-from geomech.indexed import Family, IndexedVariables, Sum, compute_indexed_eom, indices, n
+from geomech.indexed import (Family, IndexedVariables, Sum, compute_indexed_eom,
+                             indices, n)
 
 i, j = indices("i j")
 g, e3 = Scalar("g", attr=["Constant"]), Vector("e3", attr=["Constant"])
@@ -313,7 +314,8 @@ chain = IndexedVariables(families=[q])
 eom = compute_indexed_eom(L, None, chain)
 
 for size in range(1, 7):
-    print(size, check_eom(L.instantiate(size), None, chain.members(size), eom.instantiate(size)))
+    members, eq = chain.members(size), eom.instantiate(size)
+    print(size, check_eom(L.instantiate(size), None, members, eq))
 ```
 
 The result is a single equation for link $i$, with sums whose limits depend on $i$. On the tangent plane of $q_i$ it reads
@@ -325,13 +327,13 @@ $$
 M_{ij} = \Big(\sum_{k=\max(i,j)}^{n} m_k\Big)\, l_i\, l_j . \label{eq5-chain}
 $$
 
-Read $M_{ij}$ aloud: the mass hanging below both link $i$ and link $j$, times the two lengths. That is the inertia coupling of a chain of spherical pendulums, as in Lee, Leok and McClamroch (2018, ch. 5). Nobody typed the $\max(i,j)$. The Lagrangian contains $\sum_i m_i\,\|\sum_{j\le i} l_j \dot q_j\|^2$, and exchanging the order of summation produces that bound. The program does the exchange. (Its raw output also carries three velocity terms per pair that point along $q_i$, the same Jacobi leftovers as before.)
+Read $M_{ij}$ aloud: the mass hanging below both link $i$ and link $j$, times the two lengths. Nobody typed the $\max(i,j)$. The Lagrangian contains $\sum_i m_i\,\|\sum_{j\le i} l_j \dot q_j\|^2$, and exchanging the order of summation produces that bound. The program does the exchange. (Its raw output also carries three terms per pair that point along $q_i$, the same Jacobi leftovers as before.)
 
 The loop at the end of the listing instantiates the generic equation for $n = 1$ to $6$ and checks each against the Lagrangian expanded for the same $n$. The errors run from $6.2\times10^{-9}$ to $1.1\times10^{-7}$. [](#fig5-chain) simulates $n = 4$.
 
 ![A chain of four equal links, released from the horizontal while turning about the vertical, simulated from the generic equation instantiated at $n=4$. Seven instants are overlaid, light to dark. Energy drifts by $2.6\times10^{-8}$ over 2 s at the default step: the chain whips, and a fixed step feels it.](figures/ch05-chain.svg){#fig5-chain}
 
-How does a sum fit into a tree? It does not. A sum is kept as a list of terms, each an ordinary tree whose leaves carry an index, with the inequalities between indices stored beside it. Each term goes through the same five stages. The coefficient of $\xi_j$ under a summed index $j$ becomes a term of the equation for link $i$ by renaming $j$ to $i$, and the inequalities turn into the limits of the remaining sums.
+How does a sum fit into a tree? It does not. A sum is kept as a list of ordinary trees whose leaves carry an index, with the inequalities between indices stored beside them. Each tree goes through the same five stages. The inequalities become the limits of the sums that remain.
 
 ## What it cannot do {#sec5-limits}
 
@@ -370,16 +372,12 @@ Plant your own error. In the notebook, change one sign or one factor in the cabl
 :::
 
 ::: {.exercise #exr5-elastic}
-Replace the rigid cable by a spring: add a scalar variable for the cable length, with elastic energy $\tfrac12 k (l - l_0)^2$. Derive, check and simulate. How many equations are there now, and which one tends to the rigid model as $k$ grows? Watch what the stiff spring does to the size of the check error, and explain it.
-:::
-
-::: {.exercise #exr5-chain-n}
-Use [](#eq5-chain) to write the mass matrix of the three-link chain explicitly. Then instantiate the generic equation at $n = 3$, call `to_standard_form`, and compare the blocks on the tangent planes. Time the derivation for $n = 2, 4, 8$ with and without `geomech.indexed`.
+Replace the rigid cable by a spring: add a scalar variable for the cable length, with elastic energy $\tfrac12 k (l - l_0)^2$. Derive, check and simulate. How many equations are there now? Then use [](#eq5-chain) to write the mass matrix of a three-link chain and compare it with `to_standard_form` at $n = 3$.
 :::
 
 ## Notes and sources {#sec5-notes .unnumbered}
 
-The variational method that the pipeline automates, with the variation rules of [](#tbl5-leaves) and the multi-link pendulum behind [](#eq5-chain), is set out in the book of Lee, Leok and McClamroch (2018). Bittner and Sreenath (2016) were the first to automate the derivation of coordinate-free equations on manifolds, with a package written in Scala. `geomech` (Kotaru, 2026) is a Python library in the same line. It adds the numerical check, linearization, code generation, simulation and sums over a symbolic number of bodies. The numbers in this chapter were produced with version 1.1.0.
+The variational method that the pipeline automates, the rules of [](#tbl5-leaves) and the chain of pendulums behind [](#eq5-chain) are set out by Lee, Leok and McClamroch (2018). Bittner and Sreenath (2016) were the first to automate the derivation of coordinate-free equations on manifolds, with a package written in Scala. `geomech` (Kotaru, 2026) is a Python library in the same line. It adds the numerical check, linearization, code generation, simulation and sums over a symbolic number of bodies. The numbers in this chapter were produced with version 1.1.0.
 
 The quadrotor with a suspended load, [](#eq5-wu), and the multi-quadrotor rigid-payload model are taken from Wu (2017, ch. 3). The single-quadrotor model was first derived by Sreenath, Lee and Kumar (2013). For a sense of what the automation replaces, see the reaction mass biped of Siravuru (2019, ch. 5): thirteen degrees of freedom, with three attitudes on $\SO(3)$, leg lengths and sliding reaction masses, derived by hand from a variational principle over several pages. The integrator is due to Munthe-Kaas (1999).
 

@@ -241,7 +241,7 @@ def tangent():
     s.label(q, "$q$", dx=11, dy=-9, size=12)
     s.label(tip, "$E$", dx=-9, dy=8, size=12)
     s.label(q + Et, r"$(I - qq^{\top})E$", dx=-6, dy=-13, color=INDIGO, size=11.5)
-    s.label(q + En, r"$(q\cdot E)\,q$", dx=38, dy=-3, color=TERRACOTTA, size=11.5)
+    s.label(q + En, r"$(q\cdot E)\,q$", dx=42, dy=-9, color=TERRACOTTA, size=11.5)
     s.text2d(-2.15, 0.1, "the part a variation $\\xi \\perp q$\ncan test: the equation of motion", fontsize=9.5,
              fontfamily=SANS, color=INDIGO, linespacing=1.3)
     s.text2d(2.15, 1.25, "the part along $q$: no variation\nreaches it, so it says nothing", fontsize=9.5,

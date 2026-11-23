@@ -87,6 +87,16 @@ def s2_swing():
     return q0, w0
 
 
+def s2_neighbour(q0, w0, axis, e):
+    """Rotate q0 by e about `axis` and keep omega tangent. Returns the neighbour and its unit variation.
+
+    The neighbour's omega is w0 minus its component along the new q, so
+    delta omega = -(w0 . (axis x q0)) q0: exactly what the second constraint demands.
+    """
+    qe = expm_so3(e * axis) @ q0
+    return qe, w0 - (w0 @ qe) * qe, np.r_[axis, -(w0 @ np.cross(axis, q0)) * q0]
+
+
 def s2_linear_flow(ref, s0, T, dF=None, Fd=lambda t: np.zeros(3)):
     """Integrate s' = A(t) s + B(t) dF(t) along a reference dense solution."""
     def rhs(t, s):
@@ -679,17 +689,26 @@ def main():
     ref = s2_sim(q0, w0, lambda t, q_, w_: np.zeros(3), Tsw)
     axis = np.cross(q0, [0.3, 1.0, 0.2])
     axis /= np.linalg.norm(axis)
-    lin = s2_linear_flow(ref, np.r_[axis, ZERO3], Tsw)
+    s0 = s2_neighbour(q0, w0, axis, 0.0)[2]
+    ck.close("the neighbour's initial variation satisfies both constraints", s2_C(q0, w0) @ s0, 0, tol=1e-12)
+    lin = s2_linear_flow(ref, s0, Tsw)
     rel = {}
-    for deg in (1.0, 10.0, 30.0):
+    for deg in (0.1, 1.0, 10.0, 30.0):
         e = np.radians(deg)
-        pert = s2_sim(expm_so3(e * axis) @ q0, w0 - (w0 @ (expm_so3(e * axis) @ q0)) * (expm_so3(e * axis) @ q0),
-                      lambda t, q_, w_: np.zeros(3), Tsw)
+        qe, we, _ = s2_neighbour(q0, w0, axis, e)
+        pert = s2_sim(qe, we, lambda t, q_, w_: np.zeros(3), Tsw)
         eq = np.cross(ref.sol(Tsw)[:3], pert.sol(Tsw)[:3])
         rel[deg] = float(np.linalg.norm(eq - e * lin.sol(Tsw)[:3]) / np.linalg.norm(e * lin.sol(Tsw)[:3]))
     ck.true("linear prediction of e_q: relative error grows with the perturbation",
-            rel[1.0] < 0.05 and rel[1.0] < rel[10.0] < rel[30.0], f"{rel}")
-    ck.record("s2_linear_rel_error", rel)
+            rel[0.1] < 5e-3 and rel[1.0] < rel[10.0] < rel[30.0],
+            ", ".join(f"{k:g} deg: {v:.3f}" for k, v in rel.items()))
+    lin_bad = s2_linear_flow(ref, np.r_[axis, ZERO3], Tsw)
+    qe, we, _ = s2_neighbour(q0, w0, axis, np.radians(0.1))
+    eq = np.cross(ref.sol(Tsw)[:3], s2_sim(qe, we, lambda t, q_, w_: np.zeros(3), Tsw).sol(Tsw)[:3])
+    bad = float(np.linalg.norm(eq - np.radians(0.1) * lin_bad.sol(Tsw)[:3]) / np.linalg.norm(np.radians(0.1) * lin_bad.sol(Tsw)[:3]))
+    ck.true("an initial state that ignores the second constraint mispredicts at first order", bad > 0.02, f"{bad:.3f}")
+    ck.record("s2_linear_rel_error_unconstrained_start", bad)
+    ck.record("s2_linear_rel_error", {f"{k:g}": v for k, v in rel.items()})
     ck.record("s2_swing_growth", float(np.linalg.norm(lin.sol(Tsw)[:3])))
 
     # ---- LQR on SO(3): one gain for every attitude ------------------------
