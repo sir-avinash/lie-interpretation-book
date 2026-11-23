@@ -492,7 +492,7 @@ OP_NAME = {"Add": "Add", "VAdd": "Add", "Mul": "Mul", "SVMul": "Mul", "Dot": "Do
            "TimeDerivative": "d/dt", "Variation": "$\\mathrm{\\delta}$"}
 PRODUCTS = ("Mul", "SVMul")
 RW_TEX = dict(LEAF_TEX, **{"\\xi_{q}": r"$\xi$", "\\tau": r"$\tau$", "(-2)": "$-2$"})
-RW_W, RW_H, RW_DY, RW_TOP = 7.4, 4.95, 0.45, 4.95 - 0.78
+RW_W, RW_H, RW_DY, RW_TOP = 7.95, 4.95, 0.45, 4.95 - 0.78
 RW_KEY = "equation[\\xi_{q}]"
 RW_STAGES = [   # trace key, name of the step, left side of the formula, what the clerk's card says
     (None, "Lagrangian", "$L \\;=\\; $", "the Lagrangian, as the library stores it"),
