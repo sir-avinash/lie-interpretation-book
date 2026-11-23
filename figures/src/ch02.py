@@ -58,6 +58,134 @@ def arc_arrow(s, center, axis, start, angle, radius, color, n=40, head=0.1, lw=1
     s.arrow(pts[-4], pts[-1], color=color, lw=lw, head=head, zorder=45)
 
 
+def axis_through_box(s, center, R, dims, d, length, color, zorder=40, lw=1.5, head=0.11):
+    """Arrow from the center of a box along the unit vector d, with the right occlusion.
+
+    If d points toward the camera the arrow is drawn from where it leaves the box, on top.
+    If it points away it is drawn from the center, underneath the box. Returns the tip.
+    """
+    c = np.asarray(center, float)
+    half = 0.5 * np.asarray(dims, float)
+    tip = c + length * d
+    if d @ s.view > 0:
+        leave = min(half[k] / max(abs(d @ R[:, k]), 1e-9) for k in range(3))
+        s.arrow(c + min(leave, 0.95 * length) * d, tip, color=color, zorder=zorder + 4, lw=lw, head=head)
+    else:
+        s.arrow(c, tip, color=color, zorder=zorder - 4, lw=lw, head=head)
+    return tip
+
+
+def caption(s, x, y, msg, color=MUTED, size=10):
+    """The line of text inside an animation frame that says what is happening now."""
+    s.text2d(x, y, msg, fontsize=size, color=color, **SANS)
+
+
+_CACHE = {}
+
+
+def cached(key, make):
+    if key not in _CACHE:
+        _CACHE[key] = make()
+    return _CACHE[key]
+
+
+# ---------------------------------- opening: the cable that grows (animation)
+PUZ_H, PUZ_W, PUZ_T, PUZ_CONE = 0.01, 2.0, 10.0, np.radians(50)
+
+
+def puzzle_run(phi_end=0.0):
+    """The simulator of the opening puzzle, on a load that swings steadily round a cone.
+
+    The true direction q(t) circles the downward vertical at the half-angle PUZ_CONE with
+    |omega| = PUZ_W, omega = q x q_dot. The simulator takes Euler steps q <- q + h (omega x q).
+    Returns the times, the true directions and the simulated ones. `phi_end` is the azimuth of
+    the true direction at the final time.
+    """
+    n = round(PUZ_T / PUZ_H)
+    rate = PUZ_W / np.sin(PUZ_CONE)                       # precession rate that makes |q_dot| = PUZ_W
+    ts = PUZ_H * np.arange(n + 1)
+    phi = phi_end + rate * (ts - PUZ_T)
+    sa, ca = np.sin(PUZ_CONE), np.cos(PUZ_CONE)
+    true = np.stack([sa * np.cos(phi), sa * np.sin(phi), -ca * np.ones_like(phi)], axis=1)
+    vel = rate * np.stack([-sa * np.sin(phi), sa * np.cos(phi), np.zeros_like(phi)], axis=1)
+    omega = np.cross(true, vel)
+    sim = [true[0]]
+    for k in range(n):
+        sim.append(sim[-1] + PUZ_H * np.cross(omega[k], sim[-1]))
+    return ts, true, np.array(sim)
+
+
+def puzzle_frame(t):
+    s = Scene(width=6.6, height=3.75, azim=-40, elev=17, xlim=(-4.1, 2.7), ylim=(-2.25, 1.6))
+    L = 1.3                                               # one meter of cable, in scene units
+    xQ = np.zeros(3)
+    # End the run where the load shows clear of the sphere's outline: q perpendicular to the view, on the right.
+    az_view = np.arctan2(s.view[1], s.view[0])
+    phi_end = az_view + np.arccos(np.tan(np.radians(17)) / np.tan(PUZ_CONE))
+    ts, true, sim = cached(("puzzle", round(phi_end, 9)), lambda: puzzle_run(phi_end))
+    tau = PUZ_T * phase(t, 0.06, 0.90)
+    k = int(round(tau / PUZ_H))
+    length = float(np.linalg.norm(sim[k]))
+
+    s.shadow(xQ - (L + 0.22) * E3, 1.25 * L, strength=0.12)
+    s.sphere(xQ, L, color=PERIWINKLE, alpha=0.38, outline=False)
+    ring = np.array([xQ + L * (np.cos(a) * s.right + np.sin(a) * s.up) for a in np.linspace(0, 2 * np.pi, 240)])
+    s.curve(ring, color=INK, lw=0.9, alpha=0.7)
+    s.sphere_curve(xQ + L * great_circle(E3), center=xQ, color=INK, lw=0.6, alpha=0.5)
+    # where the load should be: a circle on the sphere, and a hollow marker on a dashed cable
+    circle = np.array([[np.sin(PUZ_CONE) * np.cos(a), np.sin(PUZ_CONE) * np.sin(a), -np.cos(PUZ_CONE)]
+                       for a in np.linspace(0, 2 * np.pi, 200)])
+    s.sphere_curve(xQ + L * circle, center=xQ, color=MUTED, lw=0.8, alpha=1.0)
+    # the simulated load: its trail leaves the sphere
+    if k > 1:
+        trail = xQ + L * sim[: k + 1 : 2]
+        front = sim[: k + 1 : 2] @ s.view >= 0
+        start = 0
+        for i in range(1, len(trail) + 1):
+            if i == len(trail) or front[i] != front[start]:
+                seg = trail[max(start - 1, 0):min(i + 1, len(trail))]
+                if front[start]:
+                    s.curve(seg, color=TERRACOTTA, lw=1.0, alpha=1.0, zorder=22)
+                else:
+                    s.curve(seg, color=TERRACOTTA, lw=0.7, alpha=1.0, zorder=5)
+                start = i
+    s.curve(np.array([xQ, xQ + L * true[k]]), color=MUTED, lw=0.9, alpha=1.0, linestyle=DASH, zorder=26)
+    s.dot(xQ + L * true[k], color=MUTED, size=6.5, hollow=True, zorder=27)
+    s.curve(np.array([xQ, xQ + L * sim[k]]), color=TERRACOTTA, lw=1.5, alpha=1.0, zorder=28)
+    s.dot(xQ + L * sim[k], color=TERRACOTTA, size=8, zorder=40)
+    quadrotor(s, xQ, rot(E3, np.radians(20)), arm=0.52)
+    s.dot(xQ, color=INK, size=3.5, zorder=41)
+
+    # readouts
+    x0 = -2.85
+    s.text2d(x0, 1.12, "the simulator's update", fontsize=9.5, color=MUTED, **SANS)
+    s.text2d(x0, 0.80, r"$q \leftarrow q + h\,(\omega \times q)$", fontsize=12.5, color=TERRACOTTA)
+    s.text2d(x0, 0.22, f"time  {tau:4.1f} s", fontsize=10, color=INK, **SANS)
+    s.text2d(x0, -0.12, "simulated cable length", fontsize=9.5, color=MUTED, **SANS)
+    s.text2d(x0, -0.46, f"{length:.2f} m", fontsize=15, color=TERRACOTTA, **SANS)
+    # a gauge: one meter in ink, the excess in terracotta
+    g0, g1, gy = x0 - 0.6, x0 + 0.4, -0.84
+    s.ax.plot([g0, g1], [gy, gy], color=INK, lw=3.0, solid_capstyle="butt", zorder=40)
+    s.ax.plot([g1, g1 + (length - 1.0) * (g1 - g0)], [gy, gy], color=TERRACOTTA, lw=3.0, solid_capstyle="butt", zorder=40)
+    for gx in (g0, g1):
+        s.ax.plot([gx, gx], [gy - 0.07, gy + 0.07], color=INK, lw=0.8, zorder=41)
+    s.text2d(0.5 * (g0 + g1), gy - 0.24, "1 m", fontsize=9, color=MUTED, **SANS)
+    s.text2d(1.98, 1.2, "the load must stay\non this sphere", fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
+    if tau <= 0:
+        msg, col = "a load swings steadily at 2 rad/s on a cable one meter long", MUTED
+    elif tau < PUZ_T:
+        msg, col = "each step is correct at that instant, and lands a little outside the sphere", TERRACOTTA
+    else:
+        msg, col = "after ten seconds the load hangs 22 cm farther away than the cable allows", TERRACOTTA
+    caption(s, -0.7, -2.05, msg, color=col)
+    return s
+
+
+def puzzle():
+    animate(puzzle_frame, OUT / "ch02-puzzle.gif", OUT / "ch02-puzzle-strip.png", n=110, fps=12,
+            width_px=720, stills=(0.0, 0.34, 0.62, 1.0), strip_px=900, strip_cols=2, hold=2.0)
+
+
 # -------------------------------------------------- tangent plane to S2
 def tangent():
     s = Scene(width=6.4, height=3.7, azim=-34, elev=20)
@@ -152,35 +280,73 @@ def expmap():
     s.save(OUT / "ch02-expmap.svg", pad=0.08)
 
 
-# ---------------------------------------- two quarter turns, two orders
-def noncommute():
-    s = Scene(width=6.6, height=4.3, azim=-62, elev=24)
+# ---------------------------------------- two quarter turns, two orders (animation)
+BOOK_DIMS = (0.80, 1.10, 0.22)
+
+
+def book_relative():
+    """Axis and angle of the single rotation, about an axis fixed to the desk, that carries the
+    result of "x then z" onto the result of "z then x"."""
     Ax, Az = rot(E1, np.pi / 2), rot(E3, np.pi / 2)
-    rows = [
-        (1.25, [np.eye(3), Ax, Az @ Ax], ["90° about $x$", "90° about $z$"], [E1, E3], "cover faces right, spine upright", INDIGO),
-        (-1.25, [np.eye(3), Az, Ax @ Az], ["90° about $z$", "90° about $x$"], [E3, E1], "cover faces you, spine level", TERRACOTTA),
-    ]
-    xs = [-2.6, 0.0, 2.6]
-    for y0, Rs, names, axes, verdict, col in rows:
-        for k, R in enumerate(Rs):
-            c = xs[k] * s.right + y0 * s.up
-            s.shadow(c - 0.72 * E3, 0.62, strength=0.14)
-            book(s, c, R)
-        for k in range(2):
-            m = 0.5 * (xs[k] + xs[k + 1]) * s.right + y0 * s.up
-            s.arrow(m - 0.42 * s.right, m + 0.42 * s.right, color=col, lw=1.3)
-            s.label(m, names[k], dy=13, color=col, size=10, **SANS)
-        s.label(xs[2] * s.right + (y0 - 0.98) * s.up, verdict, color=col, size=10, **SANS)
-    s.label(xs[0] * s.right + (1.25 - 0.98) * s.up, "start", size=10, color=MUTED, **SANS)
-    s.label(xs[0] * s.right + (-1.25 - 0.98) * s.up, "start", size=10, color=MUTED, **SANS)
-    # fixed axes, drawn once
-    o = -3.95 * s.right + 0.0 * s.up
-    s.project([o - 0.75 * s.right, 4.3 * s.right])
+    G = (Ax @ Az) @ (Az @ Ax).T
+    angle = np.arccos(np.clip((np.trace(G) - 1) / 2, -1, 1))
+    axis = np.array([G[2, 1] - G[1, 2], G[0, 2] - G[2, 0], G[1, 0] - G[0, 1]]) / (2 * np.sin(angle))
+    return axis, angle
+
+
+def noncommute_frame(t):
+    s = Scene(width=6.8, height=3.6, azim=-62, elev=24, xlim=(-3.85, 2.45), ylim=(-1.83, 1.505))
+    a1 = 0.5 * np.pi * ease(phase(t, 0.07, 0.29))
+    a2 = 0.5 * np.pi * ease(phase(t, 0.36, 0.58))
+    n, total = book_relative()
+    a3 = total * ease(phase(t, 0.70, 0.95))
+    cL, cR = -1.3 * s.right + 0.05 * s.up, 1.3 * s.right + 0.05 * s.up
+    RL = rot(n, a3) @ rot(E3, a2) @ rot(E1, a1)          # x first, then z, about axes fixed to the desk
+    RR = rot(E1, a2) @ rot(E3, a1)                        # z first, then x
+
+    def turning(c, R, axis, angle, name, col, full):
+        """The axis of the turn in progress, through the book, with an arc that grows with the angle."""
+        tip = axis_through_box(s, c, R, BOOK_DIMS, axis, 1.0, col, lw=1.3)
+        s.label(tip, name, dx=9 if axis @ s.right > 0.5 else 8, dy=-2 if axis @ s.right > 0.5 else 5, color=col, size=11.5)
+        if angle > 0.02 * full:
+            side = unit(np.cross(axis, s.view))
+            arc_arrow(s, c + 0.8 * axis, axis, side, angle, 0.17, col, head=0.085, lw=1.1)
+
+    for c, R in ((cL, RL), (cR, RR)):
+        s.shadow(c - 0.72 * E3, 0.62, strength=0.14)
+        book(s, c, R)
+    if 0.07 <= t < 0.33:
+        turning(cL, RL, E1, a1, "$x$", INDIGO, np.pi / 2)
+        turning(cR, RR, E3, a1, "$z$", TERRACOTTA, np.pi / 2)
+        msg, col = "first turn, 90°: the left book about $x$, the right book about $z$", INK
+    elif 0.36 <= t < 0.62:
+        turning(cL, RL, E3, a2, "$z$", INDIGO, np.pi / 2)
+        turning(cR, RR, E1, a2, "$x$", TERRACOTTA, np.pi / 2)
+        msg, col = "second turn, 90°: the left book about $z$, the right book about $x$", INK
+    elif t < 0.07:
+        msg, col = "two copies of one book: cover up, spine on the left", MUTED
+    elif t < 0.36:
+        msg, col = "after one turn each", MUTED
+    elif t < 0.70:
+        msg, col = "the same two turns in the other order: a different attitude", INK
+    else:
+        turning(cL, RL, n, a3, "", TEAL, total)
+        msg, col = "one turn of 120° about this axis carries the left result onto the right one", TEAL
+    s.label(cL + 1.28 * s.up, "$x$ first, then $z$", color=INDIGO, size=10.5, **SANS)
+    s.label(cR + 1.28 * s.up, "$z$ first, then $x$", color=TERRACOTTA, size=10.5, **SANS)
+    # axes fixed to the desk, drawn once
+    o = -3.3 * s.right - 0.25 * s.up
     for e, name, off in [(E1, "$x$", (7, -3)), (E2, "$y$", (6, 5)), (E3, "$z$", (0, 9))]:
         s.arrow(o, o + 0.5 * e, color=INK, lw=1.1, head=0.09)
         s.label(o + 0.5 * e, name, dx=off[0], dy=off[1], size=11)
     s.label(o, "axes fixed\nto the desk", dy=-22, size=9, color=MUTED, linespacing=1.2, **SANS)
-    s.save(OUT / "ch02-noncommute.svg", pad=0.1)
+    caption(s, -0.2, -1.62, msg, color=col)
+    return s
+
+
+def noncommute():
+    animate(noncommute_frame, OUT / "ch02-noncommute.gif", OUT / "ch02-noncommute-strip.png", n=110, fps=12,
+            width_px=720, stills=(0.0, 0.33, 0.64, 0.83), strip_px=900, strip_cols=2, hold=2.0)
 
 
 # ------------------------------------- quadrotor with a cable-suspended load
