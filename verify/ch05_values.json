@@ -40,6 +40,7 @@
   "free_initial_energy_J": 10.598961151611743,
   "forced_energy_range_J": 0.7534965790828263,
   "forced_modified_energy_drift_J": 7.0112804451127886e-12,
+  "forced_com_line_error_m": 1.327954413099519e-10,
   "forced_quad_wobble_m": 0.1666666666666675,
   "forced_load_radius_m": 0.8333333333333367,
   "energy_drift_vs_dt": {

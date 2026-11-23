@@ -231,7 +231,7 @@ Again $\Psi_q = 1 - \cos\theta$ for the angle $\theta$ between the two direction
 ![Error on the sphere. Level sets of $\Psi_q$ are circles of latitude about $q_d$. The error vector $e_q = q_d \times q$ lies in the tangent plane at $q$, perpendicular to the great circle through $q$ and $q_d$. The feedback $\omega = -k\,e_q$ produces the velocity $\dot q$ along that great circle.](figures/ch01-s2-error.svg){#fig-s2-error}
 
 ::: {.warning #warn-sine name="The restoring torque fades near half a turn"}
-Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The proportional action $\|e_R\| = \sin\theta$ grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyses this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. Chapter 6 covers the alternatives, which reshape $\Psi_R$ so that the push does not fade.
+Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The proportional action $\|e_R\| = \sin\theta$ grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyses this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. Chapter [](#ch-variations) compares the alternatives, which reshape $\Psi_R$ so that the push does not fade, and shows what each one costs.
 :::
 
 ## Where this leaves us {#sec-roadmap}

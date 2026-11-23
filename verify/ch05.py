@@ -168,6 +168,19 @@ eom_n = compute_eom(Ln, None, Vp)
 ck.true("without SymmetricMatrix the result keeps J and J^T apart", "(J)'" in str(eom_n["\\eta_{R}"][1]))
 ck.true("... and is still correct", check_eom(Ln, None, Vp, eom_n) < 1e-5)
 
+# The S1 row of the leaf table: a planar pendulum about the axis e2.
+e2 = Vector("e2", attr=["Constant", "UnitNorm"])
+qc = S1("q", axis=e2)
+wc, gam = qc.get_tangent_vector(), qc.get_variation_vector()
+Lc = half * m * l * l * wc * wc - m * g * l * Dot(qc, e3)
+Vc = SystemVariables(vectors=[qc])
+eom_c = compute_eom(Lc, None, Vc)
+ck.true("S1: q.t_diff() is omega (e x q), with a scalar omega",
+        str(qc.t_diff()) == "Cross(e2,q)*\\omega_{q}" and type(wc).__name__ == "TS1", str(qc.t_diff()))
+ck.true("S1: q.delta() is gamma (e x q)", str(qc.delta()) == "Cross(e2,q)*\\gamma_{q}", str(qc.delta()))
+ck.true("S1: planar pendulum gives one scalar equation that passes the check",
+        list(eom_c) == ["\\gamma_{q}"] and check_eom(Lc, None, Vc, eom_c) < 1e-5, str(eom_c["\\gamma_{q}"][1]))
+
 # =========================================================================
 # 2. Failure messages quoted in the chapter
 # =========================================================================
@@ -227,15 +240,15 @@ half = Scalar("0.5", value=0.5, attr=["Constant"])
 mQ, mL, g, l = getScalars("m_Q m_L g l", attr=["Constant"])
 J = Matrix("J", attr=["Constant", "SymmetricMatrix"])
 e3 = Vector("e3", attr=["Constant"])
-xL, q, R = Vector("x_L"), S2("q"), SO3("R")       # load position, cable direction, attitude
-f, tau = Scalar("f"), Vector("\\tau")            # thrust, torque
+xL, q, R = Vector("x_L"), S2("q"), SO3("R")     # load, cable direction, attitude
+f, tau = Scalar("f"), Vector("\\tau")          # thrust, torque
 omega, xi = q.get_tangent_vector(), q.get_variation_vector()
 Omega, eta = R.get_tangent_vector(), R.get_variation_vector()
 
-xQ = xL - q * l                                   # the quadrotor sits one cable length up
+xQ = xL - q * l                                 # quadrotor: one cable length up
 vQ, vL = xQ.t_diff(), xL.t_diff()
-L = (half * mQ * Dot(vQ, vQ) + half * mL * Dot(vL, vL) + half * Dot(Omega, J * Omega)
-     - mQ * g * Dot(e3, xQ) - mL * g * Dot(e3, xL))
+L = (half * mQ * Dot(vQ, vQ) + half * mL * Dot(vL, vL)
+     + half * Dot(Omega, J * Omega) - mQ * g * Dot(e3, xQ) - mL * g * Dot(e3, xL))
 dW = Dot(xL.delta() - Cross(xi, q) * l, (R * e3) * f) + Dot(eta, tau)
 
 variables, inputs = SystemVariables(vectors=[xL, q], matrices=[R]), [f, tau]
@@ -267,7 +280,7 @@ ck.record("quadload_check_eom_20_seeds", [min(worst), max(worst)])
 aL, domega = xL.t_diff().t_diff(), omega.t_diff()
 
 
-def load_equation(sign):                          # the x_L row, typed in from a page of algebra
+def load_equation(sign):            # the x_L row, typed in from a page of algebra
     return ((aL + e3 * g) * (mQ + mL) * (-1) + Cross(domega, q) * (mQ * l)
             + q * (Dot(omega, omega) * mQ * l) * sign + (R * e3) * f)
 
@@ -356,15 +369,15 @@ plant = load_module(module_source(sf, layout, lagrangian=L), "quadrotor_load")
 
 p = {"m_Q": 1.5, "m_L": 0.3, "l": 1.0, "g": 9.81,
      "J": np.diag([0.02, 0.025, 0.04]), "e3": np.array([0.0, 0.0, 1.0])}
-q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])   # cable swung out by 0.8 rad
-w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))  # and circling: e3 spin, made tangent to q0
-v_cm = np.array([0.45, 0.0, 0.0])                 # the centre of mass will coast at this velocity
+q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])     # cable swung out by 0.8 rad
+w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))    # circling about the vertical
+v_cm = np.array([0.45, 0.0, 0.0])                   # centre-of-mass velocity
 v0 = v_cm + p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)
 x0 = layout.pack(x_L=np.zeros(3), q=q0, R=np.eye(3), omega_q=w0, x_L_dot=v0)
 
-hover = np.r_[(p["m_Q"] + p["m_L"]) * p["g"], 0.0, 0.0, 0.0]        # u = [f, tau]
+hover = np.r_[(p["m_Q"] + p["m_L"]) * p["g"], 0.0, 0.0, 0.0]     # u = [f, tau]
 traj = simulate(plant, x0, 6.0, p, u=hover)
-free = simulate(plant, x0, 6.0, p)                # no inputs: energy must be conserved
+free = simulate(plant, x0, 6.0, p)                  # no inputs: energy is conserved
 E = free.energy()
 print(np.max(np.abs(E - E[0])) / abs(E[0]), free.max_drift())
 # --- end
@@ -395,6 +408,7 @@ ck.record("forced_modified_energy_drift_J", float(np.max(np.abs(Ef - work - Ef[0
 com = (p["m_Q"] * xQn + p["m_L"] * traj["x_L"]) / (p["m_Q"] + p["m_L"])
 ck.close("forced run: centre of mass coasts on a straight line at v_cm", com, com[0] + np.outer(traj.t, v_cm), tol=1e-9)
 ck.true("forced run: constraint drift below 1e-12", traj.max_drift() < 1e-12, f"{traj.max_drift():.1e}")
+ck.record("forced_com_line_error_m", float(np.max(np.abs(com - com[0] - np.outer(traj.t, v_cm)))))
 ck.record("forced_quad_wobble_m", float(np.max(np.linalg.norm(xQn - com, axis=1))))
 ck.record("forced_load_radius_m", float(np.max(np.linalg.norm(traj["x_L"] - com, axis=1))))
 
@@ -407,6 +421,11 @@ for dt in (0.04, 0.02, 0.01):
 order = np.log2(drifts[0.04] / drifts[0.02])
 ck.true("energy error falls like dt^4 or faster", order > 3.5, f"observed order {order:.2f}")
 ck.record("energy_drift_vs_dt", {str(k): v for k, v in drifts.items()})
+
+# ---- linearization exists and uses the variation coordinates (developed in Chapter 7) ----
+lin = linearize(eom, variables, inputs)
+ck.true("linearize returns a LinearizedSystem", type(lin).__name__ == "LinearizedSystem", type(lin).__name__)
+print("linearized system attributes:", [a_ for a_ in dir(lin) if not a_.startswith("_")])
 
 # ---- comparison with the hand-derived model, Wu (2017) eq. (3.4) -------------
 from geomech.simulation import accelerations
@@ -443,7 +462,8 @@ ck.record("wu_comparison_max_diff", worst)
 # 4. n bodies
 # =========================================================================
 # --- listing: chain
-from geomech.indexed import Family, IndexedVariables, Sum, compute_indexed_eom, indices, n
+from geomech.indexed import (Family, IndexedVariables, Sum, compute_indexed_eom,
+                             indices, n)
 
 i, j = indices("i j")
 g, e3 = Scalar("g", attr=["Constant"]), Vector("e3", attr=["Constant"])
@@ -462,7 +482,8 @@ chain = IndexedVariables(families=[q])
 eom = compute_indexed_eom(L, None, chain)
 
 for size in range(1, 7):
-    print(size, check_eom(L.instantiate(size), None, chain.members(size), eom.instantiate(size)))
+    members, eq = chain.members(size), eom.instantiate(size)
+    print(size, check_eom(L.instantiate(size), None, members, eq))
 # --- end
 generic = str(eom["q"])
 print(generic)

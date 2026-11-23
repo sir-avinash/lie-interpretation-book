@@ -136,7 +136,7 @@ Any equation of motion for $q \in S^2$ is meaningful only after projection by $I
 
 The sphere was easy because $\delta\dot q$ was just the time derivative of $\delta q$. On the rotation group the velocity we use is $\Omega$, and that changes the first move.
 
-## Rotations: where $\Omega\times J\Omega$ comes from {#sec4-so3}
+## Rotations: where the gyroscopic term comes from {#sec4-so3}
 
 A free rigid body has attitude $R \in \SO(3)$ and Lagrangian $L = \tfrac12\,\Omega\cdot J\Omega$, with $\Omega^\wedge = R\T\dot R$ as in [](#eq-kinematics). Vary the attitude by rotating it, again so that the family stays on the manifold:
 

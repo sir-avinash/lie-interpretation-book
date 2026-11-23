@@ -232,7 +232,7 @@ def transport():
         return along
 
     along_d = plane(qd, 0.34)
-    plane(q, 0.42)
+    plane(q, 0.38)
     qd_dot = 0.52 * (0.55 * along_d + 0.83 * across)             # reference velocity at q_d
     T = np.cross(np.cross(qd, qd_dot), q)                        # (q_d x q_d_dot) x q
     par = rot(across, theta) @ qd_dot                            # parallel transport, for comparison

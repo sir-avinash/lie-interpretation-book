@@ -16,7 +16,7 @@ Advanced undergraduates through senior PhD students in robotics and control. The
 6. **Be honest about limits.** Say what a result does not give you. Use a `warning` block for traps that cost people flight hardware.
 7. **Close with exercises and sources.** 5 to 8 exercises that ask for a derivation, an experiment or a counterexample. Then "Notes and sources": who did what, in two or three sentences, and a reference list.
 
-Target length is 3000 to 4500 words. Cut anything that does not help the reader understand or do something.
+Target length is 3000 to 4500 words of prose, not counting display math or the reference list. Cut anything that does not help the reader understand or do something.
 
 ## Prose rules
 
@@ -108,6 +108,7 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - **Stroke tiers.** Silhouette thickest, vectors next, construction lines thin, hidden lines dashed. Use the kit's constants.
 - **Palette.** Ink for structure. Indigo for the main object or the "good" path. Terracotta for the contrasting object, error or failure. Teal for a third role. Pastel fills only.
 - **Labels sit next to what they name**, with the halo the kit applies. Math in labels uses `$...$`. Words use `fontfamily="Source Sans 3"` at size 9 to 10.
+- Mathtext in labels cannot draw a postfix `^\wedge` or `\mathcal` well. Keep hats and calligraphic letters out of figure labels.
 - **Look at every figure** before you keep it. Rasterise it and check for overlaps, clipped text, edge-on planes and labels that landed on a line.
 - Aim for 4 to 6 figures per chapter. At least half should be geometric scenes, the rest data plots produced by simulation.
 

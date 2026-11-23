@@ -270,7 +270,7 @@ def euler_zyx(R):
     return np.array([np.arctan2(R[1, 0], R[0, 0]), -np.arcsin(np.clip(R[2, 0], -1, 1)), np.arctan2(R[2, 1], R[2, 2])])
 
 
-tt = np.linspace(0, 10, 1001)
+tt = np.linspace(0, 10, 2001)
 right = np.degrees([np.linalg.norm(log_so3(R_hat(t) @ R_true(t).T)) for t in tt])
 left_axis = np.array([unit(log_so3(R_true(t).T @ R_hat(t))) for t in tt])
 right_axis = np.array([unit(log_so3(R_hat(t) @ R_true(t).T)) for t in tt])

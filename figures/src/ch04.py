@@ -3,13 +3,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from matplotlib.patches import Polygon
 from scipy.integrate import solve_ivp
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from figkit import (INDIGO, INK, MUTED, OCHRE, PAPER, PEACH, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
-                    LW_SILHOUETTE, Scene, great_circle, halo, hat, new_plot, rot, save, style_axes, unit)
+from figkit import (INDIGO, INK, MUTED, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
+                    Scene, great_circle, halo, hat, new_plot, rot, save, style_axes, unit)
 
 OUT = ROOT / "figures"
 E1, E2, E3 = np.eye(3)
@@ -195,7 +194,7 @@ def polhodes():
     ax.plot(t, w[0] / spin, color=INDIGO, lw=1.6)
     ax.axhline(0, color=INK, lw=0.5, alpha=0.5)
     ax.text(0.95, 1.08, r"about $e_1$ or $e_3$: stays", color=INDIGO, fontsize=10, path_effects=halo())
-    ax.text(1.72, -0.62, "about $e_2$:\nflips every 1.5 s", color=TERRACOTTA, fontsize=10, path_effects=halo(), linespacing=1.25,
+    ax.text(1.62, -0.62, "about $e_2$:\nflips every 1.5 s", color=TERRACOTTA, fontsize=10, path_effects=halo(), linespacing=1.25,
             ha="center")
     ax.set_xlim(0, 4)
     ax.set_ylim(-1.2, 1.3)

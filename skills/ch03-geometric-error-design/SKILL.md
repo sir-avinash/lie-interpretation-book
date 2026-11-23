@@ -1,27 +1,125 @@
-﻿________________
+---
+name: ch03-geometric-error-design
+description: Design an error function, error vector, transport map and velocity error for a tracking problem whose state lives on SO(3), S^2, R^3 or a product of them, and verify the design by finite differences. Use when writing a geometric tracking controller, a Lyapunov or barrier function on a manifold, an invariant estimator, or the error state for a linearization or an MPC.
+---
 
+# Design a geometric tracking error
 
-name: ch03-geometric-error-design description: Guides engineers in constructing compatible configuration errors, exterior differentials, transport maps, and velocity errors on Lie groups and product manifolds (R^3, S^2, SO(3), SE(3) x S^2).
-Geometric Error & Transport Map Design Skill
-Use this skill when designing geometric tracking controllers, Control Lyapunov Functions (CLFs), Control Barrier Functions (CBFs), or variation-based linearizations on curved configuration manifolds ($Q = \mathbb{R}^n$, $\mathbb{S}^2$, $SO(3)$, $SE(3)$, and product manifolds).
-Step 1: Decompose the Configuration Manifold
-Identify the product structure $Q = Q_1 \times Q_2 \times \cdots \times Q_k$ (e.g., $\mathbb{R}^3 \times SO(3) \times \mathbb{S}^2$ for an aerial vehicle with a suspended load). Because $T_q Q = \bigoplus_i T_{q_i} Q_i$, design $\Psi_i$, $T_i$, and $e_{\dot{q}_i}$ independently on each factor and sum $\Psi = \sum_i w_i \Psi_i$.
-Step 2: Select a Quadratic Configuration Error $\Psi_i(q_i, q_{i,d})$
-* $\mathbb{R}^n$: $\Psi_x = \frac{1}{2}|x - x_d|^2$.
-* $\mathbb{S}^2$: $\Psi_q = 1 - q \cdot q_d$ ($q, q_d \in \mathbb{S}^2$).
-* $SO(3)$: $\Psi_R = \frac{1}{2}\operatorname{Tr}(I_3 - R_d^\top R)$ ($R, R_d \in SO(3)$).
+Follows Chapter 3. Notation: `R` in SO(3) maps body to world, `Rdot = R hat(Omega)`, `Omega` in the body frame. `q` in S^2, `qdot = omega x q`, `omega . q = 0`, so `omega = q x qdot`. Reference quantities carry the subscript `d`.
 
+## When to use
 
-Verify $\Psi_i(q_i, q_{i,d}) \ge 0$, $\Psi_i = 0 \iff q_i = q_{i,d}$, and $d_1 \Psi_i(q_{i,d}, q_{i,d}) = 0$.
-Step 3: Compute Exterior Differentials $d_1 \Psi_i$ and $d_2 \Psi_i$
-* $\mathbb{S}^2$: $d_1 \Psi_q = q^\wedge{}^2 q_d \in T_q \mathbb{S}^2$, $d_2 \Psi_q = (q_d^\wedge)^2 q = e_q \in T_{q_d} \mathbb{S}^2$.
-* $SO(3)$ (body-frame trivialization): $d_1 \Psi_R = e_R = \frac{1}{2}(R_d^\top R - R^\top R_d)^\vee$, $d_2 \Psi_R = -e_R$.
-Step 4: Construct the Compatible Transport Map $T_i(q_i, q_{i,d})$
-Enforce the compatibility condition: $$d_2 \Psi_i(q_i, q_{i,d}) = -T_i^*(q_i, q_{i,d}), d_1 \Psi_i(q_i, q_{i,d}).$$
+- A controller needs proportional and derivative terms for an attitude, a direction, or a product of these.
+- A velocity error is formed by subtracting two angular velocities measured in different frames.
+- A linearization or MPC needs an error state that has no singularities.
+- An estimator needs an error whose dynamics do not depend on the state.
 
+## Procedure
 
-* $\mathbb{S}^2$: $T(q, q_d)\dot{q}_d = (q_d \times \dot{q}d) \times q$, giving $e{\dot{q}} = \dot{q} - (q_d \times \dot{q}d) \times q$ and $e\omega = \omega - (-q^\wedge{}^2)\omega_d$.
-* $SO(3)$: $T(R, R_d)\Omega_d = R^\top R_d \Omega_d$, giving $e_\Omega = \Omega - R^\top R_d \Omega_d$.
-Step 5: Verify Energy-Dissipation & Variation Equivalence
-1. Confirm $\dot{\Psi}i = \langle d_1 \Psi_i, e{\dot{q}_i} \rangle$ (e.g., $\dot{\Psi}R = e_R \cdot e\Omega$, $\dot{e}R = C(R_d^\top R) e\Omega$ with $C(A) = \frac{1}{2}(\operatorname{Tr}(A)I_3 - A^\top)$).
-2. For LTV linearization along a reference trajectory, verify first-order equivalence: $e_R^\epsilon/\epsilon \to \eta$, $e_\Omega^\epsilon/\epsilon \to \dot{\eta} = \delta\Omega - \Omega_d^\wedge \eta$ on $SO(3)$, and $e_q^\epsilon/\epsilon \to -\delta q = -(\xi \times q_d)$ on $\mathbb{S}^2$.
+1. **Factor the configuration space.** Write it as a product of R^3, S^2 and SO(3) factors. Design each factor separately. The total error function is a weighted sum of the factor error functions.
+
+2. **Fix the variation on each factor.**
+
+   ```
+   R^3:    x_eps = x + eps dx                  dx free
+   SO(3):  R_eps = R exp(eps hat(eta))         dR = R hat(eta)
+   S^2:    q_eps = exp(eps hat(xi)) q          dq = xi x q,   xi . q = 0
+   ```
+
+   Velocity variations:
+
+   ```
+   SO(3):  dOmega = eta_dot + Omega x eta
+   S^2:    d(qdot) = xi_dot x q + xi x qdot
+           domega  = xi_dot - 2 omega x xi          (xi . q = 0 along the whole curve)
+   ```
+
+   Do not use `domega = xi_dot - omega x xi`: it is only the tangential part of `domega`.
+
+3. **Choose the error function Psi.** It must be nonnegative and vanish only at the target.
+
+   ```
+   R^3:    Psi = 0.5 |x - xd|^2
+   S^2:    Psi = 1 - q . qd
+   SO(3):  Psi = trace(G (I - Rd^T R)),   G = diag(g1, g2, g3) > 0     (G = I/2 is the standard choice)
+   ```
+
+   Alternatives on SO(3), for a relative rotation `Rd^T R` by angle `theta` about `u`:
+
+   ```
+   trace:       Psi = 1 - cos(theta)            e = sin(theta) u            smooth, e -> 0 at 180 deg
+   logarithm:   Psi = 0.5 theta^2               e = theta u = log(Rd^T R)   e jumps at 180 deg
+   quaternion:  Psi = 4 (1 - cos(theta/2))      e = 2 sin(theta/2) u        e jumps at 180 deg
+   ```
+
+   No choice is smooth, never fading and free of extra critical points. State which property is given up.
+
+4. **Derive the error vector as the slope of Psi.** Vary the first argument and read off `e` from `dPsi = e . (variation vector)`.
+
+   ```
+   R^3:    e_x = x - xd
+   S^2:    e_q = qd x q
+   SO(3):  e_R = vee(G Rd^T R - R^T Rd G)          (G = I/2:  e_R = 0.5 vee(Rd^T R - R^T Rd))
+   ```
+
+   Useful identity: `trace(A hat(eta)) = -vee(A - A^T) . eta`.
+
+5. **Choose the transport map and the velocity error.**
+
+   ```
+   R^3:    e_v     = v - vd
+   S^2:    e_omega = omega - (I - q q^T) omega_d         equivalently  e_qdot = qdot - (qd x qd_dot) x q = e_omega x q
+   SO(3):  e_Omega = Omega - R^T Rd Omega_d
+   ```
+
+   On SO(3) the relative attitude obeys `d/dt (Rd^T R) = (Rd^T R) hat(e_Omega)`, so `e_Omega = 0` exactly when the relative attitude is constant.
+
+6. **Error dynamics, if the design needs them.**
+
+   ```
+   SO(3), G = I/2:  e_R_dot = 0.5 (trace(R^T Rd) I - R^T Rd) e_Omega
+   S^2:             e_q_dot = (q . qd) e_omega + (q . omega_d) q x e_q - (qd . omega) q
+   ```
+
+7. **On a matrix Lie group, pick the invariance.** With `Xdot = X hat(xi)`:
+
+   ```
+   left-invariant error   E = Xd^-1 X     unchanged by (X, Xd) -> (L X, L Xd)     change of world frame
+   right-invariant error  E = X Xd^-1     unchanged by (X, Xd) -> (X L, Xd L)     change of body frame
+   left error dynamics    E_dot = E hat(xi - Ad_{E^-1} xi_d)                      no X on the right-hand side
+   Lie-algebra error      E = exp(hat(psi)),  psi_dot = -ad_{xi_d} psi + (xi - xi_d)   to first order
+   ```
+
+8. **Relate errors to variations for linearization.** For `R = Rd exp(eps hat(eta))`:
+
+   ```
+   e_R     = eps eta + O(eps^3)
+   e_Omega = eps eta_dot + O(eps^2)
+   eps dOmega = e_Omega + Omega_d x e_R + O(eps^2)
+   ```
+
+   On S^2: `e_q = eps xi + O(eps^3)`, `e_omega = eps (xi_dot - omega_d x xi) + O(eps^2)`.
+
+## Checks that must pass
+
+Run all of them numerically at random states before using the design. `verify/ch03.py` contains a reference implementation of each.
+
+1. **Slope test.** For a random variation vector, the central difference of `Psi` along the varied configuration equals `e . (variation vector)` to 1e-7.
+2. **Compatibility test.** Move both the state and the reference along arbitrary smooth curves. The central difference of `Psi` in time equals `e . e_vel` to 1e-7. Use a moving reference: a fixed reference does not test the transport map.
+3. **Frozen-error test.** Move the state and the reference rigidly together. The velocity error must be zero. `Omega - Omega_d` fails this.
+4. **Invariance test.** Apply a common change of world frame to state and reference. `Psi`, `e` and `e_vel` must not change.
+5. **Tangency.** `e_q . q = 0` and `e_omega . q = 0`.
+6. **Critical points.** Find every zero of `e`. Confirm the target is the only minimum and that every other zero is a saddle or a maximum of `Psi`. For `G` with distinct weights the zeros are the target and the three half turns about the body axes, with `Psi = 2(g2+g3), 2(g1+g3), 2(g1+g2)`.
+7. **First-order test.** Halve `eps` repeatedly. `|e - eps (variation)|` must fall by a factor of eight.
+8. **Variation test,** when a new velocity variation formula is used: build a family of curves, difference the velocity across the family, and compare.
+
+## Failure modes
+
+- **Subtracting velocities across frames.** `Omega - Omega_d` is nonzero for two bodies that move as one. With `G = I/2` it still passes the compatibility test, which hides the mistake. It fails with unequal weights and fails the frozen-error test.
+- **Testing with a fixed reference.** Every transport map passes.
+- **Fading restoring action.** With the trace error, the proportional action is `sin(theta)`. Recovery time from near 180 degrees grows without bound: `ln(10)/lambda` seconds per factor of ten in closeness, where `lambda` is the unstable closed-loop rate at 180 degrees.
+- **Discontinuous error at 180 degrees.** Logarithm and quaternion errors flip sign there. With noise the command chatters unless a hysteresis is added.
+- **Equal weights.** Every half turn is a critical point, a two-dimensional set. Use distinct weights if isolated critical points are needed.
+- **Half-strength gyroscopic terms on S^2.** Caused by `domega = xi_dot - omega x xi`. Use `xi_dot - 2 omega x xi`.
+- **Treating e_Omega as dOmega.** They differ by `Omega_d x e_R` at first order whenever the reference is turning.
+- **Expecting the transport map to be parallel transport.** The S^2 map scales the component across the connecting great circle by `cos(theta)`. That is compatible and intended.
