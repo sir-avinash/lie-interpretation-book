@@ -3,6 +3,8 @@ title: Notation and glossary
 short: Notation and glossary
 id: app-notation
 summary: Every symbol, convention and technical term of the book, with the place where each is defined.
+epigraph: "By relieving the brain of all unnecessary work, a good notation sets it free to concentrate on more advanced problems, and in effect increases the mental power of the race."
+epigraph_source: "Alfred North Whitehead, *An Introduction to Mathematics* (1911)"
 ---
 
 This appendix is the reference for the whole book. Each symbol means one thing, each term has one name, and every chapter, figure, notebook and skill follows the tables below. Read [](#secA-conventions) once. Use [](#secA-symbols) to look up a symbol and [](#secA-glossary) to look up a word. The last column of each table points to the place where the entry is introduced.

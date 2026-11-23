@@ -5,6 +5,8 @@ id: ch-variations
 summary: How to nudge a configuration, measure how far off it is, and compare two velocities that live in different places.
 notebook: notebooks/ch03_variations_transport_maps.ipynb
 verify: verify/ch03.py
+epigraph: "A ratio is a sort of relation in respect of size between two magnitudes of the same kind."
+epigraph_source: "Euclid, *Elements*, Book V, Definition 3 (trans. T. L. Heath)"
 ---
 
 A reference satellite spins steadily about the vertical at one radian per second. Yours copies it exactly: same axis, same rate. The only difference is that your body frame was bolted on a quarter turn away, so your attitude error is a constant 90°. What is your angular velocity error?

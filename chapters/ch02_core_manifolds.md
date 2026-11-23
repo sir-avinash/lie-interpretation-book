@@ -5,6 +5,8 @@ id: ch-manifolds
 summary: Circles, spheres, rotations and rigid motions. What a tangent vector is, why rotations form a group and directions do not, and how to take a time step without falling off.
 notebook: notebooks/ch02_lie_groups_product_manifolds.ipynb
 verify: verify/ch02.py
+epigraph: "Mathematics is the art of giving the same name to different things."
+epigraph_source: "Henri Poincaré, *Science and Method* (1908)"
 ---
 
 A quadrotor carries a load on a cable one meter long. Your simulator stores the cable's direction as a unit vector $q$ and its angular velocity as $\omega$. The load swings steadily at 2 rad/s. Every hundredth of a second the simulator updates $q \leftarrow q + h\,(\omega \times q)$. After ten seconds, how long is the cable?
