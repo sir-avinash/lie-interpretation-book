@@ -180,4 +180,67 @@ a = 3.1
 adot = (np.arccos(np.clip((q0 + 1e-6 * np.cross(-k * np.cross(qd, q0), q0)) @ qd, -1, 1)) - a) / 1e-6
 ck.close("angle obeys a_dot = -k sin(a)", adot, -k * np.sin(a), tol=1e-4)
 
+# ---- geometry behind the animations ----------------------------------------
+# Opening figure: the wrapped heading error.
+wrap = lambda d: (d + 180.0) % 360.0 - 180.0  # noqa: E731
+ck.close("heading: raw difference 10 - 350 is -340 deg", 10.0 - 350.0, -340.0)
+ck.close("heading: wrapped difference is +20 deg", wrap(10.0 - 350.0), 20.0)
+
+# Gimbal animation: at 90 deg of pitch a roll command and a yaw command move the body the same way.
+psi_, phi_, d_ = 0.3, -0.5, 0.8
+ck.close("at pitch 90 deg: Rz(psi) Ry(pi/2) Rx(phi) = Rz(psi - phi) Ry(pi/2)",
+         R_zyx(psi_, np.pi / 2, phi_), Rz(psi_ - phi_) @ Ry(np.pi / 2))
+ck.close("at pitch 90 deg: roll by +d equals yaw by -d",
+         R_zyx(psi_, np.pi / 2, phi_ + d_), R_zyx(psi_ - d_, np.pi / 2, phi_))
+axles = np.array([[0, 0, 1.0], Rz(psi_) @ [0, 1.0, 0], Rz(psi_) @ Ry(np.pi / 2) @ [1.0, 0, 0]])
+ck.close("at pitch 90 deg: no axle has a component along Rz(psi) e1", axles @ (Rz(psi_) @ [1.0, 0, 0]), np.zeros(3))
+ck.true("at pitch 90 deg: E has rank 2", np.linalg.matrix_rank(E(np.pi / 2, phi_)) == 2)
+
+# Plate-trick and unwinding animations: check the code that draws them.
+import importlib.util  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("ch01_figures", Path(__file__).resolve().parents[1] / "figures/src/ch01.py")
+figs = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(figs)
+
+sig = np.linspace(0, 1, 41)
+for turn_, swing_ in [(1.3, 0.0), (2 * np.pi, 0.0), (7.9, 1.1), (10.4, 2.6)]:
+    qs = figs.arm_quaternions(turn_, swing_, sig)
+    ck.close(f"plate arm (turn {turn_:.1f}, swing {swing_:.1f}): unit quaternions", np.linalg.norm(qs, axis=1), np.ones(len(sig)))
+    ck.close(f"plate arm (turn {turn_:.1f}, swing {swing_:.1f}): starts at +1", qs[0], [1, 0, 0, 0])
+    ck.close(f"plate arm (turn {turn_:.1f}, swing {swing_:.1f}): ends at the plate's quaternion",
+             qs[-1], [np.cos(turn_ / 2), 0, 0, np.sin(turn_ / 2)])
+    ck.close(f"plate arm (turn {turn_:.1f}, swing {swing_:.1f}): plate is level and turned about the vertical",
+             quat_to_R(qs[-1]), Rz(turn_))
+qs = figs.arm_quaternions(2 * np.pi, 0.0, sig)
+ck.close("plate arm after one turn is a uniform full twist",
+         np.array([quat_to_R(q_) for q_ in qs]), np.array([Rz(2 * np.pi * s_) for s_ in sig]))
+ck.close("plate arm after one turn ends at the quaternion -1", qs[-1], [-1, 0, 0, 0])
+qs = figs.arm_quaternions(4 * np.pi, np.pi, sig)
+ck.close("plate arm after two turns is untwisted: every quaternion is +1", qs, np.tile([1.0, 0, 0, 0], (len(sig), 1)))
+# The arm deforms continuously over the whole timeline (no jump is hidden between frames).
+times = np.linspace(0, 1, 2001)
+arms = np.array([figs.arm_quaternions(*figs.plate_schedule(t_)[:2], sig) for t_ in times])
+ck.true("plate arm moves continuously along the timeline", np.abs(np.diff(arms, axis=0)).max() < 0.02,
+        f"largest step {np.abs(np.diff(arms, axis=0)).max():.4f}")
+X_, F_ = figs.plate_arm(8.3, 1.7)
+ck.close("plate ribbon: unit speed along the third frame axis",
+         np.linalg.norm(np.diff(X_, axis=0), axis=1) * (len(X_) - 1) / figs.PLATE_LEN, np.ones(len(X_) - 1), tol=2e-3)
+
+ck.close("unwinding animation uses the gains of the example", [figs.KP, figs.KD, *np.diag(figs.J_BODY)], [kp, kd, 0.05, 0.05, 0.10])
+runs_ = figs.unwinding_runs()
+ck.true("animation, short run: 10 deg turned at the last frame", abs(runs_["plus"]["turned"][-1] - 10) < 0.5,
+        f"{runs_['plus']['turned'][-1]:.2f} deg")
+ck.true("animation, long run: 350 deg turned at the last frame", abs(runs_["minus"]["turned"][-1] - 350) < 0.5,
+        f"{runs_['minus']['turned'][-1]:.2f} deg")
+ck.true("long run: the quaternion goes round the circle away from -1, with q3 > 0", bool(np.all(s_minus[3] > 0)))
+ck.true("long run: q0 rises from -0.9962 and never passes through -1", bool(s_minus[0].min() > -0.9963))
+
+# Flow animation: closed form of theta_dot = -k sin(theta).
+th0_, kt_ = 2.6, 1.3
+closed = lambda kt: 2 * np.arctan(np.tan(th0_ / 2) * np.exp(-kt))  # noqa: E731
+ck.close("theta(t) = 2 atan(tan(theta0/2) exp(-k t)) solves theta_dot = -k sin(theta)",
+         (closed(kt_ + 1e-6) - closed(kt_ - 1e-6)) / 2e-6, -np.sin(closed(kt_)), tol=1e-7)
+
 ck.finish()

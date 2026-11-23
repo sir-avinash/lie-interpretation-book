@@ -429,14 +429,14 @@ def pendulum_anim():
 
 
 # ----------------------------------------------------- animation: toss a book
-BOOK_SPIN, BOOK_TILT = 2 * np.pi * 2.0, 0.01          # two revolutions per second, 1 % on the other axes
+BOOK_SPIN, BOOK_TILT = 2 * np.pi * 2.0, 0.01          # two revolutions per second, 1% on the other axes
 BOOK_PHASES = ((2, 0.75), (0, 0.75), (1, 3.2))        # (spin axis, seconds simulated)
 BOOK_SLOW, BOOK_FPS = 3.0, 12
 BOOK_NAMES = {2: "through the covers", 0: "along the spine", 1: "across the width"}
 
 
 def book_run(axis, T):
-    """Euler's equation for the book of the text, started 1 % away from a principal axis."""
+    """Euler's equation for the book of the text, started 1% away from a principal axis."""
     Om0 = BOOK_SPIN * BOOK_TILT * np.ones(3)
     Om0[axis] = BOOK_SPIN
     accel = lambda R, Om: np.cross(J_B * Om, Om) / J_B
