@@ -503,5 +503,273 @@ def closed_loop(ctrl, ref, R0, Om0, T_end, h=H_MPC):
     return dict(t=np.arange(n + 1) * h, R=np.array(Rs), Om=np.array(Oms), tau=np.array(taus), angle=np.array(ang))
 
 
+# =====================================================================
+# Section 6. Direct transcription on SO(3) and an on-manifold interior point
+#
+#   variables   R_1..R_{N-1} in SO(3),  Omega_1..Omega_{N-1},  tau_0..tau_{N-1}
+#   cost        Phi = (h/2) sum |tau_k|^2
+#   dynamics    r^R_k = log(R_{k+1}^T R_k exp(h Omega_k^))^vee = 0
+#               r^W_k = J (Omega_{k+1} - Omega_k) - h (J Omega_k x Omega_k + tau_k) = 0
+#   bounds      |tau_k,i| <= tau_max
+#   keep-out    q_c . R_k e_1 - cos(theta_c) <= 0
+# =====================================================================
+class Reorient:
+    """Minimum-effort rest-to-rest reorientation with torque bounds and a keep-out cone."""
+
+    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, cone_deg=25.0, tau_max=0.12, J=J_B):
+        self.N, self.h, self.J, self.tau_max = N, h, J, tau_max
+        self.R0 = np.array(R0, float)
+        self.RN = Rz(np.radians(120.0)) if RN is None else np.array(RN, float)
+        self.q_c = unit([np.cos(np.radians(60.0)), np.sin(np.radians(60.0)), 0.10] if q_c is None else q_c)
+        self.cos_c = np.cos(np.radians(cone_deg))
+        self.cone_deg = cone_deg
+        self.n = 9 * N - 6                               # tangent dimension
+        self.n_eq = 6 * N
+        self.n_in = 6 * N + (N - 1)
+
+    # ---- index maps into the tangent vector -------------------------------
+    def i_tau(self, k):
+        return slice(9 * k, 9 * k + 3)
+
+    def i_eta(self, k):                                  # k = 1..N-1
+        return slice(9 * (k - 1) + 3, 9 * (k - 1) + 6)
+
+    def i_dOm(self, k):                                  # k = 1..N-1
+        return slice(9 * (k - 1) + 6, 9 * (k - 1) + 9)
+
+    # ---- points -----------------------------------------------------------
+    def initial_guess(self, bulge=0.0):
+        """Attitudes on the geodesic from R0 to RN, optionally pushed sideways, with zero torque."""
+        N, h = self.N, self.h
+        phi = log_so3(self.R0.T @ self.RN)
+        R = np.zeros((N + 1, 3, 3))
+        for k in range(N + 1):
+            sk = k / N
+            side = bulge * np.sin(np.pi * sk) * unit(np.cross(phi, E1))
+            R[k] = self.R0 @ expm_so3(sk * phi) @ expm_so3(side)
+        R[N] = self.RN
+        Om = np.zeros((N + 1, 3))
+        for k in range(1, N):
+            Om[k] = log_so3(R[k].T @ R[k + 1]) / h
+        return dict(R=R, Om=Om, tau=np.zeros((N, 3)))
+
+    def retract(self, x, d, alpha=1.0):
+        """Move along the tangent vector d: attitudes by the exponential, the rest by addition."""
+        R, Om, tau = x["R"].copy(), x["Om"].copy(), x["tau"].copy()
+        for k in range(self.N):
+            tau[k] += alpha * d[self.i_tau(k)]
+        for k in range(1, self.N):
+            R[k] = R[k] @ expm_so3(alpha * d[self.i_eta(k)])
+            Om[k] += alpha * d[self.i_dOm(k)]
+        return dict(R=R, Om=Om, tau=tau)
+
+    # ---- functions --------------------------------------------------------
+    def cost(self, x):
+        return 0.5 * self.h * float(np.sum(x["tau"] ** 2))
+
+    def cost_grad(self, x):
+        g = np.zeros(self.n)
+        for k in range(self.N):
+            g[self.i_tau(k)] = self.h * x["tau"][k]
+        return g
+
+    def eq(self, x):
+        N, h, J = self.N, self.h, self.J
+        R, Om, tau = x["R"], x["Om"], x["tau"]
+        r = np.zeros(6 * N)
+        for k in range(N):
+            r[6 * k:6 * k + 3] = log_so3(R[k + 1].T @ R[k] @ expm_so3(h * Om[k]))
+            r[6 * k + 3:6 * k + 6] = J @ (Om[k + 1] - Om[k]) - h * (np.cross(J @ Om[k], Om[k]) + tau[k])
+        return r
+
+    def eq_jac(self, x):
+        """Jacobian of the residuals with respect to the tangent vector."""
+        N, h, J = self.N, self.h, self.J
+        R, Om = x["R"], x["Om"]
+        A = np.zeros((6 * N, self.n))
+        for k in range(N):
+            F = expm_so3(h * Om[k])
+            rho = log_so3(R[k + 1].T @ R[k] @ F)
+            Di = dexp_inv(rho)
+            rows, rows_w = slice(6 * k, 6 * k + 3), slice(6 * k + 3, 6 * k + 6)
+            if k >= 1:
+                A[rows, self.i_eta(k)] = Di @ F.T
+                A[rows, self.i_dOm(k)] = h * Di @ dexp(h * Om[k])
+                A[rows_w, self.i_dOm(k)] = -J - h * (hat(J @ Om[k]) - hat(Om[k]) @ J)
+            if k + 1 <= N - 1:
+                A[rows, self.i_eta(k + 1)] = -dexp_inv(-rho)
+                A[rows_w, self.i_dOm(k + 1)] = J
+            A[rows_w, self.i_tau(k)] = -h * I3
+        return A
+
+    def ineq(self, x):
+        N = self.N
+        c = np.zeros(self.n_in)
+        c[:3 * N] = x["tau"].ravel() - self.tau_max
+        c[3 * N:6 * N] = -x["tau"].ravel() - self.tau_max
+        for k in range(1, N):
+            c[6 * N + k - 1] = self.q_c @ x["R"][k] @ E1 - self.cos_c
+        return c
+
+    def ineq_jac(self, x):
+        N = self.N
+        A = np.zeros((self.n_in, self.n))
+        for k in range(N):
+            for i in range(3):
+                A[3 * k + i, 9 * k + i] = 1.0
+                A[3 * N + 3 * k + i, 9 * k + i] = -1.0
+        for k in range(1, N):
+            A[6 * N + k - 1, self.i_eta(k)] = np.cross(E1, x["R"][k].T @ self.q_c)
+        return A
+
+    def lag_grad(self, x, y, z):
+        return self.cost_grad(x) + self.eq_jac(x).T @ y + self.ineq_jac(x).T @ z
+
+    def lag_hess(self, x, y, z, eps=1e-5):
+        """Hessian of the Lagrangian along the retraction: the symmetrized difference of its gradient.
+
+        The Lagrangian couples only neighboring stages, so three colors of stages suffice.
+        """
+        n, H = self.n, np.zeros((self.n, self.n))
+        nb = self.N                                      # blocks of 9 (the last has 3)
+        for color in range(3):
+            for comp in range(9):
+                cols = [9 * j + comp for j in range(color, nb, 3) if 9 * j + comp < n]
+                if not cols:
+                    continue
+                d = np.zeros(n)
+                d[cols] = eps
+                gp = self.lag_grad(self.retract(x, d), y, z)
+                gm = self.lag_grad(self.retract(x, -d), y, z)
+                dg = (gp - gm) / (2 * eps)
+                for col in cols:
+                    j = col // 9
+                    lo, hi = max(9 * (j - 1), 0), min(9 * (j + 2), n)
+                    H[lo:hi, col] = dg[lo:hi]
+        return 0.5 * (H + H.T)
+
+    def boresight(self, x):
+        return x["R"][:, :, 0]
+
+
+def kkt_error(prob, x, y, z, w, mu):
+    """The four blocks of the primal-dual residual and its largest entry."""
+    gL = prob.lag_grad(x, y, z)
+    r, c = prob.eq(x), prob.ineq(x)
+    blocks = (gL, r, c + w, w * z - mu)
+    return blocks, max(float(np.max(np.abs(b))) for b in blocks)
+
+
+def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, state=None, log=None):
+    """Primal-dual interior point with on-manifold primal steps.
+
+    Unknowns: x (attitudes, velocities, torques), multipliers y of the dynamics, multipliers z >= 0
+    and slacks w > 0 of the inequalities c(x) + w = 0. Each iteration solves the Newton system of
+        grad Phi + A_r^T y + A_c^T z = 0,  r = 0,  c + w = 0,  w z = mu,
+    shortens the step so that w and z stay positive, backtracks on the norm of that residual,
+    retracts x and adds the rest. The barrier parameter mu is reduced when the residual is below
+    10 mu. With ``fixed_mu`` the subproblem for that mu alone is solved (a point of the central path).
+    """
+    x = x0
+    mu = mu0 if fixed_mu is None else fixed_mu
+    if state is None:
+        y = np.zeros(prob.n_eq)
+        w = np.maximum(-prob.ineq(x), 0.05)
+        z = mu / w
+    else:
+        y, z, w = (np.array(v, float) for v in state)
+    hist = []
+    for it in range(max_iter):
+        blocks, E_mu = kkt_error(prob, x, y, z, w, mu)
+        E_0 = max(float(np.max(np.abs(b))) for b in (blocks[0], blocks[1], blocks[2], w * z))
+        hist.append(dict(E0=E_0, Emu=E_mu, mu=mu, cost=prob.cost(x), alpha=np.nan))
+        if log is not None:
+            log(it, x, mu)
+        if fixed_mu is None:
+            if E_0 <= tol:
+                break
+            if E_mu <= 10 * mu and mu > tol / 10:
+                mu = max(tol / 10, min(0.2 * mu, mu**1.5))
+                blocks, E_mu = kkt_error(prob, x, y, z, w, mu)
+        elif E_mu <= tol:
+            break
+        gL, r, cw, comp = blocks
+        Ar, Ac = prob.eq_jac(x), prob.ineq_jac(x)
+        H = prob.lag_hess(x, y, z)
+        Sig = z / w
+        K = np.zeros((prob.n + prob.n_eq, prob.n + prob.n_eq))
+        Hbar = H + Ac.T @ (Sig[:, None] * Ac)
+        K[:prob.n, prob.n:], K[prob.n:, :prob.n] = Ar.T, Ar
+        rhs = -np.r_[gL + Ac.T @ (Sig * cw - comp / w), r]
+        delta = 0.0
+        while True:                                      # inertia correction: n positive, n_eq negative
+            K[:prob.n, :prob.n] = Hbar + delta * np.eye(prob.n)
+            ev = np.linalg.eigvalsh(K)
+            if np.sum(ev > 0) == prob.n and np.sum(ev < 0) == prob.n_eq:
+                break
+            delta = 1e-4 if delta == 0.0 else 10 * delta
+        sol = np.linalg.solve(K, rhs)
+        dx, dy = sol[:prob.n], sol[prob.n:]
+        dw = -cw - Ac @ dx
+        dz = -comp / w - Sig * dw
+        frac = max(0.99, 1 - mu)
+        a = 1.0
+        for v, dv in ((w, dw), (z, dz)):
+            neg = dv < 0
+            if np.any(neg):
+                a = min(a, float(np.min(-frac * v[neg] / dv[neg])))
+        psi0 = np.sqrt(sum(float(b @ b) for b in blocks))
+        for _ in range(30):
+            xn, yn, zn, wn = prob.retract(x, dx, a), y + a * dy, z + a * dz, w + a * dw
+            bn, _ = kkt_error(prob, xn, yn, zn, wn, mu)
+            if np.sqrt(sum(float(b @ b) for b in bn)) <= (1 - 1e-4 * a) * psi0 or delta > 0:
+                break
+            a *= 0.5
+        x, y, z, w = xn, yn, zn, wn
+        hist[-1]["alpha"], hist[-1]["delta"] = a, delta
+    return dict(x=x, y=y, z=z, w=w, mu=mu, hist=hist, iters=len(hist) - 1,
+                converged=(hist[-1]["E0"] <= tol) if fixed_mu is None else (hist[-1]["Emu"] <= tol))
+
+
+def central_path(prob, x0, mus):
+    """Solve the barrier problem for each mu in turn, each started from the previous one."""
+    out, state, x = [], None, x0
+    for mu in mus:
+        if state is not None:                            # keep w z near the new mu
+            state = (state[0], mu / state[2], state[2])
+        res = interior_point(prob, x, fixed_mu=mu, tol=1e-9, state=state)
+        x, state = res["x"], (res["y"], res["z"], res["w"])
+        out.append(res)
+    return out
+
+
+def rollout(prob, taus):
+    """Shooting: the discrete dynamics applied to a torque sequence."""
+    R, Om = [prob.R0], [np.zeros(3)]
+    for k in range(prob.N):
+        R.append(R[-1] @ expm_so3(prob.h * Om[-1]))
+        Om.append(Om[-1] + prob.h * np.linalg.solve(prob.J, np.cross(prob.J @ Om[-1], Om[-1]) + taus[k]))
+    return np.array(R), np.array(Om)
+
+
+def shooting_check(prob, tau0):
+    """The same problem in the torques alone, solved by SciPy's SLSQP from tau0."""
+    N = prob.N
+
+    def term(u):
+        R, Om = rollout(prob, u.reshape(N, 3))
+        return np.r_[log_so3(prob.RN.T @ R[-1]), Om[-1]]
+
+    def cone(u):
+        R, _ = rollout(prob, u.reshape(N, 3))
+        return prob.cos_c - R[1:N, :, 0] @ prob.q_c
+
+    res = minimize(lambda u: 0.5 * prob.h * u @ u, tau0.ravel(), jac=lambda u: prob.h * u, method="SLSQP",
+                   bounds=[(-prob.tau_max, prob.tau_max)] * (3 * N),
+                   constraints=[dict(type="eq", fun=term), dict(type="ineq", fun=cone)],
+                   options=dict(maxiter=500, ftol=1e-13))
+    return res
+
+
 if __name__ == "__main__":
     pass
