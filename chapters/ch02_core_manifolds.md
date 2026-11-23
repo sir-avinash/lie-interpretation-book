@@ -15,7 +15,7 @@ The arithmetic is not at fault, and a smaller step only slows the growth. Each u
 
 ## Curved sets and their velocities {#sec2-tangent}
 
-Start with the heading of Chapter [](#ch-why). A heading is a point on the unit circle,
+Start with the heading of [](#ch-why). A heading is a point on the unit circle,
 
 $$
 S^1 = \{\, q \in \R^2 : q \cdot q = 1 \,\}.
@@ -91,7 +91,7 @@ Compare [](#eq2-tangent-so3) with the sphere. At the identity the tangent space 
 A **Lie group** $G$ is a manifold that is also a group, with smooth multiplication and inversion. Its **Lie algebra** $\mathfrak g$ is the tangent space at the identity: the velocities with which a curve can leave the identity.
 :::
 
-The circle is a Lie group too. Identify the point at angle $\theta$ with the planar rotation by $\theta$ in $\SO(2)$, and multiplication adds angles. Its Lie algebra is the line $\{\omega J\}$. The three-sphere $S^3$ of unit quaternions from Chapter [](#ch-why) is a third: four numbers, one constraint, quaternion multiplication, and a Lie algebra of pure quaternions $(0, w)$, $w \in \R^3$. It covers $\SO(3)$ twice, and its kinematics $\dot\quat = \tfrac12\,\quat\otimes(0,\Omega)$ are [](#eq-kinematics) one level up.
+The circle is a Lie group too. Identify the point at angle $\theta$ with the planar rotation by $\theta$ in $\SO(2)$, and multiplication adds angles. Its Lie algebra is the line $\{\omega J\}$. The three-sphere $S^3$ of unit quaternions from [](#ch-why) is a third: four numbers, one constraint, quaternion multiplication, and a Lie algebra of pure quaternions $(0, w)$, $w \in \R^3$. It covers $\SO(3)$ twice, and its kinematics $\dot\quat = \tfrac12\,\quat\otimes(0,\Omega)$ are [](#eq-kinematics) one level up.
 
 ### Two velocities for one motion {#sec2-body-spatial}
 
@@ -224,7 +224,7 @@ Here is what the missing group structure costs.
 
 **No relative element.** On $\SO(3)$ the error between $R$ and $R_d$ is the group element $R_d\T R$. On $S^2$ there is no "$q_d^{-1}q$". Errors are built from dot and cross products instead, as in [](#def-error-s2).
 
-**No free comparison of velocities.** On a group, every velocity can be carried to the identity and compared there. On the sphere, $\dot q$ and $\dot q_d$ lie in different planes, like the two walkers of [](#thought2-horizon). Comparing them needs an extra choice, which Chapter [](#ch-variations) makes.
+**No free comparison of velocities.** On a group, every velocity can be carried to the identity and compared there. On the sphere, $\dot q$ and $\dot q_d$ lie in different planes, like the two walkers of [](#thought2-horizon). Comparing them needs an extra choice, which [](#ch-variations) makes.
 
 None of this is a defect of $S^2$ as a model. A cable has no twist, and modelling it on $\SO(3)$ would carry a degree of freedom that does nothing.
 
@@ -358,7 +358,7 @@ The exponential step is exact only if $\Omega$ is constant across the step. In [
 
 A robot's configuration is a point on a product of a few standard manifolds, and its velocity is a list of tangent vectors. The exponential turns velocities into motion, the adjoint changes their frame, and the bracket records that order matters.
 
-All of this concerns one trajectory. Control and estimation concern two: actual and desired, or true and estimated. We cannot yet subtract a desired velocity from an actual one when they live in different tangent spaces, or differentiate a function like $\Psi_R$ whose argument is a matrix under constraints. Chapter [](#ch-variations) does both with one tool.
+All of this concerns one trajectory. Control and estimation concern two: actual and desired, or true and estimated. We cannot yet subtract a desired velocity from an actual one when they live in different tangent spaces, or differentiate a function like $\Psi_R$ whose argument is a matrix under constraints. [](#ch-variations) does both with one tool.
 
 ## Exercises {#sec2-exercises .unnumbered}
 

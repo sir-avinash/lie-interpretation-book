@@ -13,7 +13,7 @@ Both gyros are honest. The reference gyro reads $\Omega_d = (0, 0, 1)$. Yours re
 
 ![Two frames that spin together about the vertical. They share one motion, but each gyro reports it along its own axes, so the readings differ. Subtracting the readings compares components taken in two different frames.](figures/ch03-frames.svg){#fig3-frames}
 
-Chapter [](#ch-why) asked what "error" means for a configuration on a curved space. This is the same question for velocities, and it is the subtler one. A velocity is attached to the place where it was measured. On a flat space every place shares one set of axes, so you subtract without thinking. On a curved space you have to carry one velocity over to the other before you compare, and there is more than one way to carry it. To sort this out we need three things: a way to nudge a configuration, a way to measure how far off it is, and a way to move a velocity from one place to another.
+[](#ch-why) asked what "error" means for a configuration on a curved space. This is the same question for velocities, and it is the subtler one. A velocity is attached to the place where it was measured. On a flat space every place shares one set of axes, so you subtract without thinking. On a curved space you have to carry one velocity over to the other before you compare, and there is more than one way to carry it. To sort this out we need three things: a way to nudge a configuration, a way to measure how far off it is, and a way to move a velocity from one place to another.
 
 ## Nudging a configuration {#sec3-variation}
 
@@ -81,7 +81,7 @@ $$
 \delta\!\left(\tfrac12\,\Omega\cdot J\Omega\right) = J\Omega \cdot \delta\Omega = J\Omega\cdot\dot\eta - (\Omega \times J\Omega)\cdot \eta .
 $$
 
-There is the $\Omega \times J\Omega$ of Euler's equations. It is not a fictitious force added by hand. It is the price of measuring velocity in a frame that the variation moves. Chapter [](#ch-dynamics) turns this line into equations of motion.
+There is the $\Omega \times J\Omega$ of Euler's equations. It is not a fictitious force added by hand. It is the price of measuring velocity in a frame that the variation moves. [](#ch-dynamics) turns this line into equations of motion.
 
 Now the sphere. The rule for $\dot q$ is again safe, because $q$ is an ordinary vector of $\R^3$:
 
@@ -108,7 +108,7 @@ Lee, Leok and McClamroch (2018) write $\delta\omega = -\omega \times \xi + (I - 
 
 Wu and Sreenath (2015) keep $\delta\omega$ as a variable of its own and impose $q \cdot \delta\omega = -(\xi \times q)\cdot\omega$. That constraint is exactly the component along $q$ above.
 
-The trap is $\delta\omega = \dot\xi - \omega \times \xi$. It is only the tangential part. It gives correct equations whenever $\delta\omega$ is dotted with something tangent, which covers every simple pendulum. It gives gyroscopic terms at half strength otherwise. The symbolic engine of Chapter [](#ch-symbolic) applies the full rule $\dot\xi - 2\,\omega\times\xi$.
+The trap is $\delta\omega = \dot\xi - \omega \times \xi$. It is only the tangential part. It gives correct equations whenever $\delta\omega$ is dotted with something tangent, which covers every simple pendulum. It gives gyroscopic terms at half strength otherwise. The symbolic engine of [](#ch-symbolic) applies the full rule $\dot\xi - 2\,\omega\times\xi$.
 
 Do not borrow the sign from $\SO(3)$ either. There $\Omega$ and $\eta$ are body-frame vectors and the cross term enters with a plus. On the sphere $\omega$ and $\xi$ are world-frame axes, and the sign flips ([](#exr3-world-frame)).
 :::
@@ -117,7 +117,7 @@ We can now nudge configurations and velocities. Next we need a number that says 
 
 ## Heights and slopes {#sec3-errors}
 
-Chapter [](#ch-why) introduced the attitude error of [](#def-error-so3) as a height $\Psi_R$ and its slope $e_R$. With variations in hand, that recipe becomes a definition that works on any manifold.
+[](#ch-why) introduced the attitude error of [](#def-error-so3) as a height $\Psi_R$ and its slope $e_R$. With variations in hand, that recipe becomes a definition that works on any manifold.
 
 ::: {.definition #def3-error-vector name="Error function and error vector"}
 An **error function** $\Psi(q, q_d) \ge 0$ vanishes only at $q = q_d$. Its **error vector** $e$ is its slope under a variation of the first argument:
@@ -128,7 +128,7 @@ $$
 
 On $\R^3$ the height $\tfrac12\|x - x_d\|^2$ has slope $x - x_d$. Nothing new. On the sphere, $\Psi_q = 1 - q\cdot q_d$ gives $\delta\Psi_q = -(\xi \times q)\cdot q_d = \xi \cdot (q_d \times q)$, so $e_q = q_d \times q$, as in [](#def-error-s2).
 
-On $\SO(3)$ let us do slightly more than Chapter [](#ch-why) did and weight the axes. Take $G = \operatorname{diag}(g_1, g_2, g_3)$ with positive entries and
+On $\SO(3)$ let us do slightly more than [](#ch-why) did and weight the axes. Take $G = \operatorname{diag}(g_1, g_2, g_3)$ with positive entries and
 
 $$
 \Psi_R = \tr\!\big(G\,(I - R_d\T R)\big). \label{eq3-weighted-psi}
@@ -162,7 +162,7 @@ Here $(q_0, q_v)$ is the unit quaternion of $R_d\T R$. [](#fig3-heights) plots a
 
 ![Three attitude error functions for a rotation by $\theta$ about a fixed axis. Left: the heights. Right: their slopes, which are the restoring actions a proportional controller applies. Only the trace error is smooth at 180°, and it pays by vanishing there. The other two never fade, and pay with a jump.](figures/ch03-heights.svg){#fig3-heights}
 
-The right-hand panel is [](#thm-obstruction) drawn as a graph. Go once round the axis. The restoring action is positive just after $0°$ and negative just before $360°$. If it is continuous it must cross zero in between: that is the trace error, whose fading torque Chapter [](#ch-why) warned about. If it never crosses zero it must jump: that is the other two, with a kink in the height at $180°$ where the shortest way home changes side.
+The right-hand panel is [](#thm-obstruction) drawn as a graph. Go once round the axis. The restoring action is positive just after $0°$ and negative just before $360°$. If it is continuous it must cross zero in between: that is the trace error, whose fading torque [](#ch-why) warned about. If it never crosses zero it must jump: that is the other two, with a kink in the height at $180°$ where the shortest way home changes side.
 
 ::: {.example #ex3-linger name="The cost of the last degree"}
 Rotate about one axis with unit inertia: $\ddot\theta = -k_p\, e(\theta) - k_d\,\dot\theta$, with $k_p = 4$ and $k_d = 2\sqrt2$. Start at rest, $179°$ from the target. The logarithm law is inside $5°$ for good after 2.8 s and the quaternion law after 2.9 s. The trace law needs 6.1 s ([](#fig3-linger)).
@@ -268,7 +268,7 @@ The **left-invariant error** $E_\ell$ is unchanged when both are multiplied on t
 :::
 
 ::: {.thought #thought3-remount name="Two labs, one technician"}
-Recall the two labs of Chapter [](#ch-why), whose motion-capture frames disagree. Changing the world frame multiplies every attitude on the left. The error $R_d\T R$ does not notice. That was the invariance we demanded of a controller.
+Recall the two labs of [](#ch-why), whose motion-capture frames disagree. Changing the world frame multiplies every attitude on the left. The error $R_d\T R$ does not notice. That was the invariance we demanded of a controller.
 
 Now a technician unbolts the flight computer and remounts it rotated. Every attitude is multiplied on the right. The error $R\,R_d\T$ does not notice that. It is the rotation, seen from the world, that takes the reference onto the body, and the world does not care how the computer is mounted. The left-invariant error does notice: its angle is the same, but its axis is now expressed along the new body axes.
 :::
@@ -330,7 +330,7 @@ The velocity error matches $\dot\eta$, not $\delta\Omega$. The two differ by $\O
 
 :::
 
-This is what makes linearization on a manifold practical. Chapter [](#ch-linearization) linearizes the dynamics in the variables $(\eta, \delta\Omega)$, which have no singularities and need no coordinates. A controller cannot measure $\eta$. It can compute $e_R$ and $e_\Omega$ from the state, and [](#eq3-first-order) converts one pair into the other. For a reference at rest, such as a hover, the two pairs coincide.
+This is what makes linearization on a manifold practical. [](#ch-linearization) linearizes the dynamics in the variables $(\eta, \delta\Omega)$, which have no singularities and need no coordinates. A controller cannot measure $\eta$. It can compute $e_R$ and $e_\Omega$ from the state, and [](#eq3-first-order) converts one pair into the other. For a reference at rest, such as a hover, the two pairs coincide.
 
 ::: {.table #tbl3-summary}
 
