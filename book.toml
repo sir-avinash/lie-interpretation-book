@@ -1,5 +1,5 @@
-title = "A Lie-Interpretation of Robotics and Control"
-subtitle = "Modeling, control, estimation and optimization on configuration manifolds"
+title = "A Manifold Introduction to Robotics and Control"
+subtitle = "Coordinate-free modeling, control, estimation and optimization"
 repo = "sir-avinash/lie-interpretation-book"
 index = "chapters/index.md"
 

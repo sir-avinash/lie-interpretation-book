@@ -1,6 +1,6 @@
-# A Lie-Interpretation of Robotics and Control
+# A Manifold Introduction to Robotics and Control
 
-A textbook on modeling, control, estimation and trajectory optimization for robots whose configurations live on manifolds: $\mathrm{SO}(3)$, $S^2$, $\mathrm{SE}(3)$ and their products.
+A textbook on coordinate-free modeling, control, estimation and optimization for robots whose configurations live on manifolds: $\mathrm{SO}(3)$, $S^2$, $\mathrm{SE}(3)$ and their products.
 
 It consolidates a body of research on geometric mechanics and control into one exposition with one notation, written for advanced undergraduates through PhD students in robotics and control. No differential geometry is assumed.
 
