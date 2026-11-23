@@ -1,0 +1,70 @@
+title = "A Lie-Interpretation of Robotics and Control"
+subtitle = "Modeling, control, estimation and optimization on configuration manifolds"
+repo = "sir-avinash/lie-interpretation-book"
+branch = "main"
+index = "chapters/index.md"
+
+[macros]
+"\\R" = "\\mathbb{R}"
+"\\SO" = "\\mathrm{SO}"
+"\\so" = "\\mathfrak{so}"
+"\\SE" = "\\mathrm{SE}"
+"\\se" = "\\mathfrak{se}"
+"\\T" = "^{\\top}"
+"\\tr" = "\\operatorname{tr}"
+"\\quat" = "\\mathfrak{q}"
+"\\Ad" = "\\operatorname{Ad}"
+"\\ad" = "\\operatorname{ad}"
+"\\dd" = "\\mathrm{d}"
+"\\ddt" = "\\frac{\\mathrm{d}}{\\mathrm{d}t}"
+
+[[part]]
+title = "I. Foundations"
+chapter = [
+  { num = 1, file = "chapters/ch01_why_coordinate_free.md", title = "Why coordinate-free?" },
+  { num = 2, file = "chapters/ch02_core_manifolds.md", title = "The manifolds robots live on" },
+  { num = 3, file = "chapters/ch03_variations_errors_transport.md", title = "Variations, errors and transport" },
+]
+
+[[part]]
+title = "II. Modeling"
+chapter = [
+  { num = 4, file = "chapters/ch04_coordinate_free_dynamics.md", title = "Dynamics without coordinates" },
+  { num = 5, file = "chapters/ch05_symbolic_derivation_geomech.md", title = "Symbolic derivation" },
+]
+
+[[part]]
+title = "III. Geometric control"
+chapter = [
+  { num = 6, title = "Tracking control and almost-global stability" },
+  { num = 7, file = "chapters/ch07_variation_linearization_lqr.md", title = "Variation-based linearization and LQR" },
+  { num = 8, title = "Robust, adaptive and safety-critical control" },
+]
+
+[[part]]
+title = "IV. Reduction"
+chapter = [
+  { num = 9, title = "Symmetry, fiber bundles and connections" },
+  { num = 10, title = "Differential flatness" },
+  { num = 11, title = "Hybrid zero dynamics on manifolds" },
+]
+
+[[part]]
+title = "V. Trajectory optimization"
+chapter = [
+  { num = 12, title = "Variational integrators and collocation" },
+  { num = 13, title = "Error-state MPC and on-manifold solvers" },
+]
+
+[[part]]
+title = "VI. Estimation and learning"
+chapter = [
+  { num = 14, title = "Filtering on Lie groups" },
+  { num = 15, title = "Equivariant learning and residual control" },
+]
+
+[[part]]
+title = "VII. Case studies"
+chapter = [
+  { num = 16, title = "Aerial manipulation, legged and limbless robots" },
+]

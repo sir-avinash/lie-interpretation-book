@@ -1,4 +1,4 @@
-﻿Chapter 7: Variation-Based Linearization, State-Constrained Controllability & LTV-LQR
+Chapter 7: Variation-Based Linearization, State-Constrained Controllability & LTV-LQR
 Linearizing nonlinear mechanical systems evolving on curved configuration manifolds—such as $SO(3)$, $S^2$, and their products $\prod_i M_i$—using local coordinates (e.g., Euler angles or spherical coordinates) introduces representation singularities and cumbersome trigonometric expressions. Building on the coordinate-free variation framework of Wu & Sreenath (IEEE Access 2015) and its extension to multi-link cable-suspended aerial systems in Kotaru, Wu, & Sreenath (arXiv:1711.04895), this chapter develops symbolic variation-based linearization, establishes state-constrained controllability on the invariant nullspace of the tangent-bundle constraints, and synthesizes finite-horizon LTV-LQR controllers directly on the manifold.
 
 

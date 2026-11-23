@@ -1,4 +1,4 @@
-﻿Chapter 2: Core Manifolds: $S^1/\mathrm{SO}(2)$, $S^2$, $\mathrm{SO}(3)$, $S^3$, $\mathrm{SE}(3)$ & Product Spaces
+Chapter 2: Core Manifolds: $S^1/\mathrm{SO}(2)$, $S^2$, $\mathrm{SO}(3)$, $S^3$, $\mathrm{SE}(3)$ & Product Spaces
 "Because globally valid coordinate charts do not exist for non-Euclidean configuration spaces, coordinate-free geometric formulations on Lie groups and homogeneous manifolds eliminate parameterization singularities and enable almost-global stability."
 — Adapted from Wu & Sreenath (2015) and Kotaru, Edmonson, & Sreenath (2020)
 

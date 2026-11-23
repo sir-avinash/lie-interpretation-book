@@ -1,4 +1,4 @@
-﻿Chapter 4: Coordinate-Free Dynamics: Riemannian Mechanics, Lagrange–d'Alembert & Multi-Body Formulations
+Chapter 4: Coordinate-Free Dynamics: Riemannian Mechanics, Lagrange–d'Alembert & Multi-Body Formulations
 Chapter Roadmap. Classical Euler–Lagrange equations written in local coordinates $q \in \mathbb{R}^n$ suffer from chart singularities (such as gimbal lock on $SO(3)$ or polar singularities on $S^2$) and obscure the geometric structure of mechanical energy and constraints. This chapter develops coordinate-free equations of motion directly on configuration manifolds: (1) Riemannian simple mechanical systems via the Levi-Civita covariant derivative, (2) the Lagrange–d'Alembert principle on $SE(3) \times S^2$ for a quadrotor with a cable-suspended load (including taut/slack hybrid transitions), (3) Newton–Euler flexible-cable chains on $SO(3) \times \mathbb{R}^3 \times (S^2)^n$ and modular Boltzmann–Hamel whole-body dynamics on $SE(3) \times \mathbb{R}^{N_T}$, and (4) worked examples and exercises.
 
 

@@ -1,4 +1,4 @@
-﻿Chapter 3: Variations, Configuration Errors & Transport Maps
+Chapter 3: Variations, Configuration Errors & Transport Maps
 3.1 Motivation: Why Subtraction Fails on Curved Manifolds
 In Euclidean space $\mathbb{R}^n$, comparing a current state $x \in \mathbb{R}^n$ with a desired reference $x_d \in \mathbb{R}^n$ is trivial: the configuration error is $e_x = x - x_d$, its time derivative is $\dot{e}_x = \dot{x} - \dot{x}_d$, and a small perturbation is $x^\epsilon = x_d + \epsilon \delta x$. All three operations—difference, velocity comparison, and linearization—rely on the global vector-space structure of $\mathbb{R}^n$, where tangent spaces at different points are canonically identified.
 
