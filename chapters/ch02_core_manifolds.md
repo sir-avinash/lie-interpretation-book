@@ -11,9 +11,11 @@ epigraph_source: "Henri Poincaré, *Science and Method* (1908)"
 
 A quadrotor carries a load on a cable one meter long. Your simulator stores the cable's direction as a unit vector $q$ and its angular velocity as $\omega$. The load swings steadily at 2 rad/s. Every hundredth of a second the simulator updates $q \leftarrow q + h\,(\omega \times q)$. After ten seconds, how long is the cable?
 
-One meter, surely. The simulator disagrees. It reports $\|q\| = 1.22$, and the load hangs 22 cm further away than the cable allows.
+One meter, surely. The simulator disagrees ([](#fig2-puzzle)). It reports $\|q\| = 1.22$, and the load hangs 22 cm further away than the cable allows.
 
 The arithmetic is not at fault, and a smaller step only slows the growth. Each update moves $q$ in a direction that is correct at that instant, and still lands off the sphere. To see why, and to find an update that cannot do this, we need to know what kind of object $q$ is, and what kind of object its velocity is. They are not the same kind.
+
+![The opening puzzle. The load must stay on the sphere of radius one meter about the quadrotor. The simulated load (terracotta) starts on it and spirals outward, one small step at a time, while the hollow marker shows where the load should be. After ten seconds the simulated cable is 1.22 m long.](figures/ch02-puzzle-strip.png){#fig2-puzzle anim="figures/ch02-puzzle.gif"}
 
 ## Curved sets and their velocities {#sec2-tangent}
 
@@ -33,13 +35,15 @@ The velocity is perpendicular to the position. At each point the allowed velocit
 
 The cable direction lives one dimension up, on the sphere $S^2 = \{ q \in \R^3 : q\cdot q = 1\}$. The same differentiation gives the same conclusion, $q \cdot \dot q = 0$. The allowed velocities at $q$ now fill a plane ([](#fig2-tangent)).
 
-![The tangent plane to the sphere at $q$. The teal curve $q(t)$ stays on the sphere, and its velocity $\dot q$ lies in the plane perpendicular to $q$. So does the angular velocity $\omega = q \times \dot q$, which is $\dot q$ turned a quarter turn about the normal.](figures/ch02-tangent.svg){#fig2-tangent}
+![The tangent plane to the sphere at $q$. The teal curve $q(t)$ stays on the sphere, and its velocity $\dot q$ lies in the plane perpendicular to $q$. So does the angular velocity $\omega = q \times \dot q$, which is $\dot q$ turned a quarter turn about the normal. Watch the plane ride along with $q$ and tilt as it goes. The dashed outline is the plane at the starting point.](figures/ch02-tangent-strip.png){#fig2-tangent anim="figures/ch02-tangent.gif"}
 
 ::: {.thought #thought2-horizon name="Standing on a planet"}
-Stand on a small, perfectly round planet. You can walk north, east, or any mixture. You cannot walk *up*. Every velocity available to you lies in the plane of your horizon.
+Stand on a small, perfectly round planet. You can walk north, east, or any mixture. You cannot walk *up*. Every velocity available to you lies in the plane of your horizon ([](#fig2-flat)).
 
-Fly to another spot and the horizon tilts with you. A walker near the pole and a walker on the equator both say "I am heading north at 1 m/s". Those are different arrows in space, lying in different planes.
+Fly to another spot and the horizon tilts with you ([](#fig2-tangent)). A walker near the pole and a walker on the equator both say "I am heading north at 1 m/s". Those are different arrows in space, lying in different planes.
 :::
+
+![Why a round planet looks flat to someone standing on it. Zoom in on $q$ while a square patch of ground keeps its size on the page: the sphere grows, and the gap between the patch of sphere (indigo grid) and the tangent plane at $q$ (ink grid) shrinks toward zero.](figures/ch02-flat-strip.png){#fig2-flat anim="figures/ch02-flat.gif"}
 
 The circle and the sphere are instances of one idea.
 
@@ -114,8 +118,10 @@ The left side changes the frame of the matrix $x^\wedge$ by conjugation. The rig
 ::: {.thought #thought2-turntable name="A phone on a turntable"}
 A phone's axes are $x$ across the screen, $y$ along its long side and $z$ out of the screen. Lay it flat on a turntable that spins at 0.5 rad/s about the vertical. Its gyroscope reads $\Omega = (0, 0, 0.5)$: all of the spin is along the axis that comes out of the screen. Now stand the phone upright, long axis vertical, and spin the turntable again. The gyroscope reads $\Omega = (0, 0.5, 0)$.
 
-A camera on the ceiling sees no difference. In the world frame the angular velocity is $\omega = (0, 0, 0.5)$ both times. The phone changed its frame, and $\Omega = R\T\omega$ changed with it.
+A camera on the ceiling sees no difference. In the world frame the angular velocity is $\omega = (0, 0, 0.5)$ both times. The phone changed its frame, and $\Omega = R\T\omega$ changed with it ([](#fig2-turntable)).
 :::
+
+![One spin, two readings. Both turntables spin up to 0.5 rad/s about the vertical, so both phones have the same world-frame angular velocity $\omega$ (ink). The bars show the body angular velocity $\Omega = R\T\omega$ that each gyroscope reports: along the phone's $z$ axis when it lies flat, along its $y$ axis when it stands upright.](figures/ch02-turntable-strip.png){#fig2-turntable anim="figures/ch02-turntable.gif"}
 
 We can now describe a rotation in progress. We cannot yet say where it ends up. If the gyroscope reads a constant $\Omega$ for $t$ seconds, what is $R$?
 
@@ -150,7 +156,7 @@ $$
 
 leave $q$ in the direction $v$ and follow the great circle for a distance $\|v\|$.
 
-![The exponential map wraps a tangent space onto the manifold, keeping lengths along each ray from the base point. Left: the tangent line at the identity of $\SO(2)$. A segment of length $\theta$ lands on the arc of length $\theta$. Right: a tangent vector $v$ at $q \in S^2$ lands on the great-circle arc of length $\|v\|$ that leaves $q$ in the direction of $v$.](figures/ch02-expmap.svg){#fig2-expmap}
+![The exponential map wraps a tangent space onto the manifold, keeping lengths along each ray from the base point. Left: the tangent line at the identity of $\SO(2)$. A segment of length $\theta$ lands on the arc of length $\theta$. Right: a tangent vector $v$ at $q \in S^2$ lands on the great-circle arc of length $\|v\|$ that leaves $q$ in the direction of $v$. Watch each segment roll onto the manifold without stretching. The dashed copies stay behind in the tangent space.](figures/ch02-expmap-strip.png){#fig2-expmap anim="figures/ch02-expmap.gif"}
 
 ::: {.example #ex2-exp name="A quarter turn about a diagonal"}
 A body starts at $R = I$ and turns at $\Omega = \tfrac{\pi}{2}\,(1, 1, 0)/\sqrt2$ rad/s for one second. Its axis is $a = (1,1,0)/\sqrt2$ and its angle is $\theta = \pi/2$, so $\sin\theta = 1$ and $1 - \cos\theta = 1$. Equation [](#eq2-rodrigues) gives
@@ -173,7 +179,7 @@ Lay a book on the desk, cover up, spine on your left. Fix three axes to the desk
 Start again, and turn 90° about $z$ first, then 90° about $x$. Now the cover faces you and the spine lies level, underneath ([](#fig2-noncommute)). Same two turns, different attitude. The two results are 120° apart.
 :::
 
-![The same two quarter turns in two orders. The dark block marks the top of the front cover and the tan face is the spine. The final attitudes are 120° apart.](figures/ch02-noncommute.svg){#fig2-noncommute}
+![The same two quarter turns in two orders, played one turn at a time on two copies of the book. The dark block marks the top of the front cover and the tan face is the spine. The final attitudes are 120° apart: in the last step a single turn of 120° about one fixed axis (teal) carries the left result onto the right one.](figures/ch02-noncommute-strip.png){#fig2-noncommute anim="figures/ch02-noncommute.gif"}
 
 Quarter turns are large. Now go small. Rotate by an angle $\epsilon$ about a unit axis $a$, then about another unit axis $b$, then undo the first, then undo the second. If rotations commuted, you would be back at the start. Instead:
 
@@ -330,7 +336,7 @@ $$
 
 The norm grows at every step, by an amount that depends only on the speed. The tangent plane touches the sphere at one point and lies outside it everywhere else, so a step along the tangent always lands outside ([](#fig2-steps)). With $\|\omega\| = 2$ rad/s and $h = 0.01$ s, each step multiplies $\|q\|^2$ by $1.0004$. A thousand steps give $1.0004^{500} = 1.22$. That is the stretched cable.
 
-![Four steps on a circle, exaggerated. Each Euler step (terracotta) runs along the tangent and lands outside, and the radius grows from 1 to 1.38. Each exponential step (indigo) follows the circle.](figures/ch02-steps.svg){#fig2-steps}
+![Four steps on a circle, exaggerated and taken one at a time. Each Euler step (terracotta) runs along the tangent and lands outside, and the radius grows from 1 to 1.38. Each exponential step (indigo) follows the circle.](figures/ch02-steps-strip.png){#fig2-steps anim="figures/ch02-steps.gif"}
 
 Rotation matrices fail the same way. One Euler step $R_{k+1} = R_k + h\,R_k\Omega^\wedge$ gives
 

@@ -447,6 +447,19 @@ def main():
     ck.record("euler_inv_cos_89p5", float(1 / np.cos(np.radians(89.5))))
     ck.close("det E = -cos(theta)", np.linalg.det(euler_E(0.7, -0.4)), -np.cos(0.7))
 
+    # ---- opening figure: one 10 degree deviation written three ways --------
+    eta10 = np.radians(10.0) * np.ones(3) / np.sqrt(3.0)
+    dev = {}
+    for pitch in (0.0, 89.0):
+        Rd_ = Ry(np.radians(pitch))
+        R_ = Rd_ @ expm_so3(eta10)
+        dev[pitch] = np.degrees(wrap(euler_of(R_) - euler_of(Rd_)))
+        ck.close(f"opening figure: the variation is the same 10 degree vector at {pitch:.0f} degrees of pitch",
+                 log_so3(Rd_.T @ R_), eta10, 1e-12)
+    ck.true("opening figure: the Euler-angle deviation of a 10 degree error is under 7 degrees level, over 120 at 89",
+            np.abs(dev[0.0]).max() < 7.0 and np.abs(dev[89.0]).max() > 120.0,
+            f"{np.abs(dev[0.0]).max():.1f}, {np.abs(dev[89.0]).max():.1f} deg")
+
     # ---- variation formulas on S^2 (Chapter 3), by finite differences ------
     q = rng.normal(size=3)
     q /= np.linalg.norm(q)

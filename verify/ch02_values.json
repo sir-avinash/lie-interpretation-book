@@ -32,5 +32,11 @@
   "drift_euler_det_10s": 1.1317088167182114,
   "drift_exp_orthogonality_10s": 9.197324346366963e-15,
   "exp_step_attitude_error_deg_h0p01": 0.28684431152615664,
-  "exp_midpoint_attitude_error_deg_h0p01": 0.0011555352411850258
+  "exp_midpoint_attitude_error_deg_h0p01": 0.0011555352411850258,
+  "figure_puzzle_cable_length": 1.2213431551485145,
+  "figure_book_axis": [
+    0.5773502691896257,
+    -0.5773502691896258,
+    -0.5773502691896257
+  ]
 }

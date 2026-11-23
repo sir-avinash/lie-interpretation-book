@@ -371,4 +371,46 @@ cands = [R_proj @ expm_so3(1e-3 * rng.normal(size=3)) for _ in range(200)]
 ck.true("no nearby rotation is closer to the drifted matrix than its polar factor",
         all(np.linalg.norm(c - R_eu) >= np.linalg.norm(R_proj - R_eu) for c in cands))
 
+# ---- claims made by the figures ---------------------------------------------------
+# Opening figure: the same simulator on a load that circles a cone of half-angle 50 degrees
+# with |omega| = 2 rad/s. omega = q x q_dot is perpendicular to the true direction at every step.
+h_f, w_f, T_f, cone = 0.01, 2.0, 10.0, np.radians(50)
+N_f = round(T_f / h_f)
+rate_f = w_f / np.sin(cone)
+phi_f = rate_f * h_f * np.arange(N_f + 1)
+q_true = np.stack([np.sin(cone) * np.cos(phi_f), np.sin(cone) * np.sin(phi_f), -np.cos(cone) * np.ones(N_f + 1)], axis=1)
+v_true = rate_f * np.stack([-np.sin(cone) * np.sin(phi_f), np.sin(cone) * np.cos(phi_f), np.zeros(N_f + 1)], axis=1)
+om_true = np.cross(q_true, v_true)
+ck.close("figure: the conical swing has |omega| = 2 rad/s", np.linalg.norm(om_true, axis=1), w_f * np.ones(N_f + 1), tol=1e-12)
+q_sim = q_true[0].copy()
+for k in range(N_f):
+    q_sim = q_sim + h_f * np.cross(om_true[k], q_sim)
+ck.true("figure: on the conical swing the simulated cable is also 1.22 m after 10 s", abs(np.linalg.norm(q_sim) - 1.22) < 0.005,
+        f"{np.linalg.norm(q_sim):.4f}")
+ck.record("figure_puzzle_cable_length", float(np.linalg.norm(q_sim)))
+
+# Book figure: one rotation about an axis fixed to the desk carries "x then z" onto "z then x".
+G = (A @ B) @ (B @ A).T
+ck.close("figure: that rotation is by 120 degrees", np.degrees(angle_of(G)), 120.0, tol=1e-9)
+ck.close("figure: its axis is (1, -1, -1)/sqrt(3)", unit(log_so3(G)), np.array([1.0, -1.0, -1.0]) / np.sqrt(3), tol=1e-12)
+ck.close("figure: it carries one result onto the other", expm_so3(log_so3(G)) @ (B @ A), A @ B, tol=1e-12)
+ck.record("figure_book_axis", unit(log_so3(G)).tolist())
+
+# Turntable figure: the gyroscope reads R^T omega, whatever the angle of the turntable.
+om_w = np.array([0.0, 0.0, 0.5])
+for ang in (0.0, 0.7, 2.9):
+    flat, upright = Rz(ang) @ Rz(0.4), Rz(ang) @ Rz(0.2) @ Rx(np.pi / 2)
+    ck.close(f"figure: flat phone reads (0, 0, 0.5) at turntable angle {ang}", flat.T @ om_w, [0, 0, 0.5], tol=1e-15)
+    ck.close(f"figure: upright phone reads (0, 0.5, 0) at turntable angle {ang}", upright.T @ om_w, [0, 0.5, 0], tol=1e-15)
+
+# Steps figure: the Euler radius after one, two, three and four steps with h w = 0.42.
+ck.close("figure: Euler radii 1.08, 1.18, 1.28, 1.38", [(1 + 0.42**2) ** (k / 2) for k in (1, 2, 3, 4)], [1.08, 1.18, 1.28, 1.38], tol=0.005)
+
+# Zoom figure: a patch of width 1.2 on a sphere of radius rho; a corner of the tangent patch is
+# sqrt(rho^2 + r^2) - rho from the sphere, with r the half diagonal.
+r_c = 0.6 * np.sqrt(2)
+gap_pct = lambda rho: 100 * (np.hypot(rho, r_c) - rho) / 1.2
+ck.close("figure: radius 1 is 0.8 patch widths, gap 26.0 %", [1 / 1.2, gap_pct(1.0)], [0.8, 26.0], tol=0.05)
+ck.close("figure: radius 40 is 33.3 patch widths, gap 0.7 %", [40 / 1.2, gap_pct(40.0)], [33.3, 0.7], tol=0.06)
+
 ck.finish()

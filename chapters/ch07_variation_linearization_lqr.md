@@ -15,7 +15,9 @@ Try yaw, pitch and roll. Nose-up is 90° of pitch, where the matrix $E$ of [](#e
 
 Try the nine entries of $R$ instead. Now $x$ has twelve components, $A$ and $B$ exist at every attitude, and the design fails anyway. The controllability matrix has rank 6. Six of the twelve directions are changes that would make $R$ stop being a rotation. No torque produces them, the Riccati solver gives up, and $x_d + \delta x$ is not an attitude.
 
-Both attempts ask how the *numbers that label* an attitude change. The useful question is how the attitude itself changes. The answer is a vector with three components and no singularity anywhere. We will build linear models out of it, put LQR on top, and then find out where the result stops being true.
+Both attempts ask how the *numbers that label* an attitude change. The useful question is how the attitude itself changes. The answer is a vector with three components and no singularity anywhere. We will build linear models out of it, put LQR on top, and then find out where the result stops being true. [](#fig7-puzzle) shows the three answers side by side.
+
+![One small deviation of an attitude, written three ways. A body sits 10° from its reference while the reference pitches up. Top: the deviation in Euler angles grows as the pitch nears 90°. Middle: the nine entries of $R$ can be changed in ways that are not rotations. Bottom: the three components of the variation $\eta$ do not change.](figures/ch07-puzzle-strip.png){#fig7-puzzle anim="figures/ch07-puzzle.gif"}
 
 ## A small deviation of a direction {#sec7-variation}
 
@@ -29,7 +31,7 @@ $$
 
 The vector $\xi$ is the axis and angle of that small rotation. Its part along $q_d$ would spin $q_d$ about itself and move nothing, so we set it to zero. What remains lies in the tangent plane at $q_d$: two numbers, as there should be.
 
-![A free swing of a spherical pendulum (indigo) and a neighbor released 20° away (terracotta), both simulated. At each instant the neighbor is the reference turned about $\xi$. Both $\xi$ and the displacement $\delta q = \xi \times q_d$ lie in the tangent plane at $q_d(t)$, at right angles to each other.](figures/ch07-variation.svg){#fig7-variation}
+![A free swing of a spherical pendulum (indigo) and a neighbor released 20° away (terracotta), both simulated. At each instant the neighbor is the reference turned about $\xi$. Watch the tangent plane at $q_d(t)$ ride along with the reference: $\xi$ and the displacement $\delta q = \xi \times q_d$ stay in it, at right angles to each other.](figures/ch07-variation-strip.png){#fig7-variation anim="figures/ch07-variation.gif"}
 
 The variation of the velocity is simpler to define and stranger to live with: $\delta\omega = \omega - \omega_d$, to first order.
 
@@ -39,7 +41,7 @@ Hold two pencils by their ends so that they point in different directions, and t
 Carry $\omega$ over to $q_d$ and compare ([](#fig7-planes)). It sticks out of the plane there. The difference $\delta\omega$ therefore has a component along $q_d$, and that component is not free. It is fixed by how far apart the pencils are and how fast the reference is turning.
 :::
 
-![Why $\delta\omega$ is constrained. The reference spins with $\omega_d$, tangent at $q_d$. The neighbor spins with $\omega$, tangent at $q$. Redrawn at $q_d$ (dashed), $\omega$ leaves the tangent plane, so $\delta\omega = \omega - \omega_d$ has a component along $q_d$ (teal).](figures/ch07-two-planes.svg){#fig7-planes}
+![Why $\delta\omega$ is constrained. The reference spins with $\omega_d$, tangent at $q_d$. The neighbor spins with $\omega$, tangent at $q$. Carried over to $q_d$ (dashed), $\omega$ leaves the tangent plane, so $\delta\omega = \omega - \omega_d$ has a component along $q_d$ (teal). Watch it shrink as the two directions come together.](figures/ch07-planes-strip.png){#fig7-planes anim="figures/ch07-planes.gif"}
 
 To find that component, vary $q \cdot \omega = 0$ with [](#eq7-var-s2). The result is the part of [](#eq3-delta-omega) along $q$:
 
@@ -97,7 +99,7 @@ Near the reference the linear state *is* the geometric error of [](#def-error-s2
 
 [](#fig7-linear) tests the prediction on a free swing. Release a neighbor 1° away and after 1.2 s the linear model is off by 1.6% of the error. At 10° it is off by 16%, at 30° by 48%. The mismatch grows in proportion to the initial angle. That is what "first order" means, and it is the only promise a linearization makes.
 
-![What the linear state predicts. Left: the error $\|e_q(t)\|$ between two simulated swings, divided by the initial angle, against the linear prediction from [](#eq7-s2-lin). Right: the relative error of the prediction at 1.2 s grows in proportion to the initial angle.](figures/ch07-linear-vs-nonlinear.svg){#fig7-linear}
+![What the linear state predicts. Left: the error $\|e_q(t)\|$ between two simulated swings, divided by the initial angle, against the linear prediction from [](#eq7-s2-lin). The 1° and 10° errors stay on the prediction and the 30° error peels away. Right: the relative error of the prediction as the swing goes on. At 1.2 s it is in proportion to the initial angle.](figures/ch07-linear-strip.png){#fig7-linear anim="figures/ch07-linear.gif"}
 
 The experiment also has a trap in it. The neighbor's $\omega$ must be perpendicular to the neighbor's $q$, so its initial $\delta\omega$ has to satisfy [](#eq7-var-omega). Start the linear model from $(\xi, 0)$ instead and the prediction is wrong by 3.5% however small the perturbation. The constraints are part of the model.
 
@@ -249,7 +251,7 @@ Level, the two are hard to tell apart. Peak torque is 0.76 N·m for the geometri
 At 85° of pitch the geometric loop does exactly what it did before, to the last digit. The Euler loop rolls the body almost all the way over ([](#fig7-hold)). The attitude error climbs from 20° to 177.8° before it recovers. Peak torque is 14.2 N·m, 19 times higher, and the effort $\int\|\tau\|^2\dd t$ is 327 times higher. At 88° of pitch a 5° error is enough to set it off.
 :::
 
-![Holding a nose-up attitude at 85° of pitch from a 20° initial error, simulated. Left: the path traced by the body's second axis. The geometric LQR moves it straight to the target. The Euler-angle LQR sends it round the sphere. Right: the attitude error angle of both loops.](figures/ch07-hold.svg){#fig7-hold}
+![Holding a nose-up attitude at 85° of pitch from a 20° initial error, simulated. Left: the same body under the two loops, with the target dashed. The geometric LQR turns it straight to the target. The Euler-angle LQR rolls it almost all the way over first. Right: the attitude error angle of both loops.](figures/ch07-hold-strip.png){#fig7-hold anim="figures/ch07-hold.gif"}
 
 The cause is the one from [](#ex-euler-blowup). Near the pole of the chart a small rotation is a large change of yaw and roll. The Euler regulator sees a large error, where the body has a small one, and spends torque on it.
 
@@ -261,7 +263,7 @@ Now a reference that moves. The body makes one full turn in 1.5 s about an axis 
 Start the body 15° off. The geometric loop ends the flip 0.007° from the reference. Its peak torque is 0.86 N·m, against 0.80 for the feedforward alone.
 :::
 
-![Riccati gain along the flip of [](#ex7-flip). Top: the pitch angle of the reference passes within 5° of the chart singularity twice. Bottom: the norm of the LQR gain, designed in the linear state $(\eta, \delta\Omega)$ and in Euler angles.](figures/ch07-gain-history.svg){#fig7-gain}
+![Riccati gain along the flip of [](#ex7-flip). Left: the reference attitude. Top: its pitch angle passes within 5° of the chart singularity twice. Bottom: the norm of the LQR gain, designed in the linear state $(\eta, \delta\Omega)$ and in Euler angles. Watch the Euler-angle gain swell before each pass.](figures/ch07-gain-strip.png){#fig7-gain anim="figures/ch07-gain.gif"}
 
 One more number, for honesty. The Euler-angle LQR also tracks this flip, ending 0.005° off. The reference is within 10° of the pole for less than 0.05 s per pass, too briefly for the swollen gain to do harm. A chart singularity hurts where you linger, as in [](#ex7-hold), and it forbids a reference that passes through it. It does not ruin every maneuver that goes near.
 
