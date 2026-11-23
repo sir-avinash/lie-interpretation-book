@@ -513,7 +513,7 @@ def book_frame(t):
     for done_axis, _ in BOOK_PHASES[:idx]:               # the spins already shown stayed where they were
         s.dot(np.eye(3)[done_axis], color=INDIGO, size=6)
     trail = np.array([book_state(axis, T, x)[1] for x in np.linspace(0, tau, max(2, int(400 * tau / T)))])
-    s.sphere_curve(1.003 * trail, color=col, lw=2.0, zorder=18)
+    s.sphere_curve(1.003 * trail, color=col, lw=2.0, zorder=18, alpha=1.0)
     s.dot(1.003 * p, color=col, size=7, hollow=not s.point_visible(p), zorder=45)
     s.text2d(0.0, 1.24, r"body angular momentum $J\Omega$ on its sphere", fontsize=9.5, color=MUTED, **SANS)
 
@@ -582,10 +582,10 @@ def variation_frame(t):
     s.sphere_curve(great_circle(E3), color=INK, lw=0.6, alpha=0.45)
     for e in (VAR_EPS, -VAR_EPS):                              # the two extremes of the sweep, faint
         s.sphere_curve(varied(e)[::10], color=TEAL, lw=0.8, alpha=0.35, show_hidden=False, zorder=15)
-    s.sphere_curve(Q[::6], color=INDIGO, lw=2.2, zorder=17, show_hidden=False)
+    s.sphere_curve(Q[::6], color=INDIGO, lw=2.2, zorder=17, show_hidden=False, alpha=1.0)
     Qe = varied(eps)
     if abs(eps) > 1e-3:
-        s.sphere_curve(1.002 * Qe[::6], color=TEAL, lw=2.0, zorder=18, show_hidden=False)
+        s.sphere_curve(1.002 * Qe[::6], color=TEAL, lw=2.0, zorder=18, show_hidden=False, alpha=1.0)
         for k in (210, 400, 600, 800, 990):                     # the displacement of five points of the path
             s.arrow(1.004 * Q[k], 1.004 * Qe[k], color=TERRACOTTA, lw=1.2, head=0.075, zorder=31)
         mid = Qe[600]
@@ -668,8 +668,8 @@ def cut_frame(t):
     xC = (M_Q * xQ + M_L * xL) / (M_Q + M_L)
     s = Scene(width=6.9, height=4.1, azim=-90, elev=9, xlim=(-1.3, 5.9), ylim=(-3.45, 0.828))
     kc = int(np.searchsorted(tt, t_cut))
-    s.curve(xC[:k + 1], color=TEAL, lw=1.0, alpha=0.9, zorder=16)
-    s.curve(xL[:k + 1], color=INDIGO, lw=1.6, alpha=0.9, zorder=17)
+    s.curve(xC[:k + 1], color=TEAL, lw=1.0, alpha=1.0, zorder=16)
+    s.curve(xL[:k + 1], color=INDIGO, lw=1.6, alpha=1.0, zorder=17)
     s.curve(np.array([xQ[k], xL[k]]), color=INK, lw=1.1, alpha=1.0, zorder=25)
     quadrotor(s, xQ[k], np.eye(3), arm=0.34)
     if on:
