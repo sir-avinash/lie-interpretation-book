@@ -451,6 +451,33 @@ class EulerMPC:
         return ff[:3] + U[:3]
 
 
+class Turn:
+    """Rest-to-rest turn by `angle` about a fixed body axis in time T, then hold.
+
+    Turn(2 pi, axis tilted 5 deg from e2, 1.5) is the flip of Chapter 7.
+    """
+
+    def __init__(self, angle, axis, T):
+        self.total, self.n, self.T = angle, unit(axis), T
+
+    def __call__(self, t):
+        s = np.clip(t / self.T, 0.0, 1.0)
+        a = self.total * (10 * s**3 - 15 * s**4 + 6 * s**5)
+        da = self.total * (30 * s**2 - 60 * s**3 + 30 * s**4) / self.T
+        dda = self.total * (60 * s - 180 * s**2 + 120 * s**3) / self.T**2
+        Od = da * self.n
+        return expm_so3(a * self.n), Od, J_B @ (dda * self.n) + np.cross(Od, J_B @ Od)
+
+
+def flip_ref():
+    d = np.radians(5.0)
+    return Turn(2 * np.pi, [np.sin(d), np.cos(d), 0.0], 1.5)
+
+
+def pitch_up_ref(pitch_deg=88.0):
+    return Turn(np.radians(pitch_deg), E2, 1.0)
+
+
 def plant_step(R, Om, tau, h, J=J_B):
     """The nonlinear rigid body over one sampling period with the torque held."""
     def rhs(t, y):
