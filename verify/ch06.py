@@ -492,6 +492,447 @@ ck.record("linger_log_e1_s", [float(x) for x in tl])
 t_half, ang_half = settle_time(np.diag([1.0, -1.0, -1.0]), t_f=10.0)
 ck.true("exactly half a turn, at rest: the body stays there", abs(ang_half - 180) < 1e-6, f"angle after 10 s: {ang_half:.6f}")
 
+# =========================================================================
+# 5. The same template on the sphere
+# =========================================================================
+sp_mod, sp_layout, sp_p = library("spherical_pendulum")
+m_p, l_p = 1.0, 1.0
+sp_p.update(m=m_p, l=l_p, g=G)
+k_q, k_om = 16.0, 5.6
+ck.record("s2_params", {"m": m_p, "l": l_p, "k_q": k_q, "k_omega": k_om})
+
+
+def pend_omega_dot(q, om, F):
+    """m l^2 omega_dot = -m g l q x e3 + l q x F  (force F on the bob)."""
+    return (-m_p * G * l_p * np.cross(q, E3) + l_p * np.cross(q, F)) / (m_p * l_p**2)
+
+
+worst = 0.0
+for _ in range(20):
+    q = unit(rng.normal(size=3))
+    om, F = tangent(q, rng.normal(size=3)), rng.normal(size=3)
+    a_g = accelerations(sp_mod, sp_layout.pack(q=q, omega_q=om), l_p * np.cross(q, F), sp_p)
+    worst = max(worst, np.max(np.abs(a_g - pend_omega_dot(q, om, F))))
+ck.true("pendulum with a force on the bob equals geomech (moment l q x F)", worst < 1e-9, f"err {worst:.1e}")
+
+CONE, W_REF = np.radians(35), 1.2
+
+
+def ref_s2(t):
+    """Reference direction on a cone about e3: q_d, omega_d, omega_d_dot."""
+    c, s = np.cos(W_REF * t), np.sin(W_REF * t)
+    qd = np.array([np.sin(CONE) * c, np.sin(CONE) * s, np.cos(CONE)])
+    qd1 = np.sin(CONE) * W_REF * np.array([-s, c, 0])
+    qd2 = -np.sin(CONE) * W_REF**2 * np.array([c, s, 0])
+    return qd, np.cross(qd, qd1), np.cross(qd, qd2)
+
+
+B_ref = float(np.linalg.norm(ref_s2(0.3)[1]))
+ck.close("reference on the cone: |omega_d| = w sin(alpha), constant", [np.linalg.norm(ref_s2(t)[1]) for t in (0, 1, 2.2)], [W_REF * np.sin(CONE)] * 3)
+ck.record("s2_omega_d_bound", B_ref)
+
+
+def omega_dot_des(q, om, qd, omd, omd_dot, kq=k_q, kom=k_om):
+    """(I - q q') omega_d_dot - (q . omega_d) q_dot - k_q e_q - k_omega e_omega."""
+    return tangent(q, omd_dot) - (q @ omd) * np.cross(om, q) - kq * e_q(q, qd) - kom * e_omega(q, om, omd)
+
+
+def s2_force(q, om, qd, omd, omd_dot):
+    return m_p * G * E3 + m_p * l_p * np.cross(omega_dot_des(q, om, qd, omd, omd_dot), q)
+
+
+# identities and derivative formulas on the sphere
+w1 = w2 = w3 = w4 = w5 = 0.0
+for _ in range(100):
+    q, qd = unit(rng.normal(size=3)), unit(rng.normal(size=3))
+    om, omd = tangent(q, rng.normal(size=3)), tangent(qd, rng.normal(size=3))
+    om_dot = tangent(q, rng.normal(size=3))                 # q . omega_dot = 0
+    omd_dot = tangent(qd, rng.normal(size=3))
+    eq, ew, Psi = e_q(q, qd), e_omega(q, om, omd), Psi_q(q, qd)
+    w1 = max(w1, abs(eq @ eq - Psi * (2 - Psi)), abs(eq @ q), abs(ew @ q))
+    d = 1e-6
+
+    def at(h):
+        q_ = expm_so3(h * om + 0.5 * h * h * om_dot) @ q
+        qd_ = expm_so3(h * omd + 0.5 * h * h * omd_dot) @ qd
+        return q_, om + h * om_dot, qd_, omd + h * omd_dot
+
+    (qa, oma, qda, omda), (qb, omb, qdb, omdb) = at(d), at(-d)
+    w2 = max(w2, abs((Psi_q(qa, qda) - Psi_q(qb, qdb)) / (2 * d) - eq @ ew))
+    fd_ew = (e_omega(qa, tangent(qa, oma), omda) - e_omega(qb, tangent(qb, omb), omdb)) / (2 * d)
+    ew_dot = om_dot - tangent(q, omd_dot) + (q @ omd) * np.cross(om, q) + (np.cross(om, q) @ omd) * q
+    w3 = max(w3, np.max(np.abs(fd_ew - ew_dot)))
+    fd_eq = (e_q(qa, qda) - e_q(qb, qdb)) / (2 * d)
+    eq_dot = (q @ qd) * ew + (q @ omd) * np.cross(q, eq) - (qd @ om) * q
+    w4 = max(w4, np.max(np.abs(fd_eq - eq_dot)))
+    # closed loop with the force law: tangent part of e_omega_dot is -k_q e_q - k_omega e_omega
+    F = s2_force(q, om, qd, omd, omd_dot)
+    od = pend_omega_dot(q, om, F)
+    ew_dot_cl = od - tangent(q, omd_dot) + (q @ omd) * np.cross(om, q) + (np.cross(om, q) @ omd) * q
+    w5 = max(w5, np.max(np.abs(ew_dot_cl - (-k_q * eq - k_om * ew + (np.cross(om, q) @ omd) * q))), abs(od @ q))
+ck.true("sphere: |e_q|^2 = Psi_q (2 - Psi_q), e_q . q = 0, e_omega . q = 0", w1 < 1e-12, f"err {w1:.1e}")
+ck.true("sphere: Psi_q_dot = e_q . e_omega (finite differences)", w2 < 1e-8, f"err {w2:.1e}")
+ck.true("sphere: e_omega_dot = omega_dot - (I-qq')omega_d_dot + (q.omega_d) q_dot + (q_dot.omega_d) q", w3 < 1e-7, f"err {w3:.1e}")
+ck.true("sphere: e_q_dot formula of Chapter 3 (finite differences)", w4 < 1e-7, f"err {w4:.1e}")
+ck.true("sphere closed loop: e_omega_dot = -k_q e_q - k_omega e_omega + (q_dot.omega_d) q, and q.omega_dot = 0", w5 < 1e-10, f"err {w5:.1e}")
+
+
+def c_max_s2(kq, kom, B):
+    return min(np.sqrt(kq), 4 * kq * kom / ((kom + B)**2 + 4 * kq))
+
+
+def mats_s2(kq, kom, B, c, psi):
+    M1 = 0.5 * np.array([[kq, -c], [-c, 1.0]])
+    M2 = 0.5 * np.array([[2 * kq / (2 - psi), c], [c, 1.0]])
+    W = np.array([[c * kq, -c * (kom + B) / 2], [-c * (kom + B) / 2, kom - c]])
+    return M1, M2, W
+
+
+viol_lo = viol_up = viol_dot = err_dot = 0.0
+n_pd = 0
+for _ in range(4000):
+    kq, kom, B = 0.1 + 30 * rng.random(), 0.05 + 8 * rng.random(), 3 * rng.random()
+    c = c_max_s2(kq, kom, B) * rng.uniform(0.01, 0.99)
+    psi = 2 * rng.uniform(0.01, 0.999)
+    qd = unit(rng.normal(size=3))
+    th = np.arccos(1 - psi * rng.random())
+    q = expm_so3(th * unit(tangent(qd, rng.normal(size=3)))) @ qd
+    omd = B * rng.random() * unit(tangent(qd, rng.normal(size=3)))
+    ew = 3 * rng.random() * tangent(q, rng.normal(size=3))
+    om = ew + tangent(q, omd)
+    eq, Psi = e_q(q, qd), Psi_q(q, qd)
+    z = np.array([np.linalg.norm(eq), np.linalg.norm(ew)])
+    M1, M2, W = mats_s2(kq, kom, B, c, psi)
+    V = 0.5 * ew @ ew + kq * Psi + c * eq @ ew
+    viol_lo, viol_up = max(viol_lo, z @ M1 @ z - V), max(viol_up, V - z @ M2 @ z)
+    ew_dot = -kq * eq - kom * ew + (np.cross(om, q) @ omd) * q
+    eq_dot = (q @ qd) * ew + (q @ omd) * np.cross(q, eq) - (qd @ om) * q
+    Vdot = ew @ ew_dot + kq * eq @ ew + c * (eq_dot @ ew + eq @ ew_dot)
+    Vdot_formula = (-kom * ew @ ew + c * (q @ qd) * ew @ ew + c * (q @ omd) * np.cross(q, eq) @ ew
+                    - c * kq * eq @ eq - c * kom * eq @ ew)
+    err_dot = max(err_dot, abs(Vdot - Vdot_formula))
+    viol_dot = max(viol_dot, Vdot + z @ W @ z)
+    n_pd += (np.linalg.eigvalsh(M1)[0] > 0) and (np.linalg.eigvalsh(W)[0] > 0)
+ck.true("sphere: z'M1 z <= V <= z'M2 z on Psi_q <= psi (4000 random states and gains)", max(viol_lo, viol_up) < 1e-10,
+        f"max viol {max(viol_lo, viol_up):.1e}")
+ck.true("sphere: V_dot formula with the cross term", err_dot < 1e-9, f"err {err_dot:.1e}")
+ck.true("sphere: V_dot <= -z'W z for |omega_d| <= B (4000 random states and gains)", viol_dot < 1e-10, f"max viol {viol_dot:.1e}")
+ck.true("sphere: M1 > 0 and W > 0 for every c below the stated bound", n_pd == 4000, f"{n_pd}/4000")
+
+
+def s2_rhs(t, s):
+    q, om = s[:3], s[3:]
+    return np.concatenate([np.cross(om, q), pend_omega_dot(q, om, s2_force(q, om, *ref_s2(t)))])
+
+
+def s2_run(angle_deg, t_f=8.0, n=1601, side=E2):
+    qd0, omd0, _ = ref_s2(0.0)
+    q0 = expm_so3(np.radians(angle_deg) * unit(np.cross(qd0, side))) @ qd0
+    sol = solve_ivp(s2_rhs, [0, t_f], np.concatenate([q0, tangent(q0, omd0)]), t_eval=np.linspace(0, t_f, n), rtol=1e-10, atol=1e-12)
+    return sol.t, sol.y[:3].T, sol.y[3:].T
+
+
+s2_times = {}
+for ang in (60.0, 170.0, 179.9):
+    ts_, qs_, oms_ = s2_run(ang)
+    refs = [ref_s2(t) for t in ts_]
+    Ps = np.array([Psi_q(q, r[0]) for q, r in zip(qs_, refs)])
+    V0 = np.array([0.5 * e_omega(q, om, r[1]) @ e_omega(q, om, r[1]) + k_q * Psi_q(q, r[0]) for q, om, r in zip(qs_, oms_, refs)])
+    ck.true(f"sphere run from {ang:g} deg: V0 never increases, |q| = 1, converges", np.max(np.diff(V0)) < 1e-9
+            and abs(np.linalg.norm(qs_[-1]) - 1) < 1e-8 and Ps[-1] < 1e-9, f"final Psi_q {Ps[-1]:.1e}")
+    ang_t = np.degrees(np.arccos(np.clip(1 - Ps, -1, 1)))
+    s2_times[f"{ang:g}"] = float(ts_[np.nonzero(ang_t > 5)[0][-1] + 1])
+    if ang == 170.0:
+        psi_bar_s = V0[0] / k_q
+        beta_s, c_s = max(((np.linalg.eigvalsh(mats_s2(k_q, k_om, B_ref, c_, psi_bar_s)[2])[0]
+                            / np.linalg.eigvalsh(mats_s2(k_q, k_om, B_ref, c_, psi_bar_s)[1])[-1]), c_)
+                          for c_ in np.linspace(0.002, 0.998, 499) * c_max_s2(k_q, k_om, B_ref))
+        Vc = np.array([0.5 * e_omega(q, om, r[1]) @ e_omega(q, om, r[1]) + k_q * Psi_q(q, r[0]) + c_s * e_q(q, r[0]) @ e_omega(q, om, r[1])
+                       for q, om, r in zip(qs_, oms_, refs)])
+        ck.true("sphere run from 170 deg: V(t) <= V(0) exp(-beta t)", np.all(Vc <= Vc[0] * np.exp(-beta_s * ts_) * (1 + 1e-9) + 1e-12), f"beta {beta_s:.3f}")
+        ck.record("s2_example", {"psi_bar": float(psi_bar_s), "beta_guaranteed": float(beta_s), "c_max": float(c_max_s2(k_q, k_om, B_ref))})
+ck.record("s2_time_to_5deg_s", s2_times)
+# antipode of a fixed target: two unstable directions, rate from lam^2 + k_omega lam - k_q = 0
+lam_s2 = (-k_om + np.sqrt(k_om**2 + 4 * k_q)) / 2
+qd = E3
+q = expm_so3(1e-5 * E1) @ (-qd)
+ck.close("sphere, near the antipode: e_q = -xi to first order", e_q(q, qd) / 1e-5, -E1, tol=1e-4)
+ck.record("s2_antipode_rate", float(lam_s2))
+
+
+# =========================================================================
+# 6. The quadrotor cascade
+# =========================================================================
+q_mod, q_layout, q_p = library("quadrotor")
+worst = 0.0
+for _ in range(20):
+    R, Om, f, tau = random_rotation(rng), rng.normal(size=3), 5 + 60 * rng.random(), rng.normal(size=3)
+    a_g = accelerations(q_mod, q_layout.pack(x=rng.normal(size=3), R=R, x_dot=rng.normal(size=3), Omega_R=Om),
+                        np.concatenate([[f], tau]), {**q_p, "m": m_Q, "J": J})
+    mine = np.concatenate([f * R @ E3 / m_Q - G * E3, Jinv @ (tau - np.cross(Om, J @ Om))])
+    worst = max(worst, np.max(np.abs(a_g - mine)))
+ck.true("quadrotor: m x_ddot = f R e3 - m g e3, J Om_dot + Om x J Om = tau equals geomech", worst < 1e-9, f"err {worst:.1e}")
+
+
+def ref_pos(t, w=1.0, r=1.5):
+    """Circle of radius 1.5 m with a vertical wobble; heading along the tangent. Returns x_d and four derivatives,
+    then the heading vector and two derivatives."""
+    c, s = np.cos(w * t), np.sin(w * t)
+    c2, s2 = np.cos(2 * w * t), np.sin(2 * w * t)
+    x = np.array([r * c, r * s, 0.3 * s2])
+    v = np.array([-r * w * s, r * w * c, 0.6 * w * c2])
+    a = np.array([-r * w**2 * c, -r * w**2 * s, -1.2 * w**2 * s2])
+    j = np.array([r * w**3 * s, -r * w**3 * c, -2.4 * w**3 * c2])
+    sn = np.array([r * w**4 * c, r * w**4 * s, 4.8 * w**4 * s2])
+    psi = w * t + np.pi / 2
+    hd = np.array([np.cos(psi), np.sin(psi), 0.0])
+    return x, v, a, j, sn, hd, w * np.array([-np.sin(psi), np.cos(psi), 0.0]), -w**2 * hd
+
+
+def Rd_from(F, hd):
+    """Attitude target: third axis along F, first axis as close to the heading hd as that allows."""
+    b3 = unit(F)
+    b2 = unit(np.cross(b3, hd))
+    return np.column_stack([np.cross(b2, b3), b2, b3])
+
+
+def Rd_derivs(F, F1, F2, hd, hd1, hd2, d=1e-4):
+    """R_d, Omega_d, Omega_d_dot from F_d, the heading and their first two time derivatives."""
+    def g(s):
+        return Rd_from(F + s * F1 + 0.5 * s * s * F2, hd + s * hd1 + 0.5 * s * s * hd2)
+
+    R0, Rp, Rm = g(0.0), g(d), g(-d)
+    Wd = R0.T @ (Rp - Rm) / (2 * d)
+    Omd = vee(0.5 * (Wd - Wd.T))
+    A2 = R0.T @ (Rp - 2 * R0 + Rm) / d**2 - hat(Omd) @ hat(Omd)
+    return R0, Omd, vee(0.5 * (A2 - A2.T))
+
+
+def quad_ctrl(t, x, v, R, Om, ff=True, eps=1.0, clip=True, ref=ref_pos):
+    xd, vd, ad, jd, sd, hd, hd1, hd2 = ref(t)
+    ex, ev = x - xd, v - vd
+    Fd = -k_x * ex - k_v * ev + m_Q * G * E3 + m_Q * ad
+    b3 = R @ E3
+    f = Fd @ b3
+    on = f > 0 or not clip
+    f = f if on else 0.0
+    ev1 = f * b3 / m_Q - G * E3 - ad                            # e_v_dot from the model
+    F1 = -k_x * ev - k_v * ev1 + m_Q * jd
+    b3_dot = R @ np.cross(Om, E3)
+    f1 = (F1 @ b3 + Fd @ b3_dot) if on else 0.0
+    ev2 = (f1 * b3 + f * b3_dot) / m_Q - jd
+    F2 = -k_x * ev1 - k_v * ev2 + m_Q * sd
+    Rd, Omd, Omd_dot = Rd_derivs(Fd, F1, F2, hd, hd1, hd2)
+    if not ff:
+        Omd, Omd_dot = np.zeros(3), np.zeros(3)
+    tau = att_torque(R, Om, Rd, Omd, Omd_dot, k_R / eps**2, k_Om / eps)
+    return f, tau, Rd, Omd, ex, ev, Fd
+
+
+def quad_rhs(t, s, ff, eps, clip):
+    x, v, R, Om = s[:3], s[3:6], s[6:15].reshape(3, 3), s[15:18]
+    f, tau, *_ = quad_ctrl(t, x, v, R, Om, ff, eps, clip)
+    return np.concatenate([v, f * R @ E3 / m_Q - G * E3, (R @ hat(Om)).ravel(), Jinv @ (tau - np.cross(Om, J @ Om))])
+
+
+def quad_run(x0, v0, R0, Om0, t_f, ff=True, eps=1.0, clip=True, n=2001, stop=None):
+    ev = None
+    if stop is not None:
+        def ev(t, s, *a):
+            return stop - np.linalg.norm(s[:3] - ref_pos(t)[0])
+        ev.terminal = True
+    sol = solve_ivp(quad_rhs, [0, t_f], np.concatenate([x0, v0, R0.ravel(), Om0]), args=(ff, eps, clip),
+                    t_eval=np.linspace(0, t_f, n), rtol=1e-9, atol=1e-11, max_step=0.01, events=ev)
+    return sol.t, sol.y.T
+
+
+# the thrust error: Delta = f R e3 - F_d has length |F_d| sin(tilt), and is bounded by |F_d| |e_R| when Psi_R < 1
+w1 = 0.0
+viol = -np.inf
+for _ in range(2000):
+    Fd, hd = rng.normal(size=3) * 20, unit(rng.normal(size=3))
+    Rd = Rd_from(Fd, hd)
+    th = np.pi * rng.random()
+    R = Rd @ expm_so3(th * unit(rng.normal(size=3)))
+    b3 = R @ E3
+    Delta = (Fd @ b3) * b3 - Fd
+    tilt = np.arccos(np.clip(b3 @ unit(Fd), -1, 1))
+    w1 = max(w1, abs(np.linalg.norm(Delta) - np.linalg.norm(Fd) * np.sin(tilt)), np.max(np.abs(Rd @ E3 - unit(Fd))),
+             np.max(np.abs(Rd.T @ Rd - I3)), abs(np.linalg.det(Rd) - 1), abs((Rd @ E2) @ hd), float(tilt > th + 1e-9))
+    if Psi_R(R, Rd) < 1:
+        viol = max(viol, np.linalg.norm(Delta) - np.linalg.norm(Fd) * np.linalg.norm(e_R(R, Rd)))
+ck.true("R_d is a rotation with R_d e3 = F_d/|F_d| and second axis perpendicular to the heading; |Delta| = |F_d| sin(tilt); tilt <= theta",
+        w1 < 1e-9, f"err {w1:.1e}")
+ck.true("|f R e3 - F_d| <= |F_d| |e_R| whenever Psi_R < 1 (2000 samples)", viol < 1e-9, f"max viol {viol:.1e}")
+# the bound fails beyond 90 degrees
+R = Rd @ expm_so3(np.radians(170) * (Rd.T @ unit(np.cross(Rd @ E3, E1))))
+b3 = R @ E3
+ck.true("the bound |Delta| <= |F_d||e_R| can fail when Psi_R > 1", np.linalg.norm((Fd @ b3) * b3 - Fd) > np.linalg.norm(Fd) * np.linalg.norm(e_R(R, Rd)))
+
+# Omega_d from the finite-difference construction matches a direct derivative of R_d along a run
+x0 = ref_pos(0)[0] + np.array([0.6, -0.4, 0.5])
+t_q, S_q = quad_run(x0, np.zeros(3), Rz(np.pi / 2) @ Rx(np.radians(60)), np.zeros(3), 8.0, n=8001)
+info = [quad_ctrl(t, s[:3], s[3:6], s[6:15].reshape(3, 3), s[15:18]) for t, s in zip(t_q, S_q)]
+k = 3000
+Omd_fd = vee(info[k][2].T @ (info[k + 1][2] - info[k - 1][2]) / (t_q[k + 1] - t_q[k - 1]))
+ck.close("Omega_d used by the controller equals the derivative of R_d(t) along the closed loop", info[k][3], Omd_fd, tol=1e-5)
+ck.true("no clipping in this run after the first instants (thrust positive)", min(i[0] for i in info[200:]) > 0)
+# with the exact feedforward the attitude error system of the quadrotor is the autonomous one of section 2
+Re0 = info[0][2].T @ S_q[0, 6:15].reshape(3, 3)
+eOm0 = S_q[0, 15:18] - Re0.T @ info[0][3]
+t_cmp, run_cmp = att_run(Re0, eOm0, 8.0, moving=False, n=8001)
+gap = max(np.max(np.abs(i[2].T @ s[6:15].reshape(3, 3) - a[0])) for i, s, a in zip(info[::40], S_q[::40], run_cmp[::40]))
+ck.true("cascade is triangular: the quadrotor's attitude error follows the autonomous error system", gap < 1e-4, f"gap {gap:.1e}")
+ck.record("cascade_triangular_gap", float(gap))
+Psi_q0 = Psi_R(S_q[0, 6:15].reshape(3, 3), info[0][2])
+ex_q = np.array([np.linalg.norm(i[4]) for i in info])
+ck.true("quadrotor from a 60 degree tilt and 0.9 m offset: position error below 1 mm after 4 s, 1e-6 at 8 s",
+        np.max(ex_q[t_q > 4]) < 1e-3 and ex_q[-1] < 1e-6, f"{np.max(ex_q[t_q > 4]):.1e}, {ex_q[-1]:.1e}")
+
+# recovery from upside down (thrust clipped at zero)
+R0_inv = Rz(np.pi / 2) @ Rx(np.radians(178))
+t_i, S_i = quad_run(x0, np.zeros(3), R0_inv, np.zeros(3), 8.0, n=8001)
+info_i = [quad_ctrl(t, s[:3], s[3:6], s[6:15].reshape(3, 3), s[15:18]) for t, s in zip(t_i, S_i)]
+Psi_i = np.array([Psi_R(s[6:15].reshape(3, 3), i[2]) for s, i in zip(S_i, info_i)])
+ex_i = np.array([np.linalg.norm(i[4]) for i in info_i])
+dz_i = S_i[:, 2] - np.array([ref_pos(t)[0][2] for t in t_i])
+tilt_i = np.degrees(np.arccos(np.clip(S_i[:, 14], -1, 1)))             # angle between R e3 and e3
+f_i = np.array([i[0] for i in info_i])
+tau_i = np.array([np.linalg.norm(i[1]) for i in info_i])
+ck.true("inverted start: all errors converge", ex_i[-1] < 1e-6 and Psi_i[-1] < 1e-9, f"e_x {ex_i[-1]:.1e}, Psi_R {Psi_i[-1]:.1e}")
+ck.true("inverted start: F_d never vanishes, so R_d is defined throughout", min(np.linalg.norm(i[6]) for i in info_i) > 5)
+t_upright = float(t_i[np.nonzero(tilt_i > 90)[0][-1] + 1])
+ck.record("inverted", {"tilt0_deg": float(tilt_i[0]), "Psi_R0": float(Psi_i[0]), "t_Psi_below_1_s": float(t_i[np.nonzero(Psi_i >= 1)[0][-1] + 1]),
+                       "t_tilt_below_90_s": t_upright, "max_drop_m": float(-np.min(dz_i)), "max_e_x_m": float(np.max(ex_i)),
+                       "t_e_x_below_5cm_s": float(t_i[np.nonzero(ex_i > 0.05)[0][-1] + 1]), "max_thrust_N": float(np.max(f_i)),
+                       "hover_thrust_N": float(m_Q * G), "max_torque_Nm": float(np.max(tau_i)),
+                       "e_x_0_m": float(ex_i[0]), "thrust_zero_until_s": float(t_i[np.nonzero(f_i <= 0)[0][-1] + 1])})
+
+# feedforward dropped (Omega_d = 0, Omega_d_dot = 0): the inner loop must be faster
+x0s = ref_pos(0)[0] + np.array([0.05, 0.0, 0.0])
+ff_study = {}
+for eps_ in (1.0, 0.5, 0.25):
+    t_, S_ = quad_run(x0s, ref_pos(0)[1], Rz(np.pi / 2), np.zeros(3), 20.0, ff=False, eps=eps_, n=2001, stop=5.0)
+    e_ = np.array([np.linalg.norm(s[:3] - ref_pos(t)[0]) for t, s in zip(t_, S_)])
+    ff_study[f"{eps_:g}"] = {"diverged": bool(t_[-1] < 19.9), "t_end_s": float(t_[-1]),
+                             "max_e_x_last_5s_m": float(np.max(e_[t_ > 15])) if t_[-1] > 19.9 else None}
+t_, S_ = quad_run(x0s, ref_pos(0)[1], Rz(np.pi / 2), np.zeros(3), 20.0, ff=True, eps=1.0, n=2001, stop=5.0)
+e_ex = np.array([np.linalg.norm(s[:3] - ref_pos(t)[0]) for t, s in zip(t_, S_)])
+ff_study["exact_1"] = {"diverged": bool(t_[-1] < 19.9), "max_e_x_last_5s_m": float(np.max(e_ex[t_ > 15]))}
+ck.record("feedforward_study", ff_study)
+ck.true("exact feedforward, original gains: tracking error below 1e-6 m", ff_study["exact_1"]["max_e_x_last_5s_m"] < 1e-6)
+ck.true("no feedforward, original gains: the cascade diverges (error passes 5 m)", ff_study["1"]["diverged"], f"at t = {ff_study['1']['t_end_s']:.1f} s")
+ck.true("no feedforward, attitude loop 2x and 4x faster: bounded error that shrinks with eps",
+        (not ff_study["0.5"]["diverged"]) and (not ff_study["0.25"]["diverged"])
+        and ff_study["0.25"]["max_e_x_last_5s_m"] < ff_study["0.5"]["max_e_x_last_5s_m"] < 0.05,
+        f"{ff_study['0.5']['max_e_x_last_5s_m']:.4f} m, {ff_study['0.25']['max_e_x_last_5s_m']:.4f} m")
+# exact feedforward with a slow inner loop still converges (the cascade is triangular)
+t_, S_ = quad_run(x0, np.zeros(3), Rz(np.pi / 2) @ Rx(np.radians(20)), np.zeros(3), 20.0, ff=True, eps=3.0, n=2001)
+e_slow = np.linalg.norm(S_[-1, :3] - ref_pos(t_[-1])[0])
+ck.true("exact feedforward, attitude loop 3x slower (slower than the position loop): still converges", e_slow < 1e-6, f"e_x(20 s) = {e_slow:.1e}")
+ck.record("slow_inner_exact_e_x_20s", float(e_slow))
+ck.record("loop_rates", {"position_wn": float(np.sqrt(k_x / m_Q)), "position_zeta": float(k_v / (2 * np.sqrt(k_x * m_Q))),
+                         "attitude_slowest_pole": float(-slowest_pole)})
+
+
+# =========================================================================
+# 7. Quadrotor with a cable-suspended load: a deeper cascade
+# =========================================================================
+ql_mod, ql_layout, ql_p = library("quadrotor_suspended_load")
+m_L, l_c = 0.5, 1.0
+ql_p.update(m_Q=m_Q, m_L=m_L, l=l_c, J=J)
+
+
+def load_accels(q, om, R, Om, f, tau):
+    u = f * R @ E3
+    vL_dot = ((q @ u) - m_Q * l_c * (om @ om)) * q / (m_Q + m_L) - G * E3
+    return vL_dot, -np.cross(q, u) / (m_Q * l_c), Jinv @ (tau - np.cross(Om, J @ Om))
+
+
+worst = 0.0
+for _ in range(20):
+    q = unit(rng.normal(size=3))
+    om = tangent(q, rng.normal(size=3))
+    R, Om, f, tau = random_rotation(rng), rng.normal(size=3), 5 + 60 * rng.random(), rng.normal(size=3)
+    xs = ql_layout.pack(x_L=rng.normal(size=3), q=q, R=R, x_L_dot=rng.normal(size=3), omega_q=om, Omega_R=Om)
+    a_g = accelerations(ql_mod, xs, np.concatenate([[f], tau]), ql_p)
+    worst = max(worst, np.max(np.abs(a_g - np.concatenate(load_accels(q, om, R, Om, f, tau)))))
+ck.true("quadrotor + load: the equations used here equal geomech", worst < 1e-8, f"err {worst:.1e}")
+
+kxL, kvL = 4.0 * (m_Q + m_L), 2.8 * (m_Q + m_L)
+kqL, komL = 25.0, 7.0
+ck.record("load_params", {"m_Q": m_Q, "m_L": m_L, "l": l_c, "k_x": kxL, "k_v": kvL, "k_q": kqL, "k_omega": komL})
+
+
+def load_force(x, v, q, om, xd):
+    """Thrust vector F wanted from the quadrotor, and the cable direction q_d the position loop asks for."""
+    A = -kxL * (x - xd) - kvL * v + (m_Q + m_L) * G * E3 + m_Q * l_c * (om @ om) * q
+    qd = -unit(A)
+    om_des = -kqL * e_q(q, qd) - komL * om                      # target fixed, omega_d taken as zero
+    return (A @ q) * q + m_Q * l_c * np.cross(q, om_des), qd, A, om_des
+
+
+# what the two parts of F do, at random states
+w1 = w2 = 0.0
+for _ in range(200):
+    q = unit(rng.normal(size=3))
+    om = tangent(q, rng.normal(size=3))
+    x, v, xd = rng.normal(size=3), rng.normal(size=3), rng.normal(size=3)
+    F, qd, A, om_des = load_force(x, v, q, om, xd)
+    w1 = max(w1, np.max(np.abs(-np.cross(q, F) / (m_Q * l_c) - om_des)))
+    # if q = q_d, the load equation becomes the PD law
+    F2, qd2, A2, _ = load_force(x, v, qd, tangent(qd, om), xd)
+    lhs = ((qd @ F2) - m_Q * l_c * (tangent(qd, om) @ tangent(qd, om))) * qd
+    w2 = max(w2, np.max(np.abs(lhs - (-kxL * (x - xd) - kvL * v + (m_Q + m_L) * G * E3))))
+ck.true("load cascade: with thrust vector F the cable obeys omega_dot = -k_q e_q - k_omega omega", w1 < 1e-10, f"err {w1:.1e}")
+ck.true("load cascade: when q = q_d the load obeys (m_Q+m_L)(a + g e3) = -k_x e_x - k_v e_v + (m_Q+m_L) g e3", w2 < 1e-9, f"err {w2:.1e}")
+
+
+def load_rhs(t, s, xd, eps):
+    x, v, q, om, R, Om = s[:3], s[3:6], s[6:9], s[9:12], s[12:21].reshape(3, 3), s[21:]
+    F, *_ = load_force(x, v, q, om, xd)
+    f = max(F @ (R @ E3), 0.0)
+    tau = att_torque(R, Om, Rd_from(F, E1), np.zeros(3), np.zeros(3), k_R / eps**2, k_Om / eps)
+    vLd, omd, Omd = load_accels(q, om, R, Om, f, tau)
+    return np.concatenate([v, vLd, np.cross(om, q), omd, (R @ hat(Om)).ravel(), Omd])
+
+
+def load_run(eps, t_f=12.0, n=2401, stop=20.0):
+    xd = np.array([1.5, 0.0, 0.5])
+    q0 = expm_so3(np.radians(40) * E1) @ (-E3)
+    s0 = np.concatenate([np.zeros(6), q0, np.zeros(3), I3.ravel(), np.zeros(3)])
+
+    def ev(t, s, *a):
+        return stop - np.linalg.norm(s[:3] - xd)
+    ev.terminal = True
+    sol = solve_ivp(load_rhs, [0, t_f], s0, args=(xd, eps), t_eval=np.linspace(0, t_f, n), rtol=1e-9, atol=1e-11,
+                    max_step=0.01, events=ev)
+    return sol.t, sol.y.T, xd
+
+
+load_study = {}
+for eps_ in (1.0, 0.5):
+    t_l, S_l, xd_l = load_run(eps_)
+    exl = np.linalg.norm(S_l[:, :3] - xd_l, axis=1)
+    swing = np.degrees(np.arccos(np.clip(-S_l[:, 8], -1, 1)))
+    Tn = []
+    for s in S_l:
+        F, *_ = load_force(s[:3], s[3:6], s[6:9], s[9:12], xd_l)
+        f = max(F @ (s[12:21].reshape(3, 3) @ E3), 0.0)
+        Tn.append(m_L / (m_Q + m_L) * (m_Q * l_c * (s[9:12] @ s[9:12]) - s[6:9] @ (f * s[12:21].reshape(3, 3) @ E3)))
+    conv = bool(t_l[-1] > 11.9 and exl[-1] < 0.01)
+    load_study[f"{eps_:g}"] = {"converged": conv, "t_end_s": float(t_l[-1]), "e_x_end_m": float(exl[-1]), "swing_end_deg": float(swing[-1]),
+                               "t_e_x_below_5cm_s": float(t_l[np.nonzero(exl > 0.05)[0][-1] + 1]) if conv else None,
+                               "max_swing_deg": float(np.max(swing)), "min_tension_N": float(np.min(Tn))}
+ck.record("load_study", load_study)
+ck.true("load cascade, attitude gains of the bare vehicle: diverges", not load_study["1"]["converged"], f"e_x = {load_study['1']['e_x_end_m']:.1f} m at {load_study['1']['t_end_s']:.1f} s")
+ck.true("load cascade, attitude loop 2x faster: load reaches the target, cable hangs straight, cable stays taut",
+        load_study["0.5"]["converged"] and load_study["0.5"]["swing_end_deg"] < 0.5 and load_study["0.5"]["min_tension_N"] > 0,
+        f"e_x {load_study['0.5']['e_x_end_m']:.1e} m, swing {load_study['0.5']['swing_end_deg']:.2f} deg, min T {load_study['0.5']['min_tension_N']:.2f} N")
+ck.record("load_loop_rates", {"position_wn": float(np.sqrt(kxL / (m_Q + m_L))), "cable_wn": float(np.sqrt(kqL)),
+                              "attitude_slowest_pole_eps1": float(-slowest_pole),
+                              "attitude_slowest_pole_eps05": float(-max(np.roots([J[0, 0], k_Om / 0.5, k_R / 0.25]).real))})
+
 # @@NEXT@@
 
 ck.finish()

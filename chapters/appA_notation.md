@@ -3,7 +3,7 @@ title: Notation and glossary
 short: Notation and glossary
 id: app-notation
 summary: Every symbol, convention and technical term of the book, with the place where each is defined.
-epigraph: "By relieving the brain of all unnecessary work, a good notation sets it free to concentrate on more advanced problems, and in effect increases the mental power of the race."
+epigraph: "By relieving the brain of all unnecessary work, a good notation sets it free to concentrate on more advanced problems …"
 epigraph_source: "Alfred North Whitehead, *An Introduction to Mathematics* (1911)"
 ---
 

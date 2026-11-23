@@ -42,7 +42,7 @@ id: ch-manifolds
 summary: One sentence for the contents page.
 notebook: notebooks/ch02_name.ipynb
 verify: verify/ch02.py
-epigraph: A verified quotation that fits the chapter.
+epigraph: A verified quotation that fits the chapter, two lines at most.
 epigraph_source: Author, *Work* (year)
 ---
 

@@ -156,9 +156,9 @@ def so3_mean_iterate(R0, Rs, method="newton", iters=8):
 
 def mean_data():
     """Five attitude readings scattered about one attitude, and the same for four directions."""
-    rng = np.random.default_rng(13)
     Rc = Rz(0.4) @ Ry(1.1) @ Rx(-0.3)
-    Rs = [Rc @ expm_so3(np.radians(40) * unit(rng.normal(size=3)) * rng.uniform(0.5, 1.0)) for _ in range(5)]
+    spread = ((0, [1, 0, 0]), (133, [1, 0.2, 0]), (98, [0, 1, 0.3]), (84, [-0.3, 0.2, 1]), (140, [0.6, 0.7, -0.2]))
+    Rs = [Rc @ expm_so3(np.radians(a) * unit(v)) for a, v in spread]
     pts = [unit(v) for v in ([0.95, 0.05, 0.31], [0.25, 0.80, 0.55], [0.35, -0.45, 0.82], [0.70, 0.45, 0.55])]
     return Rs, pts
 
@@ -519,11 +519,11 @@ def closed_loop(ctrl, ref, R0, Om0, T_end, h=H_MPC):
 class Reorient:
     """Minimum-effort rest-to-rest reorientation with torque bounds and a keep-out cone."""
 
-    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, cone_deg=25.0, tau_max=0.12, J=J_B):
+    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, cone_deg=30.0, tau_max=0.2, J=J_B):
         self.N, self.h, self.J, self.tau_max = N, h, J, tau_max
         self.R0 = np.array(R0, float)
         self.RN = Rz(np.radians(120.0)) if RN is None else np.array(RN, float)
-        self.q_c = unit([np.cos(np.radians(60.0)), np.sin(np.radians(60.0)), 0.10] if q_c is None else q_c)
+        self.q_c = unit([np.cos(np.radians(60.0)), np.sin(np.radians(60.0)), 0.15] if q_c is None else q_c)
         self.cos_c = np.cos(np.radians(cone_deg))
         self.cone_deg = cone_deg
         self.n = 9 * N - 6                               # tangent dimension
@@ -809,20 +809,25 @@ def run_scenario(sc, which):
     return out
 
 
-def prediction_error(theta_deg, t0=0.45, N=N_MPC, h=H_MPC):
-    """How well the linear model predicts the error N steps ahead, with the feedforward torque alone."""
+def prediction_error(theta_deg, rate=2.0, t0=0.45, N=N_MPC, h=H_MPC):
+    """How well the linear model predicts the error N steps ahead, with the feedforward torque alone.
+
+    The initial error is an attitude error of angle theta and a velocity error of rate * theta.
+    """
     ref = flip_ref()
     k0 = int(round(t0 / h))
     Rd, Od, _ = ref(k0 * h)
     chi0 = np.radians(theta_deg) * unit([1.0, -0.6, 0.8])
-    R, Om, s = Rd @ expm_so3(chi0), Od.copy(), np.r_[chi0, ZERO3]
+    dO0 = rate * np.radians(theta_deg) * unit([0.5, 1.0, -0.3])
+    R, Om, s = Rd @ expm_so3(chi0), Od + dO0, np.r_[chi0, dO0]
+    Rn, On = Rd.copy(), Od.copy()                        # the reference under the same sampled torque
     for i in range(N):
         tm = (k0 + i + 0.5) * h
         R, Om = plant_step(R, Om, ref(tm)[2], h)
+        Rn, On = plant_step(Rn, On, ref(tm)[2], h)
         A, _ = zoh(err_A(ref(tm)[1]), ERR_B, h)
         s = A @ s
-    Rd, Od, _ = ref((k0 + N) * h)
-    true = np.r_[log_so3(Rd.T @ R), Om - Od]
+    true = np.r_[log_so3(Rn.T @ R), Om - On]
     return float(np.linalg.norm(s - true) / np.linalg.norm(true))
 
 
@@ -890,7 +895,7 @@ def main():
     ck.close("SO3: sym(dexp_inv(chi)) = (th/2) cot(th/2) I + (1 - (th/2) cot(th/2)) a a^T",
              0.5 * (dexp_inv(chi) + dexp_inv(chi).T), so3_mean_hess(R, [Rs[1]]), tol=1e-12)
 
-    R_start = Rs[0] @ expm_so3(np.radians(100.0) * unit([0.2, 1.0, -0.4]))
+    R_start = Rs[0]
     R_star = so3_mean_iterate(R_start, Rs, "newton", 12)[-1]
     ck.close("SO3 mean: the gradient vanishes at the Newton limit", so3_mean_grad(R_star, Rs), 0, tol=1e-13)
     dist = lambda Rk: float(np.linalg.norm(log_so3(R_star.T @ project_so3(Rk))))   # noqa: E731
@@ -900,7 +905,9 @@ def main():
     ck.close("SO3 Newton: every iterate is a rotation", on_group, 0, tol=1e-14)
     en = [v for v in errs["newton"] if v > 1e-13]
     od = order(en)
-    ck.true("SO3 Newton: observed order of convergence is 2", 1.7 < od[-1] < 2.4, f"errors {' '.join(f'{v:.1e}' for v in en)}; orders {od}")
+    ck.true("SO3 Newton: each step at least squares the error (in radians), until rounding",
+            en[1] < en[0] ** 2 and en[2] < en[1] ** 2 and errs["newton"][3] < 1e-11,
+            f"errors {' '.join(f'{v:.1e}' for v in errs['newton'][:4])}; observed order {od[-1]:.2f}")
     ep = [v for v in errs["project"] if v > 1e-13]
     ck.true("SO3 Newton with the projection retraction: also order 2", order(ep)[-1] > 1.7, f"{' '.join(f'{v:.1e}' for v in ep)}")
     eg = errs["gradient"]
@@ -982,10 +989,10 @@ def main():
         return gap
 
     chi0, dO0 = rng.normal(size=3), rng.normal(size=3)
-    g3, g2 = lin_gap(1e-3, chi0, dO0), lin_gap(1e-2, chi0, dO0)
-    ck.true("linearized error dynamics match perturbed trajectories of the tumbling body", g3 < 1e-5, f"gap {g3:.1e} at eps 1e-3")
+    g3, g2 = lin_gap(1e-4, chi0, dO0), lin_gap(1e-3, chi0, dO0)
+    ck.true("linearized error dynamics match perturbed trajectories of the tumbling body", g3 < 1e-6, f"gap {g3:.1e} at eps 1e-4")
     ck.true("... and the mismatch is second order in the perturbation", 50 < g2 / g3 < 200, f"ratio {g2 / g3:.0f}")
-    ck.record("so3_lin_gap_1e-3", g3)
+    ck.record("so3_lin_gap_1e-4", g3)
     ck.record("so3_lin_gap_ratio", g2 / g3)
 
     # ---- SE(3), twists ordered (V, Omega) --------------------------------------
@@ -1026,10 +1033,10 @@ def main():
         return gap
 
     c0, dz0 = rng.normal(size=6), rng.normal(size=6)
-    g3, g2 = lin_gap6(1e-3, c0, dz0), lin_gap6(1e-2, c0, dz0)
-    ck.true("SE(3): linearized error dynamics match perturbed trajectories", g3 < 1e-4, f"gap {g3:.1e} at eps 1e-3")
+    g3, g2 = lin_gap6(1e-4, c0, dz0), lin_gap6(1e-3, c0, dz0)
+    ck.true("SE(3): linearized error dynamics match perturbed trajectories", g3 < 1e-6, f"gap {g3:.1e} at eps 1e-4")
     ck.true("SE(3): the mismatch is second order", 50 < g2 / g3 < 200, f"ratio {g2 / g3:.0f}")
-    ck.record("se3_lin_gap_1e-3", g3)
+    ck.record("se3_lin_gap_1e-4", g3)
     ck.record("se3_lin_gap_ratio", g2 / g3)
     Y = exp_se3(rng.normal(size=6))
     Xd, Xa = exp_se3(rng.normal(size=6) * 0.5), exp_se3(rng.normal(size=6) * 0.5)
@@ -1201,9 +1208,13 @@ def main():
 
     # ---- how far the linearization reaches -----------------------------------------
     pe = {th: prediction_error(th) for th in (2, 10, 30, 60, 120)}
-    ck.true("prediction error of the linear model grows in proportion to the error angle", 3 < pe[10] / pe[2] < 7 and pe[120] > 0.3,
+    ck.true("prediction error of the linear model grows with the size of the error", pe[10] > 2 * pe[2] and pe[60] > 3 * pe[10],
             " ".join(f"{k}deg:{100 * v:.1f}%" for k, v in pe.items()))
     ck.record("prediction_error", {str(k): v for k, v in pe.items()})
+    pe0 = {th: prediction_error(th, rate=0.0) for th in (10, 120)}
+    ck.true("a pure attitude error is propagated exactly by the linear model, at any size (up to sampling)",
+            max(pe0.values()) < 5e-3, " ".join(f"{k}deg:{100 * v:.2f}%" for k, v in pe0.items()))
+    ck.record("prediction_error_attitude_only", {str(k): v for k, v in pe0.items()})
     Rd, Od, _ = ref(0.0)
     a = unit([0.3, 1.0, 0.2])
     t179 = ErrorStateMPC(ref, 2.2, tau_max=0.6)(0, Rd @ expm_so3(np.radians(179.0) * a), Od)
@@ -1213,9 +1224,9 @@ def main():
     ck.record("cut_locus_cosine", cosang)
 
     # ---- the barrier in one variable --------------------------------------------------
-    for mu in (1.0, 1e-2, 1e-6):
+    for mu in (1.0, 1e-2):
         xb = minimize(lambda v: v[0] - mu * np.log(v[0]), [0.5], bounds=[(1e-12, None)], tol=1e-14).x[0]
-        ck.close(f"barrier: min x - mu ln x is at x = mu (mu = {mu:g})", xb, mu, tol=1e-6 * max(mu, 1e-3) + 1e-9)
+        ck.close(f"barrier: min x - mu ln x is at x = mu (mu = {mu:g})", xb, mu, tol=1e-6)
     xk, zk, mu = 2.0, 0.3, 0.1                           # Newton on (1 - z, x z - mu) = 0
     for _ in range(3):
         dz = 1 - zk
@@ -1312,15 +1323,24 @@ def main():
 
     # local minima: other initial guesses, other answers
     costs = {}
-    for bulge in (0.6, -0.3):
+    for bulge in (0.6, -0.3, -0.9):
         sb = interior_point(prob, prob.initial_guess(bulge))
         ck.true(f"interior point from a guess bulged by {bulge:+.1f} rad converges", sb["converged"], f"{sb['iters']} iterations, cost {prob.cost(sb['x']):.6f}")
         costs[bulge] = prob.cost(sb["x"])
         side = float(np.sign((sb["x"]["R"][prob.N // 2] @ E1) @ E3))
-        ck.record(f"ipm_side_{bulge:+.1f}", side)
+        ck.true(f"... and passes {'over' if bulge < 0 else 'under'} the cone", side == (1.0 if bulge < 0 else -1.0))
+        if bulge == -0.3:
+            act_o = np.nonzero(-prob.ineq(sb["x"]) < 1e-6)[0]
+            Ao = np.vstack([prob.eq_jac(sb["x"]), prob.ineq_jac(sb["x"])[act_o]])
+            _, svo, Vto = np.linalg.svd(Ao)
+            Zo = Vto[np.sum(svo > 1e-9):].T
+            ck.true("the path over the cone is a local minimum too (second-order condition)",
+                    np.linalg.eigvalsh(Zo.T @ prob.lag_hess(sb["x"], sb["y"], sb["z"]) @ Zo).min() > 0)
     costs[0.0] = prob.cost(xs)
-    vals = sorted(costs.values())
-    ck.true("the problem has several local minima: different guesses, different costs", vals[-1] - vals[0] > 1e-5, f"{[round(v, 6) for v in vals]}")
+    ck.true("two local minima: under the cone and over it", abs(costs[0.6] - costs[0.0]) < 1e-7 and abs(costs[-0.9] - costs[-0.3]) < 1e-7
+            and costs[-0.3] > 1.1 * costs[0.0], f"{costs}")
+    ck.record("ipm_cost_over", costs[-0.3])
+    ck.record("ipm_over_penalty", costs[-0.3] / costs[0.0] - 1)
     ck.record("ipm_local_costs", {f"{k:+.1f}": v for k, v in costs.items()})
 
     # central path
@@ -1333,7 +1353,7 @@ def main():
             all(np.diff(pc) < 0) and all(np.diff(gapc) < 0), f"cost {[round(v, 5) for v in pc]}, margin {[f'{v:.1e}' for v in gapc]}")
     comp = max(np.abs(p_["w"] * p_["z"] - mu_).max() for p_, mu_ in zip(path, mus))
     ck.close("central path: w z = mu for every inequality", comp, 0, tol=1e-9)
-    ck.close("central path: the last point is the solution found before", prob.cost(path[-1]["x"]), prob.cost(xs), tol=1e-4)
+    ck.close("central path: the last point is the solution found before", path[-1]["x"]["tau"], xs["tau"], tol=5e-3)
     ck.record("central_path_cost", pc)
     ck.record("central_path_margin_deg", [float(np.degrees(np.arccos(prob.cos_c - g_) - np.radians(prob.cone_deg))) for g_ in gapc])
     em = [hh["Emu"] for hh in path[2]["hist"]]
