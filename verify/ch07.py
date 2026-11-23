@@ -714,6 +714,21 @@ def main():
     r1 = [np.abs(np.cross(qd, expm_so3(e * xi) @ qd) - e * xi).max() for e in (1e-2, 1e-3)]
     ck.true("e_q = xi to first order (remainder is third order)", 500 < r1[0] / r1[1] < 2000)
 
+    # transported velocity error on the sphere (exercise 7.3 and the skill)
+    wd = np.cross(qd, rng.normal(size=3))
+    dw_t = np.cross(qd, rng.normal(size=3))                 # tangential part of delta omega, free
+    dw = dw_t + qd * (xi @ np.cross(wd, qd))               # normal part fixed by the constraint
+    r2 = []
+    for e in (1e-2, 1e-3):
+        qe = expm_so3(e * xi) @ qd
+        we = wd + e * dw
+        we = we - (we @ qe) * qe                            # exactly tangent at the neighbour
+        e_w = we - (I3 - np.outer(qe, qe)) @ wd
+        e_q = np.cross(qd, qe)
+        r2.append((np.abs(e_w - e * dw_t).max(), np.abs(e_w + qd * (e_q @ np.cross(wd, qd)) - e * dw).max()))
+    ck.true("S2: e_omega = (I - q_d q_d^T) delta omega to first order", 50 < r2[0][0] / r2[1][0] < 200)
+    ck.true("S2: delta omega = e_omega + q_d (e_q . (omega_d x q_d)) to first order", 50 < r2[0][1] / r2[1][1] < 200)
+
     # nonlinear error against the linear prediction, as the perturbation grows (figure 7.2)
     q0, w0 = s2_swing()
     Tsw = 1.2
