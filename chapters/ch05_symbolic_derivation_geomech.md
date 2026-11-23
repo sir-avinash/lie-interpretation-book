@@ -24,7 +24,9 @@ They are [](#eq4-load) again. The load is at $x_L$. The unit vector $q$ points f
 
 Try to decide before reading on. Staring does not help. You could re-derive the equations, as [](#sec4-products) does. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
 
-So one sign can pass every bench test and fail in the first aggressive maneuver. This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
+So one sign can pass every bench test and fail in the first aggressive maneuver ([](#fig5-opening)). This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
+
+![The puzzle of this chapter. Left: terms of $\delta S$ for the quadrotor and its load as the derivation produces them, with the sign of the disputed term copied wrong. Right: the load equation with each sign, flown from the same hover with the same inputs. The two flights agree exactly until the load swings. Then the model with the flipped sign falls away. Below: the check, which needs no flight, puts the two equations seven orders of magnitude apart.](figures/ch05-opening-strip.png){#fig5-opening anim="figures/ch05-opening.gif"}
 
 ## Seventeen lines {#sec5-seventeen}
 
@@ -147,8 +149,10 @@ Sanity check: hang the rod straight down, $q = -e_3$, and $q\times e_3 = 0$. No 
 ::: {.thought #thought5-clerk name="The clerk who knows no mechanics"}
 Hand the five boxes of [](#fig5-pipeline) to a careful clerk who has never seen a pendulum. Give them one card with the rules: the product rule, the $S^2$ row of [](#tbl5-leaves), $x\cdot(x\times y)=0$, the triple product, and "move the dot from $\xi$ to its partner and flip the sign". Ask them to check that each box follows from the one above.
 
-They can. Nothing on the card mentions energy, force or a sphere. That is what it means for the derivation to be mechanical, and it is why a machine can do it. It is also a warning. The clerk will apply a wrong card just as carefully as a right one.
+They can ([](#fig5-rewrite)). Nothing on the card mentions energy, force or a sphere. That is what it means for the derivation to be mechanical, and it is why a machine can do it. It is also a warning. The clerk will apply a wrong card just as carefully as a right one.
 :::
+
+![The clerk at work on the tree of [](#fig5-tree). Each frame is the tree the library stored at that stage, with the rule that produced it written underneath. A chain of products is drawn as one `Mul` node and a product of constants as one leaf. Terracotta marks what a rule removes or creates. Watch the tree grow under the manifold rule and collapse when $\omega\cdot(\omega\times\xi) = 0$ fires. In integration by parts the time derivative hops from $\xi$ to $\omega$.](figures/ch05-rewrite-strip.png){#fig5-rewrite anim="figures/ch05-rewrite.gif"}
 
 Notice the form of [](#eq5-pendulum). Everything is on one side and the inertia term is negative, because $E_\xi$ is literally the coefficient of $\xi$ in $\delta S$. The library does not rearrange.
 
@@ -187,8 +191,10 @@ Seven orders of magnitude apart ([](#fig5-sign-error), left). The companion func
 ![Left: the check applied to the hand-typed load equation at 20 different random seeds. With the correct sign the error stays at finite-difference noise. With the sign flipped it is of order one. Right: why flight testing in hover would not have found it. The spurious force grows with the square of the swing rate and is zero when the cable hangs still.](figures/ch05-sign-error.svg){#fig5-sign-error}
 
 ::: {.example #ex5-sign name="Why the random state matters"}
-With $m_Q = 1.5$ kg and $l = 1$ m, the two versions of the load equation differ by $2\,m_Q\, l\,\|\omega\|^2\, q$. At $\omega = 0$ that is nothing. At 2 rad/s it is 12 N, or 6.7 m/s² of load acceleration, against a load weight of 2.9 N. A test at hover checks the equation at the one state where the wrong term is silent. The check draws $\omega$ at random, so every term is exercised at once. Over 20 seeds the wrong equation scored between 0.30 and 2.8. The right one never exceeded $9.0\times10^{-8}$.
+With $m_Q = 1.5$ kg and $l = 1$ m, the two versions of the load equation differ by $2\,m_Q\, l\,\|\omega\|^2\, q$. At $\omega = 0$ that is nothing. At 2 rad/s it is 12 N, or 6.7 m/s² of load acceleration, against a load weight of 2.9 N. A test at hover checks the equation at the one state where the wrong term is silent ([](#fig5-sign-flight)). The check draws $\omega$ at random, so every term is exercised at once. Over 20 seeds the wrong equation scored between 0.30 and 2.8. The right one never exceeded $9.0\times10^{-8}$.
 :::
+
+![The load equation with each sign, flown from hover with the same thrust and the same two pitch pulses. While the cable hangs still the two models are one flight. Once the load swings, the flipped sign invents a force along the cable, up to 7.6 N against a load weight of 2.9 N, and after 3.3 s its load is 1.9 m from the true one. The check had already told the two equations apart, $4.1\times10^{-8}$ against 1.9, without flying either.](figures/ch05-sign-flight-strip.png){#fig5-sign-flight anim="figures/ch05-sign-flight.gif"}
 
 Now the cable equation, which we skipped. The program returns
 
@@ -203,10 +209,12 @@ $$
 The first line has a counterpart in the thesis. The bracket has none. Three terms in the load's velocity, which [](#eq5-wu) never mentions. Is the program wrong, or the thesis?
 
 ::: {.thought #thought5-rod name="Pushing along the rod"}
-Hold a pendulum by its pivot and push the bob straight along the rod, toward the pivot. Nothing happens. The rod takes the push. Only the part of a force that lies across the rod can move the bob.
+Hold a pendulum by its pivot and push the bob straight along the rod, toward the pivot. Nothing happens ([](#fig5-rod)). The rod takes the push. Only the part of a force that lies across the rod can move the bob.
 
 The equations inherit this. A variation $\xi$ is always perpendicular to $q$, so $\xi\cdot E_\xi$ only ever tests the part of $E_\xi$ that lies in the tangent plane. Whatever $E_\xi$ has along $q$ is multiplied by zero in $\delta S$. It is not an equation. It is not anything.
 :::
+
+![A push $F$ of fixed size on the bob, turned from across the rod to straight along it. The indigo arrow is the part in the tangent plane at $q$, the only part that moves the bob. The terracotta arrow is the part along $q$, which the rod takes. When the push points at the pivot the indigo arrow has shrunk to nothing.](figures/ch05-rod-strip.png){#fig5-rod anim="figures/ch05-rod.gif"}
 
 ![The coefficient $E_\xi$ of $\xi$ for the cable, evaluated at one state and drawn at $q$. Only its tangent part is an equation of motion. The program does not remove the part along $q$, and two correct answers may differ there.](figures/ch05-tangent.svg){#fig5-tangent}
 
@@ -271,7 +279,7 @@ print(np.max(np.abs(E - E[0])) / abs(E[0]), free.max_drift())
 
 The run in the listing holds the thrust at the total weight, with zero torque. The cable starts 0.8 rad from vertical and circling, and the center of mass coasts at 0.45 m/s ([](#fig5-quadload)).
 
-![The simulated trajectory, five snapshots over 6 s. The thrust cancels the total weight, so the center of mass moves on a straight line. The light load swings wide below, and the heavy quadrotor wobbles about the same line with one fifth of the radius.](figures/ch05-quadload.svg){#fig5-quadload}
+![The simulated trajectory, 6 s in real time. The thrust cancels the total weight, so the center of mass, traced in teal, moves on a straight line. The light load swings wide below, and the heavy quadrotor wobbles about the same line with one fifth of the radius.](figures/ch05-quadload-strip.png){#fig5-quadload anim="figures/ch05-quadload.gif"}
 
 A trajectory figure proves little. Conserved quantities prove more.
 
@@ -333,7 +341,7 @@ Read $M_{ij}$ aloud: the mass hanging below both link $i$ and link $j$, times th
 
 The loop at the end of the listing instantiates the generic equation for $n = 1$ to $6$ and checks each against the Lagrangian expanded for the same $n$. The errors run from $6.2\times10^{-9}$ to $1.1\times10^{-7}$. [](#fig5-chain) simulates $n = 4$.
 
-![A chain of four equal links, released from the horizontal while turning about the vertical, simulated from the generic equation instantiated at $n=4$. Seven instants are overlaid, light to dark. Energy drifts by $2.6\times10^{-8}$ over 2 s at the default step: the chain whips, and a fixed step feels it.](figures/ch05-chain.svg){#fig5-chain}
+![A chain of four equal links, released from the horizontal while turning about the vertical, simulated from the generic equation instantiated at $n=4$. The first 1.3 s are shown six times slower, and the indigo curve is the path of the last mass. Energy drifts by $2.6\times10^{-8}$ over 2 s at the default step: the chain whips, and a fixed step feels it.](figures/ch05-chain-strip.png){#fig5-chain anim="figures/ch05-chain.gif"}
 
 How does a sum fit into a tree? It does not. A sum is kept as a list of ordinary trees whose leaves carry an index, with the inequalities between indices stored beside them. Each tree goes through the same five stages. The inequalities become the limits of the sums that remain.
 

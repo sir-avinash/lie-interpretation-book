@@ -49,6 +49,9 @@
     "0.01": 4.050322963138494e-11
   },
   "wu_comparison_max_diff": 2.4868995751603507e-14,
+  "sign_flight_split_at_3p3s_m": 1.9011481157675119,
+  "sign_flight_wrong_load_height_at_3p3s_m": -2.0637562164949936,
+  "sign_flight_peak_invented_force_N": 7.642594950746056,
   "chain_check_eom": {
     "1": 6.2314291732746e-09,
     "2": 4.9374584443931414e-08,

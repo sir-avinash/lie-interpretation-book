@@ -458,6 +458,52 @@ for _ in range(50):
 ck.true("accelerations agree with Wu (2017) eq. (3.4) at 50 random states", worst < 1e-10, f"max diff {worst:.1e}")
 ck.record("wu_comparison_max_diff", worst)
 
+# ---- the planted sign error, flown (the opening figure and the flight beside the sign example) ----
+weight = (p["m_Q"] + p["m_L"]) * p["g"]
+
+
+def pulses(t, _):
+    """Hover thrust and two open-loop pitch pulses: tilt forward, then tilt back to brake."""
+    amp, T, gap_, tq = 0.12, 0.2, 0.4, 0.0
+    for t_on, sg in ((1.0, 1), (1.0 + 2 * T + gap_, -1), (1.0 + 4 * T + gap_, -1), (1.0 + 6 * T + 2 * gap_, 1)):
+        if t_on <= t < t_on + T:
+            tq = sg * amp
+        elif t_on + T <= t < t_on + 2 * T:
+            tq = -sg * amp
+    return np.r_[weight, 0.0, tq, 0.0]
+
+
+x_hover = layout.pack(x_L=np.zeros(3), q=[0.0, 0.0, -1.0], R=np.eye(3))
+flown = {}
+for sign in (-1, +1):
+    hand = dict(eom)
+    hand[kx] = (xL.delta(), load_equation(sign))
+    plant_s = load_module(module_source(to_standard_form(hand, variables, inputs), layout), f"hand{sign + 1}")
+    flown[sign] = simulate(plant_s, x_hover, 3.6, p, u=pulses)
+k1, k33 = 1000, 3300
+ck.close("flight: the hand equation with the right sign flies like the derived model",
+         flown[-1]["x_L"], simulate(plant, x_hover, 3.6, p, u=pulses)["x_L"], tol=1e-9)
+ck.close("flight: in hover the two signs give the same trajectory, exactly",
+         flown[+1]["x_L"][:k1 + 1], flown[-1]["x_L"][:k1 + 1], tol=1e-12)
+ck.close("flight: in hover neither model moves", flown[-1]["x_L"][:k1 + 1], np.zeros((k1 + 1, 3)), tol=1e-12)
+split = float(np.linalg.norm(flown[+1]["x_L"][k33] - flown[-1]["x_L"][k33]))
+ck.true("flight: once the load swings the flipped sign falls away by 1.9 m at 3.3 s", abs(split - 1.9) < 0.05,
+        f"{split:.2f} m")
+ck.true("flight: the correct model has lost less than 0.3 m of height at 3.3 s",
+        abs(flown[-1]["x_L"][k33, 2]) < 0.3, f"{flown[-1]['x_L'][k33, 2]:.2f} m")
+om_w = flown[+1]["omega_q"][:k33 + 1]
+f_inv = 2 * p["m_Q"] * p["l"] * np.sum(om_w * om_w, axis=1)
+ck.true("flight: the invented force peaks above twice the weight of the load",
+        f_inv.max() > 2 * p["m_L"] * p["g"], f"{f_inv.max():.1f} N")
+ck.record("sign_flight_split_at_3p3s_m", split)
+ck.record("sign_flight_wrong_load_height_at_3p3s_m", float(flown[+1]["x_L"][k33, 2]))
+ck.record("sign_flight_peak_invented_force_N", float(f_inv.max()))
+trace_q = EOMTrace()
+compute_eom(L, dW, variables, trace=trace_q)
+terms_simplify, terms_ibp = len(trace_q["simplify"].nodes), len(trace_q["ibp"].nodes)
+ck.true("the quadrotor-load variation of the action has 19 terms after simplifying and 20 after integrating by parts",
+        (terms_simplify, terms_ibp) == (19, 20), f"{terms_simplify}, {terms_ibp}")
+
 # =========================================================================
 # 4. n bodies
 # =========================================================================
