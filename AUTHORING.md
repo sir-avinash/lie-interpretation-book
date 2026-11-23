@@ -111,6 +111,8 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - Mathtext in labels cannot draw a postfix `^\wedge` or `\mathcal` well. Keep hats and calligraphic letters out of figure labels.
 - **Animate what moves.** A thought experiment or a concept about motion gets an animation: `figkit.animate(make_frame, gif, strip)` writes a looping GIF for the site and a filmstrip of key frames for the PDF from one function. Mark it up as `![Caption.](figures/ch02-name-strip.png){#fig2-name anim="figures/ch02-name.gif"}`. An animation must earn the reader's attention: one idea, a clear beginning and end, eased motion, a short caption drawn in each frame that says what is happening now, and the same colours and strokes as the still figures. Give every frame the same canvas (fixed `xlim`, `ylim`). Keep each GIF under about 2.5 MB.
 - **Open with a picture.** The first figure of a chapter is an evocative illustration of its central puzzle, placed right after the opening paragraphs.
+- Rigid bodies are drawn with the kit's `box` and `axis_through_box`, a quadrotor with `quadrotor`, and the in-frame line of an animation with `caption`. Do not copy these into a chapter script.
+- In an animation pass `alpha=1.0` on moving strokes. A translucent stroke dithers into speckle in a GIF.
 - **Look at every figure** before you keep it. For an animation, look at the filmstrip and at least two frames of the GIF. Rasterise it and check for overlaps, clipped text, edge-on planes and labels that landed on a line.
 - Aim for 4 to 6 figures per chapter. At least half should be geometric scenes, the rest data plots produced by simulation.
 
