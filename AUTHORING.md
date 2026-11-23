@@ -69,6 +69,8 @@ Numbering and cross-references are automatic.
 Rules that keep the build green:
 
 - Prefix every label with the chapter number (`eq2-`, `thm2-`, `fig2-`, `sec2-`). Labels are global.
+- A reference already carries its name: write `[](#ch-manifolds)`, not `Chapter [](#ch-manifolds)`.
+- No math in section headings. They also appear in the sidebar.
 - Only label equations you refer to. Unlabelled equations are unnumbered.
 - A figure is an image alone in its paragraph, with a caption that says what to look at.
 - Sidenotes are footnotes: `^[Short aside.]`. Keep them to one or two sentences.

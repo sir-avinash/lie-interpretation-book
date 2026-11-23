@@ -23,7 +23,7 @@ $$
 $$
 :::
 
-Nine numbers, six constraints, three degrees of freedom. The set is closed under multiplication and inversion, so it is a group. It is also a smooth, curved, three-dimensional surface sitting inside $\R^9$, which makes it a **Lie group**. Chapter [](#ch-manifolds) takes that phrase apart. For now one picture is enough.
+Nine numbers, six constraints, three degrees of freedom. The set is closed under multiplication and inversion, so it is a group. It is also a smooth, curved, three-dimensional surface sitting inside $\R^9$, which makes it a **Lie group**. [](#ch-manifolds) takes that phrase apart. For now one picture is enough.
 
 Every rotation is a turn by some angle $\theta \in [0, \pi]$ about some unit axis $u$. Plot it as the point $\theta u$ in ordinary space. All rotations then fill a solid ball of radius $\pi$ ([](#fig-so3-ball)). The centre is "no rotation". Walking outward along a ray turns the body further about that axis.
 
@@ -200,7 +200,7 @@ $$
 
 So $e_R$ points uphill and $-e_R$ is the torque direction that reduces the error fastest. That is a proportional term, derived instead of guessed.
 
-The velocity error needs one more idea. $\Omega$ is expressed in the body frame and $\Omega_d$ in the target frame. These are different frames, so subtracting the components directly compares unlike things. The matrix $R\T R_d$ re-expresses $\Omega_d$ in the body frame first. It is our first **transport map**, and Chapter [](#ch-variations) is largely about why it has to be there. With it, the two errors fit together exactly as position and velocity error do:
+The velocity error needs one more idea. $\Omega$ is expressed in the body frame and $\Omega_d$ in the target frame. These are different frames, so subtracting the components directly compares unlike things. The matrix $R\T R_d$ re-expresses $\Omega_d$ in the body frame first. It is our first **transport map**, and [](#ch-variations) is largely about why it has to be there. With it, the two errors fit together exactly as position and velocity error do:
 
 $$
 \ddt \Psi_R = e_R \cdot e_\Omega . \label{eq-psi-dot}
@@ -231,14 +231,14 @@ Again $\Psi_q = 1 - \cos\theta$ for the angle $\theta$ between the two direction
 ![Error on the sphere. Level sets of $\Psi_q$ are circles of latitude about $q_d$. The error vector $e_q = q_d \times q$ lies in the tangent plane at $q$, perpendicular to the great circle through $q$ and $q_d$. The feedback $\omega = -k\,e_q$ produces the velocity $\dot q$ along that great circle.](figures/ch01-s2-error.svg){#fig-s2-error}
 
 ::: {.warning #warn-sine name="The restoring torque fades near half a turn"}
-Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The proportional action $\|e_R\| = \sin\theta$ grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyses this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. Chapter [](#ch-variations) compares the alternatives, which reshape $\Psi_R$ so that the push does not fade, and shows what each one costs.
+Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The proportional action $\|e_R\| = \sin\theta$ grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyses this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. [](#ch-variations) compares the alternatives, which reshape $\Psi_R$ so that the push does not fade, and shows what each one costs.
 :::
 
 ## Where this leaves us {#sec-roadmap}
 
 We now have the pattern for the whole book. Find the space the configuration lives on. Build errors, velocities and derivatives from the objects themselves. Choose coordinates only to compute, never to define.
 
-The pieces we have used so far were pulled out of a hat: the hat map, the vector $e_R$, the transport $R\T R_d$. The next two chapters derive them. Chapter [](#ch-manifolds) sets up the manifolds a robot needs, and Chapter [](#ch-variations) explains how to take derivatives and compare velocities on them. After that the same handful of tools gives equations of motion without angles, controllers with almost-global guarantees, linearizations that are valid everywhere, estimators whose error dynamics do not depend on the state, and optimizers that never leave the manifold.
+The pieces we have used so far were pulled out of a hat: the hat map, the vector $e_R$, the transport $R\T R_d$. The next two chapters derive them. [](#ch-manifolds) sets up the manifolds a robot needs, and [](#ch-variations) explains how to take derivatives and compare velocities on them. After that the same handful of tools gives equations of motion without angles, controllers with almost-global guarantees, linearizations that are valid everywhere, estimators whose error dynamics do not depend on the state, and optimizers that never leave the manifold.
 
 ## Exercises {#sec-ch1-exercises .unnumbered}
 
