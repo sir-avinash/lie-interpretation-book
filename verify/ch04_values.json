@@ -1,0 +1,64 @@
+{
+  "pendulum": {
+    "m": 1.0,
+    "rho": [
+      0.0,
+      0.0,
+      -0.4
+    ],
+    "J_diag": [
+      0.2,
+      0.25,
+      0.1
+    ]
+  },
+  "cond_J": 2.5,
+  "cond_euler_pitch_0": 2.5,
+  "cond_euler_pitch_60": 24.74272762417998,
+  "cond_euler_pitch_85": 974.1952997388835,
+  "cond_euler_pitch_89": 24416.60003202638,
+  "cond_euler_pitch_89.9": 2441915.113562827,
+  "euler_eom_terms_general": 105,
+  "euler_eom_terms_diagonal_J": 47,
+  "ball_action_increase_eps_0.1": 0.024674013570975095,
+  "pendulum_bottom_tension_N": 29.429999999849915,
+  "book_inertia_1e-3_kgm2": [
+    0.445,
+    1.0225,
+    1.4224999999999999
+  ],
+  "book_first_flip_s": 0.8805000000000001,
+  "book_flip_interval_s": 1.545,
+  "book_growth_rate_per_s": 7.591187367953714,
+  "book_efold_time_s": 0.13173169776068386,
+  "book_offaxis_smallest": 0.018316108236642342,
+  "book_offaxis_largest": 0.014365023911143842,
+  "load_params": {
+    "m_Q": 1.5,
+    "m_L": 0.3,
+    "l": 1.0
+  },
+  "load_hover_thrust_N": 17.658,
+  "load_hover_tension_N": 2.943,
+  "integrator": {
+    "h": 0.02,
+    "T": 60.0,
+    "energy_above_rest_J": 7.388210186610987
+  },
+  "int_orth_naive_end": 0.00046083230066097067,
+  "int_orth_lie_max": 1.0467705343212658e-14,
+  "int_energy_naive_end_J": 0.00028979501609027736,
+  "int_energy_lie_end_J": 0.0002151288449474542,
+  "int_energy_naive_end_rel": 3.9223981014434015e-05,
+  "int_energy_lie_end_rel": 2.911785662748382e-05,
+  "geomech_check_eom": {
+    "spherical pendulum (S2)": 1.9090929052101823e-08,
+    "free rigid body (SO(3))": 4.751577206762122e-09,
+    "3D pendulum (SO(3))": 3.3949492775992917e-09,
+    "rigid body, force at a body point (R3 x SO(3))": 1.324724974161029e-08,
+    "quadrotor (R3 x SO(3))": 4.195838417821083e-08,
+    "quadrotor with suspended load (R3 x S2 x SO(3))": 4.059809332153562e-08,
+    "two quadrotors with a point-mass load (R3 x (S2 x SO(3))^2)": 9.87324473030761e-08,
+    "telescoping leg (R x SO(3))": 2.8941391402917046e-08
+  }
+}

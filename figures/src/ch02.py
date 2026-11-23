@@ -61,14 +61,14 @@ def arc_arrow(s, center, axis, start, angle, radius, color, n=40, head=0.1, lw=1
 # -------------------------------------------------- tangent plane to S2
 def tangent():
     s = Scene(width=6.4, height=3.7, azim=-34, elev=20)
-    q = unit([0.55, -0.62, 0.56])
+    q = unit([0.30, -0.02, 0.92])
     s.shadow((0, 0, -1.1), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     s.sphere_curve(great_circle(E3), color=INK, lw=0.6, alpha=0.5)
     # A curve on the sphere through q: a small circle about a tilted axis.
-    axis = unit([-0.25, 0.35, 0.9])
+    axis = unit([0.75, -0.6, 0.25])
     polar = np.arccos(q @ axis)
-    ts = np.linspace(-1.55, 1.25, 160)
+    ts = np.linspace(-1.3, 1.3, 160)
     path = np.array([rot(axis, t) @ q for t in ts])
     s.sphere_curve(path, color=TEAL, lw=1.9, zorder=16)
     qdot = np.cross(axis, q)                 # velocity of that curve at q, with unit turn rate
@@ -83,10 +83,11 @@ def tangent():
     s.dot(q, color=INK, size=5)
     s.label(q, r"$q$", dx=-10, dy=-9, size=12)
     s.label(q + qdot, r"$\dot q$", dx=10, dy=5, color=INDIGO, size=12)
-    s.label(q + omega, r"$\omega = q \times \dot q$", dx=-36, dy=7, color=TERRACOTTA)
+    s.label(q + omega, r"$\omega = q \times \dot q$", dx=-40, dy=4, color=TERRACOTTA)
     s.label(q + 0.45 * q, "normal", dx=20, dy=4, size=9.5, **SANS)
     s.label(path[18], r"$q(t)$", dx=-13, dy=8, color=TEAL)
     s.label(q + 0.62 * (a - b), r"$T_qS^2$", dx=22, dy=-2, size=11)
+    s.project(-2.9 * s.right)
     s.text2d(-2.0, 0.35, "every velocity of a curve\nthrough $q$ lies in this plane", fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
     s.text2d(-2.0, -0.55, r"$q\cdot\dot q = 0$", fontsize=11.5)
     s.save(OUT / "ch02-tangent.svg", pad=0.1)
@@ -96,7 +97,8 @@ def tangent():
 def expmap():
     s = Scene(width=6.6, height=3.5, azim=-30, elev=22)
     # (a) circle in the camera plane, tangent line at the top
-    c = -2.75 * s.right - 0.1 * s.up
+    c = -3.25 * s.right - 0.1 * s.up
+    s.project(c - 1.75 * s.right)
 
     def P(x, y):
         return c + x * s.right + y * s.up
@@ -126,7 +128,7 @@ def expmap():
     q = unit([0.35, -0.55, 0.76])
     s.shadow((0, 0, -1.1), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
-    a, b = s.tangent_plane(1.002 * q, size=0.95, color=SAND, alpha=0.6)
+    a, b = s.tangent_plane(1.002 * q, size=0.9, color=SAND, alpha=0.6)
     for ang, length, col, name, off in [(0.35, 1.15, INDIGO, r"$v$", (8, 8)), (2.55, 0.95, TEAL, None, None)]:
         d = np.cos(ang) * a + np.sin(ang) * b
         v = length * d
@@ -143,7 +145,7 @@ def expmap():
             s.label(end, r"$\exp_q(v)$", dx=26, dy=-6, color=col)
     s.dot(q, color=INK, size=5)
     s.label(q, r"$q$", dx=-2, dy=12, size=12)
-    s.label(q - 0.95 * (a - b), r"$T_qS^2$", dx=-18, dy=4, size=10.5)
+    s.label(q - 0.9 * (a - b), r"$T_qS^2$", dx=-18, dy=4, size=10.5)
     s.text2d(1.2, -1.02, r"$S^2$", fontsize=13)
     s.save(OUT / "ch02-expmap.svg", pad=0.08)
 
@@ -170,7 +172,8 @@ def noncommute():
     s.label(xs[0] * s.right + (1.25 - 0.98) * s.up, "start", size=10, color=MUTED, **SANS)
     s.label(xs[0] * s.right + (-1.25 - 0.98) * s.up, "start", size=10, color=MUTED, **SANS)
     # fixed axes, drawn once
-    o = -3.75 * s.right + 0.0 * s.up
+    o = -3.95 * s.right + 0.0 * s.up
+    s.project([o - 0.75 * s.right, 4.3 * s.right])
     for e, name, off in [(E1, "$x$", (7, -3)), (E2, "$y$", (6, 5)), (E3, "$z$", (0, 9))]:
         s.arrow(o, o + 0.5 * e, color=INK, lw=1.1, head=0.09)
         s.label(o + 0.5 * e, name, dx=off[0], dy=off[1], size=11)
@@ -180,12 +183,12 @@ def noncommute():
 
 # ------------------------------------- quadrotor with a suspended load
 def quadload():
-    s = Scene(width=6.6, height=4.2, azim=-52, elev=14)
+    s = Scene(width=6.6, height=4.2, azim=-50, elev=22)
     L = 1.55
     xQ = np.array([0.0, 0.0, 0.0])
     q = unit([0.42, -0.25, -0.87])
     xL = xQ + L * q
-    R = rot(E3, np.radians(18)) @ rot(E2, np.radians(-16)) @ rot(E1, np.radians(10))
+    R = rot(E3, np.radians(-8)) @ rot(E2, np.radians(-14)) @ rot(E1, np.radians(10))
 
     s.shadow(xQ - (L + 0.12) * E3, L, strength=0.13)
     s.sphere(xQ, L, color=PERIWINKLE, alpha=0.38, outline=False)
@@ -225,13 +228,14 @@ def quadload():
     s.label(xQ + 0.62 * q, r"$q \in S^2$", dx=30, dy=2, color=TEAL, size=12)
     s.label(xL, r"$x_L \in \mathbb{R}^3$", dx=36, dy=-6, color=TERRACOTTA, size=12)
     s.label(xQ + arm * R[:, 0], r"$R \in \mathrm{SO}(3)$", dx=44, dy=6, color=INDIGO, size=12)
-    s.label(xQ, r"$x_Q = x_L - l\,q$", dx=-58, dy=-4, size=11)
+    s.label(xQ - arm * R[:, 0], r"$x_Q = x_L - l\,q$", dx=-46, dy=14, size=11)
     mid = xQ + 0.5 * L * q
     s.label(xQ + 0.8 * L * q, r"$l$", dx=-9, dy=2, size=11.5)
     s.text2d(2.75, 1.05, "attitude: 3", fontsize=9.5, color=INDIGO, **SANS)
     s.text2d(2.75, 0.75, "cable direction: 2", fontsize=9.5, color=TEAL, **SANS)
     s.text2d(2.75, 0.45, "load position: 3", fontsize=9.5, color=TERRACOTTA, **SANS)
     s.text2d(2.75, 0.10, "8 degrees of freedom", fontsize=10, color=INK, **SANS)
+    s.project(-3.6 * s.right)
     s.text2d(-2.6, 1.0, "the load stays on a sphere\nof radius $l$ about the quadrotor", fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
     s.save(OUT / "ch02-quadload.svg", pad=0.1)
 
@@ -271,9 +275,9 @@ def steps():
             ha="right", va="center", fontfamily="Source Sans 3", **kw)
     ax.text(qx[-1][0] - 0.16, qx[-1][1] - 0.17, "exponential step:\nradius 1.00", fontsize=9.5, color=INDIGO,
             ha="right", va="center", fontfamily="Source Sans 3", linespacing=1.3, **kw)
-    ax.text(0.33, 0.33, "each Euler step runs along\nthe tangent, so it always\nlands outside", fontsize=9.5, color=MUTED,
-            ha="center", va="center", fontfamily="Source Sans 3", linespacing=1.3, **kw)
-    ax.set_xlim(-2.6, 2.6)
+    ax.text(1.25, 1.2, "each Euler step runs along\nthe tangent, so it always\nlands outside the circle", fontsize=9.5, color=MUTED,
+            ha="left", va="center", fontfamily="Source Sans 3", linespacing=1.3, **kw)
+    ax.set_xlim(-2.3, 2.9)
     ax.set_ylim(-0.25, 1.75)
     save(fig, OUT / "ch02-steps.svg")
     return float(np.linalg.norm(qe[-1]))
@@ -311,8 +315,8 @@ def drift():
     ax0.semilogy(tt[1:], np.maximum(orth(ex)[1:], 1e-17), color=INDIGO, lw=1.2)
     ax0.set_ylim(1e-17, 10)
     ax0.set_yticks([1e-16, 1e-12, 1e-8, 1e-4, 1])
-    ax0.text(4.2, 2e-3, r"Euler step: $R + hR\,\Omega^\wedge$", color=TERRACOTTA, fontsize=10.5, path_effects=halo())
-    ax0.text(4.2, 1.5e-13, r"exponential step: $R\,\exp(h\Omega^\wedge)$", color=INDIGO, fontsize=10.5, ha="center", path_effects=halo())
+    ax0.text(4.2, 2e-3, r"Euler step: $R + hR\,\Omega^{\!\wedge}$", color=TERRACOTTA, fontsize=10.5, path_effects=halo())
+    ax0.text(4.2, 1.5e-13, r"exponential step: $R\,\exp(h\Omega^{\!\wedge})$", color=INDIGO, fontsize=10.5, ha="center", path_effects=halo())
     ax0.set_title(r"distance from the manifold, $\|R^{\!\top}\! R - I\|$", fontsize=10, **SANS)
     ax1.semilogy(tt[1:], np.maximum(ang(ex)[1:], 1e-7), color=INDIGO, lw=1.8)
     ax1.semilogy(tt[1:], np.maximum(ang(exm)[1:], 1e-7), color=TEAL, lw=1.8)
