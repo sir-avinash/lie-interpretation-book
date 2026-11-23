@@ -205,8 +205,10 @@ It cannot, and the reason is a fact about hair.
 ::: {.thought #thought2-hair name="Combing a group"}
 On a Lie group, pick any nonzero velocity $\zeta$ at the identity. Multiply it by each group element $X$ to get a velocity $X\zeta$ at $X$. Since $X$ is invertible, $X\zeta$ is never zero. You have covered the whole group with a smooth field of arrows that vanishes nowhere. On the circle this is the field "go counterclockwise at unit speed".
 
-Now try it on a sphere. Comb a hairy ball flat. However you do it, you get a cowlick: a point where the hair has no direction. This is the hairy ball theorem. Every continuous field of tangent vectors on $S^2$ is zero somewhere. So no multiplication on $S^2$ can make it a Lie group.^[Among spheres, only $S^0$, $S^1$ and $S^3$ are Lie groups: the signs $\pm1$, the unit complex numbers and the unit quaternions.]
+Now try it on a sphere. Comb a hairy ball flat. However you do it, you get a cowlick: a point where the hair has no direction ([](#fig2-comb)). This is the hairy ball theorem. Every continuous field of tangent vectors on $S^2$ is zero somewhere. So no multiplication on $S^2$ can make it a Lie group.^[Among spheres, only $S^0$, $S^1$ and $S^3$ are Lie groups: the signs $\pm1$, the unit complex numbers and the unit quaternions.]
 :::
+
+![Combing a group and combing a sphere. Left: on the circle, multiplication carries one arrow to every point, and none of the copies is zero. Right: every way of combing the sphere leaves a cowlick, a point where the field vanishes. Changing the combing moves the cowlicks and can merge two into one. It cannot remove the last.](figures/ch02-comb-strip.png){#fig2-comb anim="figures/ch02-comb.gif"}
 
 The sphere has the next best thing: $\SO(3)$ **acts** on it: a rotation $R$ moves the direction $q$ to $Rq$, and some rotation takes any direction to any other. A manifold with a group acting on it this way is a **homogeneous space**. Every direction is $q = R\,e_3$ for some $R$, but not for a unique one. Rotations about $e_3$ leave $e_3$ alone, so $R$ and $R\,R_z(\alpha)$ give the same $q$. The sphere is the rotation group with a circle's worth of information forgotten, and the dimensions agree: $3 - 1 = 2$.
 

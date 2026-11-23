@@ -333,6 +333,122 @@ def drift():
     save(fig, OUT / "ch02-drift.svg")
 
 
+# ------------------------------------------------------ animation: combing
+def _fibonacci_sphere(n):
+    k = np.arange(n) + 0.5
+    polar = np.arccos(1 - 2 * k / n)
+    azim = np.pi * (1 + 5 ** 0.5) * k
+    return np.stack([np.sin(polar) * np.cos(azim), np.sin(polar) * np.sin(azim), np.cos(polar)], axis=1)
+
+
+def _comb_field(P, c, blend):
+    """Tangent field on the unit sphere at the points P (rows).
+
+    blend = 0: the sphere combed flat toward the direction c. It vanishes at +c and -c.
+    blend = 1: a field with a single zero, at +c (a constant field on the plane,
+               carried to the sphere by stereographic projection from c).
+    """
+    two = c - (P @ c)[:, None] * P
+    d = unit(np.cross(c, E3))
+    one = (1 - P @ c)[:, None] * d + (P @ d)[:, None] * (c - P)
+    return (1 - blend) * two + blend * 1.4 * one
+
+
+def _cowlicks(c, blend):
+    """Zeros of the field, found numerically: coarse search, then local refinement."""
+    P = _fibonacci_sphere(6000)
+    mag = np.linalg.norm(_comb_field(P, c, blend), axis=1)
+    found = []
+    for _ in range(3):
+        i = int(np.argmin(mag))
+        if mag[i] > 0.08:
+            break
+        p = P[i]
+        for radius in (0.06, 0.02, 0.006):
+            a = unit(np.cross(p, [0.3, 0.5, 0.8]))
+            b = np.cross(p, a)
+            g = np.linspace(-radius, radius, 15)
+            cand = np.array([unit(p + x * a + y * b) for x in g for y in g])
+            p = cand[np.argmin(np.linalg.norm(_comb_field(cand, c, blend), axis=1))]
+        if all(np.arccos(np.clip(p @ f, -1, 1)) > 0.25 for f in found):
+            found.append(p)
+        mag[np.arccos(np.clip(P @ P[i], -1, 1)) < 0.45] = np.inf
+    return found
+
+
+def comb_frame(t):
+    from figkit import ease, phase
+
+    s = Scene(width=6.6, height=3.5, azim=-30, elev=20, xlim=(-4.05, 1.75), ylim=(-1.62, 1.46))
+    # --- left: a group. Carry one arrow around the circle by multiplication.
+    ctr = -2.75 * s.right
+    ring = ctr + np.array([np.cos(a) * s.right + np.sin(a) * s.up for a in np.linspace(0, 2 * np.pi, 200)])
+    s.curve(ring, color=INK, lw=1.7, alpha=1.0, zorder=20)
+    sweep = 2 * np.pi * ease(phase(t, 0.0, 0.32))
+
+    def on_ring(a, r=1.0):
+        return ctr + r * (np.cos(a) * s.right + np.sin(a) * s.up)
+
+    def tangent_arrow(a, color, lw=1.3, alpha=1.0):
+        tip = on_ring(a, 1.17) + 0.36 * (-np.sin(a) * s.right + np.cos(a) * s.up)
+        s.arrow(on_ring(a, 1.17), tip, color=color, lw=lw, head=0.11, alpha=alpha)
+
+    for a in np.arange(0, 2 * np.pi - 1e-9, np.pi / 6):
+        if a <= sweep + 1e-9:
+            tangent_arrow(a, INDIGO)
+    if 0 < sweep < 2 * np.pi - 1e-6:
+        tangent_arrow(sweep, TERRACOTTA, lw=1.7)
+        s.dot(on_ring(sweep), color=TERRACOTTA, size=6)
+    s.dot(on_ring(0.0), color=INK, size=5)
+    s.label(on_ring(0.0), "identity", dx=-27, dy=0, size=9.5, **SANS)
+    s.label(ctr, r"$S^1$", size=13, dy=10)
+    s.label(ctr, "a group", size=9.5, dy=-9, color=MUTED, **SANS)
+    done = sweep >= 2 * np.pi - 1e-6
+    s.text2d(ctr @ s.right, -1.44, "arrows everywhere, none of them zero" if done else "carry one arrow by multiplication",
+             fontsize=10, color=INDIGO, **SANS)
+
+    # --- right: a sphere. Comb it, and watch the cowlicks.
+    comb = ease(phase(t, 0.32, 0.62))
+    blend = ease(phase(t, 0.62, 0.97))
+    c = unit(rot(E3, -0.2 + 1.5 * comb) @ rot(E2, 0.35 * np.sin(np.pi * comb)) @ unit([-0.1, -0.85, 0.5]))
+    s.shadow((0, 0, -1.1), 1.0)
+    s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
+    if t >= 0.30:
+        P = _fibonacci_sphere(300)
+        V = _comb_field(P, c, blend)
+        for p, v in zip(P, V):
+            n = np.linalg.norm(v)
+            if n < 0.05 or not s.point_visible(p) or p @ s.view < 0.12:
+                continue
+            step = 0.17 * min(1.0, n / 0.75) * v / n
+            s.arrow(1.004 * p, 1.004 * unit(p + step), color=INDIGO, lw=1.0, head=0.055, zorder=30)
+        zeros = _cowlicks(c, blend)
+        for z in zeros:
+            vis = s.point_visible(z)
+            s.dot(1.004 * z, color=TERRACOTTA, size=7, hollow=not vis, zorder=45)
+        nvis = [z for z in zeros if s.point_visible(z)]
+        if nvis:
+            s.label(1.004 * nvis[0], "cowlick", dx=0, dy=13, size=9.5, color=TERRACOTTA, **SANS)
+        if blend <= 0:
+            msg = "comb it flat: one cowlick here, one on the far side"
+        elif len(zeros) > 1:
+            msg = "comb differently: the cowlicks move and merge"
+        else:
+            msg = "you can merge them. You cannot remove them"
+        s.text2d(0.0, -1.44, msg, fontsize=10, color=TERRACOTTA, **SANS)
+    else:
+        s.text2d(0.0, -1.44, "now try the same on a sphere", fontsize=10, color=MUTED, **SANS)
+    s.text2d(1.42, 1.2, r"$S^2$", fontsize=13)
+    return s
+
+
+def comb():
+    from figkit import animate
+
+    animate(comb_frame, OUT / "ch02-comb.gif", OUT / "ch02-comb-strip.png", n=96, fps=14,
+            width_px=760, stills=(0.16, 0.45, 0.8, 1.0), strip_px=900, strip_cols=2)
+
+
 if __name__ == "__main__":
     tangent()
     expmap()
@@ -341,3 +457,4 @@ if __name__ == "__main__":
     r = steps()
     print(f"steps figure: Euler radius after four steps = {r:.4f}")
     drift()
+    comb()

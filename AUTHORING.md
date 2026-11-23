@@ -42,6 +42,8 @@ id: ch-manifolds
 summary: One sentence for the contents page.
 notebook: notebooks/ch02_name.ipynb
 verify: verify/ch02.py
+epigraph: A verified quotation that fits the chapter.
+epigraph_source: Author, *Work* (year)
 ---
 
 Opening puzzle, straight in.
@@ -106,7 +108,9 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - **Labels use the book's symbols and terms exactly.** A label is checked by `tools/check_terms.py` like any sentence.
 - **Labels sit next to what they name**, with the halo the kit applies. Math in labels uses `$...$`. Words use `fontfamily="Source Sans 3"` at size 9 to 10.
 - Mathtext in labels cannot draw a postfix `^\wedge` or `\mathcal` well. Keep hats and calligraphic letters out of figure labels.
-- **Look at every figure** before you keep it. Rasterise it and check for overlaps, clipped text, edge-on planes and labels that landed on a line.
+- **Animate what moves.** A thought experiment or a concept about motion gets an animation: `figkit.animate(make_frame, gif, strip)` writes a looping GIF for the site and a filmstrip of key frames for the PDF from one function. Mark it up as `![Caption.](figures/ch02-name-strip.png){#fig2-name anim="figures/ch02-name.gif"}`. An animation must earn the reader's attention: one idea, a clear beginning and end, eased motion, a short caption drawn in each frame that says what is happening now, and the same colours and strokes as the still figures. Give every frame the same canvas (fixed `xlim`, `ylim`). Keep each GIF under about 2.5 MB.
+- **Open with a picture.** The first figure of a chapter is an evocative illustration of its central puzzle, placed right after the opening paragraphs.
+- **Look at every figure** before you keep it. For an animation, look at the filmstrip and at least two frames of the GIF. Rasterise it and check for overlaps, clipped text, edge-on planes and labels that landed on a line.
 - Aim for 4 to 6 figures per chapter. At least half should be geometric scenes, the rest data plots produced by simulation.
 
 ## Verification
