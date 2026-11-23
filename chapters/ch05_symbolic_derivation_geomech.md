@@ -20,7 +20,7 @@ $$
 
 The load is at $x_L$. The unit vector $q$ points from the quadrotor down the cable to the load, with $\dot q = \omega \times q$. The quadrotor has attitude $R$, thrust $f$ and torque $\tau$. Now one question. Look at the term $m_Q\, l\; \dot q \cdot \dot q$ in the first line. It is printed with a minus sign. Should it be a plus?
 
-Try to decide before reading on. Staring does not help. You could re-derive the equations, as Chapter [](#ch-dynamics) does over several pages. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
+Try to decide before reading on. Staring does not help. You could re-derive the equations, as [](#ch-dynamics) does over several pages. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
 
 So one sign can pass every bench test and fail in the first aggressive manoeuvre. This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
 
@@ -71,9 +71,9 @@ Two things should bother you. Why believe a program over a thesis? And what did 
 
 Take the second question first. Computer algebra systems have differentiated Lagrangians for decades. Why a separate tool?
 
-A general system differentiates functions of real variables. Ask it for $\partial L / \partial R$ and it wants to know what $R$ is a function of. You can answer with three angles, and you are back in Chapter [](#ch-why) with a singularity. You can answer with nine matrix entries and six constraints, and you now carry Lagrange multipliers for constraints the geometry already knows. Either way you have left the manifold to please the software.
+A general system differentiates functions of real variables. Ask it for $\partial L / \partial R$ and it wants to know what $R$ is a function of. You can answer with three angles, and you are back in [](#ch-why) with a singularity. You can answer with nine matrix entries and six constraints, and you now carry Lagrange multipliers for constraints the geometry already knows. Either way you have left the manifold to please the software.
 
-Now look again at the recipe of Chapter [](#ch-dynamics). It never differentiates with respect to $R$. It does four things. Apply $\delta$ with the product rule. Replace the variation of each manifold quantity with a known expression. Integrate by parts. Read off what multiplies each variation. None of these steps needs coordinates. Each one replaces a pattern of symbols with another pattern.
+Now look again at the recipe of [](#ch-dynamics). It never differentiates with respect to $R$. It does four things. Apply $\delta$ with the product rule. Replace the variation of each manifold quantity with a known expression. Integrate by parts. Read off what multiplies each variation. None of these steps needs coordinates. Each one replaces a pattern of symbols with another pattern.
 
 So the right object is not a function of numbers. It is a **tree** ([](#fig5-tree)). Interior nodes are operations: `Add`, `Mul`, `Dot`, `Cross`. Leaves are symbols, and every leaf carries a type that says where it lives.
 
@@ -90,7 +90,7 @@ The type is what lets a rewrite rule do geometry. The program does not know what
 | `S2("q")` | $S^2$ | $\dot q = \omega \times q$ | $\delta q = \xi \times q$ | $\delta\omega = \dot\xi - 2\,\omega\times\xi$ |
 | `SO3("R")` | $\SO(3)$ | $\dot R = R\,\Omega^\wedge$ | $\delta R = R\,\eta^\wedge$ | $\delta\Omega = \dot\eta + \Omega\times\eta$ |
 
-The five leaf types and the rules attached to them. The last column is the content of Chapter [](#ch-variations), stored as data.
+The five leaf types and the rules attached to them. The last column is the content of [](#ch-variations), stored as data.
 :::
 
 Nodes cannot be modified once built. A rewrite never edits a tree. It builds a new one. So every intermediate stage of a derivation still exists afterwards, and you can ask to see it.
@@ -285,7 +285,7 @@ A trajectory figure proves little. Conserved quantities prove more.
 
 Now settle the opening question. Equation [](#eq5-wu) is solved for the accelerations. The program's rows [](#eq5-quad-rows) and [](#eq5-cable) are coupled. Substitute one into the other and two lines of algebra give the thesis form. Numerically, the accelerations from the generated code and from [](#eq5-wu) agree to $2.5\times10^{-14}$ at 50 random states. The thesis is right. The sign is a minus.
 
-A controller needs one more thing: the dynamics linearized about a trajectory. That is one more variation. Apply $\delta$ to $E$ itself, with the same rules, and collect terms. The function `linearize` does this and returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ in the variation coordinates $(\delta x_L, \xi, \eta)$. Chapter [](#ch-linearization) develops it.
+A controller needs one more thing: the dynamics linearized about a trajectory. That is one more variation. Apply $\delta$ to $E$ itself, with the same rules, and collect terms. The function `linearize` does this and returns $M\,\delta\dot x = A\,\delta x + B\,\delta u$ in the variation coordinates $(\delta x_L, \xi, \eta)$. [](#ch-linearization) develops it.
 
 ## More bodies {#sec5-scaling}
 
