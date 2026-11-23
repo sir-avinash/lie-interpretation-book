@@ -187,6 +187,8 @@ ol.toc li.planned em { font-family: var(--sans); font-size: 0.68rem; margin-left
   .mobile-nav summary { font-weight: 700; cursor: pointer; }
   main { margin-left: 0; padding: 1.4rem 1.1rem 4rem; }
   h1 { font-size: 1.9rem; }
+  .katex-display > .katex { white-space: nowrap; }
+  .katex-display > .katex > .katex-html > .tag { position: relative; margin-left: 1.5rem; }
   .running-head { margin-bottom: 1.6rem; }
 }
 

@@ -73,6 +73,7 @@ Rules that keep the build green:
 - A figure is an image alone in its paragraph, with a caption that says what to look at.
 - Sidenotes are footnotes: `^[Short aside.]`. Keep them to one or two sentences.
 - Unnumbered closing sections: `## Exercises {#sec2-exercises .unnumbered}` and `## Notes and sources {#sec2-notes .unnumbered}`.
+- Inside math write degrees as `^\circ`, never the `°` character. In prose `°` is fine.
 - Math is KaTeX. A LaTeX error fails the build. Use `\begin{bmatrix}`, `\begin{aligned}`, `\tfrac`, `\operatorname`. One `\label` per display.
 - Shared macros are in `book.toml`: `\R`, `\SO`, `\so`, `\SE`, `\se`, `\T` (transpose, as in `R\T`), `\tr`, `\quat`, `\Ad`, `\ad`, `\dd`, `\ddt`.
 

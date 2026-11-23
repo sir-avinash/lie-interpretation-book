@@ -1,46 +1,69 @@
-﻿________________
+﻿---
+name: ch01-manifold-diagnostics
+description: Audit an attitude or direction controller for Euler-angle singularities, frame-dependent feedback and quaternion unwinding, and replace its error terms with errors defined on SO(3) or S^2. Use when reviewing or debugging an existing attitude, thrust-direction or cable-direction controller, or before flying one through large angles.
+---
 
+# Diagnose a controller's attitude representation
 
-name: ch01-manifold-diagnostics description: Guide an engineer through diagnosing coordinate singularities (gimbal lock) and quaternion unwinding in an existing attitude/direction controller, and migrating to coordinate-free SO(3) and S^2 geometric control.
-Manifold Diagnostics & Migration to $SO(3) / S^2$
-Use this skill when auditing an existing attitude or direction-tracking controller for coordinate singularities, loss of feedback invariance, or quaternion unwinding, and when migrating the controller to coordinate-free geometric control on $SO(3)$ and $S^2$.
-Diagnostic Checklist
-Step 1: Audit State Representation for Coordinate Singularities
-1. Check for minimal 3-parameter attitude representations (ZYX/XYZ Euler angles, Tait-Bryan angles, Rodrigues parameters).
-2. Inspect kinematic Jacobians for trigonometric denominators such as $\frac{1}{\cos\theta}$ or $\tan\theta$:
-   * For ZYX Euler angles $\eta = (\psi, \theta, \phi)^\top$, $\dot{\eta} = E^{-1}(\theta, \phi)\Omega$ blows up at $\theta = \pm \frac{\pi}{2}$ where $\det(E) = -\cos\theta = 0$.
-   * Flag any controller computing $\tau = -K_p(\eta - \eta_d) - K_d\dot{\eta}$: this law is not left-invariant on $SO(3)$ and fails near pitch $\pm 90^\circ$.
-3. Check numerical conditioning: Evaluate $\kappa(E) = \sigma_{\max}(E)/\sigma_{\min}(E)$ along expected flight/motion trajectories. If $\kappa(E) > 10$ or pitch approaches $|\theta| > 75^\circ$, migration to $SO(3)$ is mandatory.
-Step 2: Diagnose $S^3$ Double-Cover & Unwinding Risks
-1. Check for unit quaternion state $\mathfrak{q} = (q_0, q_v^\top)^\top \in S^3$:
-   * Verify whether the control law uses $\tau = -k_p q_v - k_d \Omega$ without sign handling. If $q_0 < 0$ at initialization or after a disturbance, the robot will unwind by up to $360^\circ$ toward $+\mathfrak{q}_I$ instead of taking the short geodesic path.
-   * Verify whether the control law uses a discontinuous $\operatorname{sgn}(q_0)$ switch. Flag this as a chattering risk near $q_0 = 0$ ($180^\circ$ rotation) under sensor noise.
-Step 3: Verify Topological & Equilibrium Expectations
-1. Confirm realistic stability claims: By Bhat & Bernstein (2000), no continuous autonomous feedback law can achieve global asymptotic stability on compact manifolds without boundary ($SO(3)$, $S^2$) or their tangent bundles.
-2. Expect Almost-Global Exponential Stability (AGES): Verify that the target design achieves exponential convergence from all initial states except a measure-zero set (the stable manifold of antipodal saddle equilibria at $\theta = \pi$, where $\Psi_R = 2$ or $\Psi_q = 2$).
+Follows Chapter 1. Notation: `R` in SO(3) maps body to world, `Rdot = R hat(Omega)` with `Omega` in the body frame; `q` in S^2 with `qdot = omega x q`; unit quaternion `(q0, qv)`.
 
+## When to use
 
-________________
+- A controller subtracts Euler angles, or feeds back on Euler-angle rates.
+- A controller feeds back on the vector part of a quaternion.
+- A vehicle behaves differently after the world frame or the mocap origin was changed.
+- A vehicle rotates the long way round after a large disturbance, or chatters near 180 degrees of error.
 
+## Procedure
 
-Migration Workflow to Coordinate-Free $SO(3)$ and $S^2$
-Step 4: Replace Error Metrics with Manifold-Intrinsic Definitions
-1. Define the hat/vee isomorphism:
-   * $(\cdot)^\wedge : \mathbb{R}^3 \to \mathfrak{so}(3)$ such that $x^\wedge y = x \times y$, and $(\cdot)^\vee : \mathfrak{so}(3) \to \mathbb{R}^3$.
-2. On $SO(3)$ (Rigid-Body Attitude):
-   * Configuration error function: $$\Psi_R(R, R_d) = \frac{1}{2}\operatorname{Tr}(I_3 - R_d^\top R) \in [0, 2]$$
-   * Attitude error vector: $$e_R = \frac{1}{2}(R_d^\top R - R^\top R_d)^\vee \in \mathbb{R}^3$$
-   * Angular velocity error (transported to body frame): $$e_\Omega = \Omega - R^\top R_d \Omega_d \in \mathbb{R}^3$$
-   * Geometric PD + feedforward torque (Sreenath, Lee, & Kumar, CDC 2013; Kotaru, Edmonson, & Sreenath, JDSMC 2020): $$\tau = -k_R e_R - k_\Omega e_\Omega + \Omega \times J\Omega - J\left(\Omega^\wedge R^\top R_d \Omega_d - R^\top R_d \dot{\Omega}_d\right)$$
-3. On $S^2$ (Unit-Vector Direction, e.g., Thrust Axis or Cable Load):
-   * Configuration error function: $$\Psi_q(q, q_d) = 1 - q \cdot q_d \in [0, 2]$$
-   * Tangent-space error vector: $$e_q = q_d \times q \in T_q S^2$$
-4. Use Structure-Preserving Integration:
-   * Integrate $\dot{R} = R\Omega^\wedge$ using the Lie-group exponential map $R_{k+1} = R_k \exp(\Delta t,\Omega_k^\wedge)$ (Rodrigues' formula) rather than component-wise Euler integration, ensuring $R^\top R = I_3$ and $\det(R) = +1$ to machine precision.
-Step 5: Verification Tests
-Run the following three sanity checks after migration:
+1. **Find the representation.** List every place the attitude or direction enters the feedback law, and what is subtracted from what.
 
+2. **Three numbers: look for the singularity.** For yaw-pitch-roll, `Omega = E(theta, phi) eta_dot` and `det E = -cos(theta)`. Any `1/cos` or `tan` of an angle in the kinematics or in the mass matrix is the same defect. Evaluate the condition number of `E` along the intended trajectories. If the pitch (or the corresponding angle for another order) can approach 90 degrees, the representation must go. Changing the angle order moves the singularity and does not remove it.
 
-1. Gimbal-Lock Pass-Through: Command a smooth trajectory through $\theta_{\text{pitch}} = \pm 90^\circ$ and verify $\Psi_R$ and $|e_R|$ remain smooth and bounded.
-2. Antipodal / Sign-Invariance Check: Initialize $R(0)$ at $\pm 10^\circ$ from $R_d$ and verify identical geodesic convergence without unwinding.
-3. Manifold Invariance Check: Assert $|R(t)^\top R(t) - I_3|_F < 10^{-10}$ and $|\det(R(t)) - 1| < 10^{-10}$ over the entire simulation.
+3. **Three numbers: test invariance.** Pick `R`, `Rd` and a world-frame change `Q`. Compute the commanded torque for `(R, Rd)` and for `(Q R, Q Rd)`. If they differ, the law depends on the choice of world frame. `eta - eta_d` always fails this test.
+
+4. **Four numbers: test for unwinding.** If the law is `tau = -kp qv - kd Omega`, simulate from one physical attitude with both quaternion signs. If the angle turned differs, the law unwinds. If the law uses `sign(q0)`, it is discontinuous at 180 degrees of error: test with measurement noise at 179 degrees and look for chatter. The remedy within quaternions is a hysteresis switch, which makes the controller hybrid.
+
+5. **Set expectations.** No continuous time-invariant feedback is globally asymptotically stabilising on SO(3) or S^2. Reject any claim of global stability from a continuous law. The achievable target is almost-global: one or more extra equilibria, all unstable, placed far from the goal.
+
+6. **Replace the error terms.**
+
+   On SO(3):
+
+   ```
+   Psi_R   = 0.5 * trace(I - Rd^T R)
+   e_R     = 0.5 * vee(Rd^T R - R^T Rd)
+   e_Omega = Omega - R^T Rd Omega_d
+   ```
+
+   On S^2 (fixed `qd`):
+
+   ```
+   Psi_q = 1 - q . qd
+   e_q   = qd x q
+   ```
+
+   If the relative rotation `Rd^T R` is a turn by `theta` about `u`, then `Psi_R = 1 - cos(theta)` and `e_R = sin(theta) u`. Likewise `Psi_q = 1 - cos(theta)` and `|e_q| = sin(theta)`.
+
+7. **Integrate on the manifold.** Advance attitudes with `R <- R expm(h hat(Omega))`, never with `R <- R + h Rdot`.
+
+## Checks that must pass
+
+| Check | Pass condition |
+| :-- | :-- |
+| Invariance | `e_R(Q R, Q Rd) == e_R(R, Rd)` to machine precision for random `Q` |
+| Angle form | `Psi_R == 1 - cos(theta)` and `norm(e_R) == sin(theta)` |
+| Compatibility | finite-difference `d/dt Psi_R` equals `e_R . e_Omega` to `1e-7` |
+| Tangency on S^2 | `e_q . q == 0` |
+| Sphere compatibility | finite-difference `d/dt Psi_q` equals `e_q . omega` to `1e-7` |
+| Bad point | `e_R == 0` only at `R == Rd` and at half turns, where `Psi_R == 2` |
+| On-manifold | `norm(R^T R - I) < 1e-10` after a long simulation |
+
+`verify/ch01.py` implements all of these and is the reference.
+
+## Failure modes
+
+- **The restoring action fades near 180 degrees.** `norm(e_R) = sin(theta)` shrinks past 90 degrees and is zero at a half turn. A vehicle flipped nearly upside down recovers slowly. If large-angle recovery matters, use an error function whose slope does not vanish there (Chapter 6).
+- **Subtracting angular velocities directly.** `Omega - Omega_d` compares vectors expressed in different frames. Always transport first: `R^T Rd Omega_d`.
+- **Renormalising instead of integrating properly.** Projecting `R` back to SO(3) after an Euler step hides the error and biases the motion.
+- **Trusting noiseless simulation.** The `sign(q0)` patch looks perfect without noise.

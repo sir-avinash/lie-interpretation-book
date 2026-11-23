@@ -1,12 +1,77 @@
 # A Lie-Interpretation of Robotics and Control
 
-Version-controlled textbook, executable Google Colab tutorials, and reusable engineering skills developed under the **Elephant–Goldfish** architecture:
-- **Goldfish Agents:** Develop each chapter, Colab notebook (`.ipynb`), and reusable skill (`SKILL.md`) independently.
-- **Elephant Orchestrator:** Enforces the Master Notation & Consistency Standard, verifies equations and code against primary literature, and integrates verified assets into the master manuscript and Google Drive (`Gemini Spark`).
+A textbook on modeling, control, estimation and trajectory optimization for robots whose configurations live on manifolds: $\mathrm{SO}(3)$, $S^2$, $\mathrm{SE}(3)$ and their products.
 
-## Directory Structure
-- `chapters/` — Verified Markdown chapters (`ch01_*.md` through `ch16_*.md`)
-- `notebooks/` — Executable Google Colab tutorials (`ch01_*.ipynb` through `ch16_*.ipynb`)
-- `skills/` — Reusable `SKILL.md` workflow guides (`chXX-*/SKILL.md`)
-- `NOTATION_STANDARD.md` — Non-negotiable cross-chapter symbol, equation, figure, and table standard
-- `TOC.md` — Master 16-chapter architecture (Parts I–VII)
+It consolidates a body of research on geometric mechanics and control into one exposition with one notation, written for advanced undergraduates through PhD students in robotics and control. No differential geometry is assumed.
+
+## Contents
+
+| | Chapter | Status |
+| :-- | :-- | :-- |
+| 1 | Why coordinate-free? | written |
+| 2 | The manifolds robots live on | written |
+| 3 | Variations, errors and transport | written |
+| 4 | Dynamics without coordinates | written |
+| 5 | Symbolic derivation | written |
+| 6 | Tracking control and almost-global stability | planned |
+| 7 | Variation-based linearization and LQR | written |
+| 8 | Robust, adaptive and safety-critical control | planned |
+| 9 | Symmetry, fiber bundles and connections | planned |
+| 10 | Differential flatness | planned |
+| 11 | Hybrid zero dynamics on manifolds | planned |
+| 12 | Variational integrators and collocation | planned |
+| 13 | Error-state MPC and on-manifold solvers | planned |
+| 14 | Filtering on Lie groups | planned |
+| 15 | Equivariant learning and residual control | planned |
+| 16 | Aerial manipulation, legged and limbless robots | planned |
+
+## What each chapter comes with
+
+- **Text** in `chapters/`, with figures generated from code in `figures/src/`.
+- **A verification script** in `verify/`. It checks every identity in the chapter numerically, re-derives every equation of motion and linearization with [`geomech`](https://github.com/vkotaru/geomech), and computes every number the text quotes.
+- **A notebook** in `notebooks/` that reproduces the chapter's examples and starts the exercises. Runs on Colab.
+- **A skill** in `skills/`: a short procedure for applying the chapter to your own system, written so that a person or a coding agent can follow it.
+
+## Layout
+
+```text
+book.toml          title, chapter order, shared math macros
+chapters/          chapter sources (Pandoc Markdown)
+figures/src/       one script per chapter; writes figures/*.svg
+verify/            one script per chapter; must exit 0
+notebooks/src/     notebook sources; built to notebooks/*.ipynb
+skills/            one skill per chapter
+tools/             build script, cross-reference filter, figure kit
+docs/              the built site (GitHub Pages serves this directory)
+AUTHORING.md       how chapters are written: voice, markup, notation
+```
+
+## Build
+
+Requires Python 3.11+, Pandoc 3, and Node.js.
+
+```bash
+pip install numpy scipy matplotlib nbformat nbclient ipykernel geomech
+```
+
+```bash
+npm install --prefix tools
+```
+
+```bash
+for f in figures/src/ch*.py; do python "$f"; done
+```
+
+```bash
+for f in verify/ch*.py; do python "$f"; done
+```
+
+```bash
+python tools/build.py
+```
+
+The build fails on a broken cross-reference, a duplicate label, a missing figure or a LaTeX error. Open `docs/index.html` to read the result.
+
+## Contributing a chapter
+
+Read `AUTHORING.md`, then `chapters/ch01_why_coordinate_free.md` as the worked example.

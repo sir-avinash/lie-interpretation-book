@@ -9,7 +9,7 @@ verify: verify/ch01.py
 
 Here is a question that sounds too easy. Your robot's heading is 350°. You want it at 10°. What is the error?
 
-Subtract and you get 340°, so the controller swings the robot almost all the way round. The sensible answer is 20° the other way. You already know the patch: wrap the difference into $(-180°, 180°]$. But notice what the patch admits. Headings do not live on a line. They live on a circle, and subtraction is an operation for lines.
+Subtract and you get 340°, so the controller swings the robot almost all the way round. The sensible answer is 20° the other way. You already know the patch: wrap the difference into $(-180^\circ, 180^\circ]$. But notice what the patch admits. Headings do not live on a line. They live on a circle, and subtraction is an operation for lines.
 
 That was one angle. A drone has three, tangled together, and the patches stop working. This chapter shows three ways the tangle bites, proves that one of them cannot be patched by anyone, and then shows the way out that the rest of the book follows.
 
@@ -79,7 +79,7 @@ Now pitch the middle ring by 90°. The roll axle, which rides on the middle ring
 This is **gimbal lock**, and it is not a historical curiosity. Apollo's inertial platform had three gimbals. During Apollo 11, after Houston warned that a manoeuvre had come close to lock, Michael Collins asked mission control to send him a fourth gimbal for Christmas.^[The exchange is in the Apollo 11 air-to-ground record at about 105 hours mission time, and is discussed in the *Apollo Lunar Surface Journal*.]
 
 ::: {.example #ex-euler-blowup name="A calm body, a panicking chart"}
-A quadrotor pitches up through a manoeuvre with body rate $\Omega = (0, 0.5, 0.5)$ rad/s. Its angular speed is $\|\Omega\| = 0.71$ rad/s, about 40° per second. Unhurried. Take roll $\phi = 45°$ and let the pitch reach $89°$. Solving [](#eq-euler-jacobian) for the yaw rate gives
+A quadrotor pitches up through a manoeuvre with body rate $\Omega = (0, 0.5, 0.5)$ rad/s. Its angular speed is $\|\Omega\| = 0.71$ rad/s, about 40° per second. Unhurried. Take roll $\phi = 45^\circ$ and let the pitch reach $89^\circ$. Solving [](#eq-euler-jacobian) for the yaw rate gives
 
 $$
 \dot\psi = \frac{\Omega_2 \sin\phi + \Omega_3\cos\phi}{\cos\theta} = \frac{0.707}{0.01745} = 40.5\ \text{rad/s},
@@ -263,7 +263,7 @@ Prove [](#eq-error-angle) using Rodrigues' formula $R_d\T R = I + \sin\theta\, u
 :::
 
 ::: {.exercise #exr-antipode}
-For the sphere, show that $\omega = -k\, e_q$ gives $\dot\theta = -k \sin\theta$, where $\theta$ is the angle between $q$ and $q_d$. Conclude that $-q_d$ is an unstable equilibrium. How long does it take to get from $\theta = 179°$ to $\theta = 1°$?
+For the sphere, show that $\omega = -k\, e_q$ gives $\dot\theta = -k \sin\theta$, where $\theta$ is the angle between $q$ and $q_d$. Conclude that $-q_d$ is an unstable equilibrium. How long does it take to get from $\theta = 179^\circ$ to $\theta = 1^\circ$?
 :::
 
 ## Notes and sources {#sec-ch1-notes .unnumbered}

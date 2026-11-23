@@ -54,7 +54,7 @@ def gimbals():
     s.label(c + 0.92 * x2, "roll", dx=-10, dy=-8, color=TERRACOTTA, size=9.5, fontfamily="Source Sans 3")
     c, x2 = assembly(1.55, np.radians(90), "b", "pitch 90°: roll axis lands on yaw axis")
     s.label(c - 0.7 * E3, "roll", dx=22, dy=-4, color=TERRACOTTA, size=9.5, fontfamily="Source Sans 3")
-    s.save(OUT / "ch01-gimbals.svg", pad=0.05)
+    s.save(OUT / "ch01-gimbals.svg", pad=0.22)
 
 
 # --------------------------------------------------------- Euler rate blow-up
@@ -69,10 +69,10 @@ def euler_rates():
     ax.plot([89], [(Om[1] * np.sin(phi) + Om[2] * np.cos(phi)) / np.cos(np.radians(89))], "o", ms=5, color=TERRACOTTA)
     ax.annotate("40.5 rad/s at 89°", (89, 40.5), xytext=(-12, 0), textcoords="offset points", ha="right",
                 va="center", fontsize=10, color=TERRACOTTA, path_effects=halo())
-    ax.text(30, 1.4, r"yaw rate $\dot\psi$ reported by the Euler chart", color=TERRACOTTA, fontsize=10.5, path_effects=halo())
-    ax.text(30, 0.47, r"what the body is doing: $\|\Omega\| = 0.71$ rad/s", color=INDIGO, fontsize=10.5, path_effects=halo())
+    ax.text(4, 2.6, r"yaw rate $\dot\psi$ reported by the Euler chart", color=TERRACOTTA, fontsize=10.5, path_effects=halo())
+    ax.text(4, 0.36, r"what the body is doing: $\|\Omega\| = 0.71$ rad/s", color=INDIGO, fontsize=10.5, path_effects=halo())
     ax.set_xlim(0, 90)
-    ax.set_ylim(0.3, 600)
+    ax.set_ylim(0.22, 600)
     ax.set_xticks([0, 15, 30, 45, 60, 75, 90])
     ax.set_xlabel("pitch angle θ (degrees)", fontfamily="Source Sans 3", fontsize=9.5)
     ax.set_ylabel("rad/s", fontfamily="Source Sans 3", fontsize=9.5)
@@ -109,7 +109,7 @@ def unwinding():
     ax0.text(0, 0.12, r"$(\cos\frac{\theta}{2},\ \sin\frac{\theta}{2})$", ha="center", fontsize=11)
     ax0.text(0, -0.2, "fixed axis", ha="center", fontsize=9, fontfamily="Source Sans 3", color=MUTED)
     ax0.text(0, -1.42, "350° the long way round", ha="center", color=TERRACOTTA, fontsize=9.5, fontfamily="Source Sans 3")
-    ax0.set_xlim(-2.15, 2.15)
+    ax0.set_xlim(-2.75, 2.15)
     ax0.set_ylim(-1.6, 1.3)
 
     J3, kp, kd = 0.10, 2.0, 0.6
