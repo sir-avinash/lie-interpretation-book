@@ -8,7 +8,7 @@
 # 3. The finite-horizon tracking problem as a QP with box constraints, a small solver for it, and the link to LQR.
 # 4. A flip with too little torque: error-state MPC, a saturated LQR and an Euler-angle MPC.
 # 5. Where the linear model stops being accurate.
-# 6. Direct transcription on $\mathrm{SO}(3)$ and a primal-dual interior point with on-manifold steps.
+# 6. Direct transcription on $\mathrm{SO}(3)$ and a primal-dual interior-point method with on-manifold steps.
 #
 # Notation follows the book: $\dot R = R\,\Omega^\wedge$, the error is $\chi = \log(R_d^\top R)^\vee$, and a step on the group is $R \leftarrow R\exp(\eta^\wedge)$.
 
@@ -114,7 +114,7 @@ def angle_between(q, p):
 
 
 # %% [markdown]
-# ## A step that stays on the sphere
+# ## 1. A step that stays on the sphere
 #
 # Four readings of a direction, and the point that minimizes the sum of squared angles to them. A move of $q$ is $q \mapsto \exp(\xi^\wedge) q$ with $\xi \cdot q = 0$. The gradient along it is $\sum_i (\theta_i/\sin\theta_i)\, q_i \times q$.
 
@@ -135,26 +135,26 @@ def s2_mean_cost(q, pts):
 
 def s2_mean_grad_hess(q, pts):
     """Gradient and Hessian of the cost along q -> exp(xi^) q, with xi in the tangent plane."""
-    g, H = np.zeros(3), np.zeros((3, 3))
+    g, Hess = np.zeros(3), np.zeros((3, 3))
     for p in pts:
         v = s2_log(q, p)
         th = np.linalg.norm(v)
         g -= np.cross(q, v)
         if th < 1e-9:
-            H += I3 - np.outer(q, q)
+            Hess += I3 - np.outer(q, q)
             continue
         t = v / th                                 # along the great circle to p
         nrm = np.cross(q, t)                       # turning about nrm moves q along it
-        H += np.outer(nrm, nrm) + th / np.tan(th) * np.outer(t, t)
-    return g, H
+        Hess += np.outer(nrm, nrm) + th / np.tan(th) * np.outer(t, t)
+    return g, Hess
 
 
 def s2_mean_newton(q0, pts, iters=6):
     """Newton iterates q <- exp(xi^) q. Returns the iterates and the steps."""
     q, qs, steps = np.array(q0, float), [np.array(q0, float)], []
     for _ in range(iters):
-        g, H = s2_mean_grad_hess(q, pts)
-        xi = -np.linalg.solve(H + np.outer(q, q), g)   # the q q^T block fixes the unused direction
+        g, Hess = s2_mean_grad_hess(q, pts)
+        xi = -np.linalg.solve(Hess + np.outer(q, q), g)   # the q q^T block fixes the unused direction
         xi -= (xi @ q) * q
         q = expm_so3(xi) @ q
         qs.append(q)
@@ -185,25 +185,25 @@ def so3_mean_grad(R, Rs):
 
 
 def so3_mean_hess(R, Rs):
-    H = np.zeros((3, 3))
+    Hess = np.zeros((3, 3))
     for Ri in Rs:
         chi = log_so3(Ri.T @ R)
         th = np.linalg.norm(chi)
         if th < 1e-9:
-            H += I3
+            Hess += I3
             continue
         a, k = chi / th, 0.5 * th / np.tan(0.5 * th)
-        H += k * I3 + (1 - k) * np.outer(a, a)
-    return H
+        Hess += k * I3 + (1 - k) * np.outer(a, a)
+    return Hess
 
 
 def so3_mean_iterate(R0, Rs, method="newton", iters=8):
     """Iterates of four ways to use the same tangent-space information.
 
-    newton    : eta = -H^-1 g,  R <- R exp(eta^)          (exponential retraction)
-    project   : eta = -H^-1 g,  R <- project(R + R eta^)  (projection retraction)
+    newton    : eta = -Hess^-1 g,  R <- R exp(eta^)          (exponential retraction)
+    project   : eta = -Hess^-1 g,  R <- project(R + R eta^)  (projection retraction)
     gradient  : eta = -g / n,   R <- R exp(eta^)
-    additive  : eta = -H^-1 g,  R <- R + R eta^           (leaves the group)
+    additive  : eta = -Hess^-1 g,  R <- R + R eta^           (leaves the group)
     """
     R, out = np.array(R0, float), [np.array(R0, float)]
     for _ in range(iters):
@@ -247,7 +247,7 @@ ax[0].legend(); ax[1].legend(); plt.tight_layout(); plt.show()
 
 
 # %% [markdown]
-# ## The error is the variable
+# ## 2. The error is the variable
 #
 # The error state is $s = (\chi, \delta\Omega)$ with $\chi = \log(R_d^\top R)^\vee$ and $\delta\Omega = \Omega - \Omega_d$. To first order
 #
@@ -308,11 +308,11 @@ print("exact error dynamics, mismatch:",
 
 
 # %% [markdown]
-# ## A quadratic program
+# ## 3. A quadratic program
 #
-# Sample the model, $s_{k+1} = A_k s_k + B_k\,\delta\tau_k$, eliminate the states and stack the corrections in $U$. The tracking problem becomes
+# Sample the model with the sampling period $h$, $s_{k+1} = A_k s_k + B_k\,\delta\tau_k$, eliminate the states and stack the corrections in $U$. The cost is a quadratic form in $(s_0, U)$ with blocks $P_{UU}$ and $P_{Us}$, and the tracking problem becomes
 #
-# $$\min_U\ \tfrac12 U^\top H\,U + (F s_0)\cdot U, \qquad U_{\min} \le U \le U_{\max}.$$
+# $$\min_U\ \tfrac12 U^\top P_{UU}\,U + (P_{Us}\,s_0)\cdot U, \qquad U_{\min} \le U \le U_{\max}.$$
 #
 # `box_qp` is a projected Newton method. We compare it with SciPy's bounded least squares and check that MPC without bounds is LQR.
 
@@ -342,7 +342,7 @@ def terminal_weight(h=H_MPC, Q=Q_MPC, Ru=RU_MPC):
 
 
 def condense(As, Bs, Q, Ru, Pf):
-    """Stack s_1..s_N = Sx s_0 + Su U and return the QP data  1/2 U^T H U + (F s_0) . U.
+    """Stack s_1..s_N = Sx s_0 + Su U and return the QP data  1/2 U^T P_UU U + (P_Us s_0) . U.
 
     Stage cost 1/2 s_k^T Q s_k for k = 1..N-1, terminal 1/2 s_N^T Pf s_N, input 1/2 du_k^T Ru du_k.
     """
@@ -357,13 +357,13 @@ def condense(As, Bs, Q, Ru, Pf):
         Sx[k * n:(k + 1) * n] = Phi
     Qbar = np.kron(np.eye(N), Q)
     Qbar[-n:, -n:] = Pf
-    H = Su.T @ Qbar @ Su + np.kron(np.eye(N), Ru)
-    F = Su.T @ Qbar @ Sx
-    return 0.5 * (H + H.T), F, Sx, Su
+    P_UU = Su.T @ Qbar @ Su + np.kron(np.eye(N), Ru)
+    P_Us = Su.T @ Qbar @ Sx
+    return 0.5 * (P_UU + P_UU.T), P_Us, Sx, Su
 
 
-def box_qp(H, p, lo, hi, U0=None, tol=1e-10, max_iter=200):
-    """Minimize 1/2 U^T H U + p . U subject to lo <= U <= hi by projected Newton.
+def box_qp(P_UU, p, lo, hi, U0=None, tol=1e-10, max_iter=200):
+    """Minimize 1/2 U^T P_UU U + p . U subject to lo <= U <= hi by projected Newton.
 
     Inputs that sit on a bound and want to push through it are held. A Newton step is
     taken in the others, then clipped to the bounds, with a backtracking line search.
@@ -371,7 +371,7 @@ def box_qp(H, p, lo, hi, U0=None, tol=1e-10, max_iter=200):
     """
     U = np.clip(np.zeros_like(p) if U0 is None else U0, lo, hi)
     for it in range(max_iter):
-        g = H @ U + p
+        g = P_UU @ U + p
         act = ((U <= lo + 1e-12) & (g > 0)) | ((U >= hi - 1e-12) & (g < 0))
         res = np.where(act, 0.0, g)
         inner = ~act & (U > lo + 1e-12) & (U < hi - 1e-12)
@@ -380,29 +380,29 @@ def box_qp(H, p, lo, hi, U0=None, tol=1e-10, max_iter=200):
             return U, it
         d = np.zeros_like(U)
         free = ~act
-        d[free] = -np.linalg.solve(H[np.ix_(free, free)], g[free])
-        f0, a = 0.5 * U @ H @ U + p @ U, 1.0
+        d[free] = -np.linalg.solve(P_UU[np.ix_(free, free)], g[free])
+        f0, a = 0.5 * U @ P_UU @ U + p @ U, 1.0
         while True:
             Un = np.clip(U + a * d, lo, hi)
-            if 0.5 * Un @ H @ Un + p @ Un <= f0 + 1e-4 * g @ (Un - U) or a < 1e-10:
+            if 0.5 * Un @ P_UU @ Un + p @ Un <= f0 + 1e-4 * g @ (Un - U) or a < 1e-10:
                 break
             a *= 0.5
         U = Un
     return U, max_iter
 
 
-def box_qp_kkt(H, p, lo, hi, U):
+def box_qp_kkt(P_UU, p, lo, hi, U):
     """Largest violation of the optimality conditions of the box-constrained QP."""
-    g = H @ U + p
+    g = P_UU @ U + p
     at_lo, at_hi = U <= lo + 1e-9, U >= hi - 1e-9
     stat = np.where(at_lo, np.minimum(g, 0), np.where(at_hi, np.maximum(g, 0), g))
     feas = max(np.max(lo - U), np.max(U - hi), 0.0)
     return float(max(np.max(np.abs(stat)), feas))
 
 
-def box_qp_reference(H, p, lo, hi):
+def box_qp_reference(P_UU, p, lo, hi):
     """The same QP solved by SciPy's bounded-variable least squares (an active-set method)."""
-    L = np.linalg.cholesky(H)
+    L = np.linalg.cholesky(P_UU)
     sol = lsq_linear(L.T, -np.linalg.solve(L, p), bounds=(lo, hi), method="bvls", tol=1e-14, max_iter=2000)
     return sol.x
 
@@ -434,23 +434,23 @@ ref = flip_ref()
 Pf, K_rest = terminal_weight()
 k0 = 20
 AB = [zoh(err_A(ref((k0 + i + 0.5) * H_MPC)[1]), ERR_B, H_MPC) for i in range(N_MPC)]
-H, F, Sx, Su = condense([a for a, _ in AB], [b for _, b in AB], H_MPC * Q_MPC, H_MPC * RU_MPC, Pf)
-print("H is positive definite, eigenvalues in", np.linalg.eigvalsh(H)[[0, -1]].round(3))
+P_UU, P_Us, Sx, Su = condense([a for a, _ in AB], [b for _, b in AB], H_MPC * Q_MPC, H_MPC * RU_MPC, Pf)
+print("P_UU is positive definite, eigenvalues in", np.linalg.eigvalsh(P_UU)[[0, -1]].round(3))
 ff = np.array([ref((k0 + i + 0.5) * H_MPC)[2] for i in range(N_MPC)]).ravel()
 s0 = np.r_[np.radians(50) * unit([1, -1, 0.5]), 1.0, -2.0, 0.5]
-U, iters = box_qp(H, F @ s0, -TAU_MAX - ff, TAU_MAX - ff)
-U_ref = box_qp_reference(H, F @ s0, -TAU_MAX - ff, TAU_MAX - ff)
+U, iters = box_qp(P_UU, P_Us @ s0, -TAU_MAX - ff, TAU_MAX - ff)
+U_ref = box_qp_reference(P_UU, P_Us @ s0, -TAU_MAX - ff, TAU_MAX - ff)
 print(f"projected Newton: {iters} iterations, difference from SciPy {np.abs(U - U_ref).max():.1e}, "
-      f"optimality residual {box_qp_kkt(H, F @ s0, -TAU_MAX - ff, TAU_MAX - ff, U):.1e}")
+      f"optimality residual {box_qp_kkt(P_UU, P_Us @ s0, -TAU_MAX - ff, TAU_MAX - ff, U):.1e}")
 
 A0, B0 = zoh(err_A(ZERO3), ERR_B, H_MPC)
 for N in (1, 5, 25):
-    Hn, Fn, _, _ = condense([A0] * N, [B0] * N, H_MPC * Q_MPC, H_MPC * RU_MPC, Pf)
-    print(f"N = {N:2d}: first move of unconstrained MPC minus the LQR gain: {np.abs(np.linalg.solve(Hn, Fn)[:3] - K_rest).max():.1e}")
+    P_UU_n, P_Us_n, _, _ = condense([A0] * N, [B0] * N, H_MPC * Q_MPC, H_MPC * RU_MPC, Pf)
+    print(f"N = {N:2d}: first move of unconstrained MPC minus the LQR gain: {np.abs(np.linalg.solve(P_UU_n, P_Us_n)[:3] - K_rest).max():.1e}")
 
 
 # %% [markdown]
-# ## A flip with too little torque
+# ## 4. A flip with too little torque
 #
 # The flip of Chapter 7 asks for 0.80 N·m. The motors give 0.6. Three controllers: error-state MPC, the sampled LQR with its torque clipped afterwards, and the same MPC written in yaw, pitch and roll.
 
@@ -512,15 +512,15 @@ class ErrorStateMPC:
         return np.r_[log_so3(Rd.T @ R), Om - Od]
 
     def __call__(self, k, R, Om):
-        H, F = self.data(k)
+        P_UU, P_Us = self.data(k)
         s0 = self.error_state(k, R, Om)
         ff = self.tau_d[k:k + self.N].ravel()
         t0 = time.perf_counter()
         if self.bounded:
             warm = None if self.U_prev is None else np.r_[self.U_prev[3:], np.zeros(3)]
-            U, it = box_qp(H, F @ s0, -self.tau_max - ff, self.tau_max - ff, warm)
+            U, it = box_qp(P_UU, P_Us @ s0, -self.tau_max - ff, self.tau_max - ff, warm)
         else:
-            U, it = -np.linalg.solve(H, F @ s0), 1
+            U, it = -np.linalg.solve(P_UU, P_Us @ s0), 1
         self.times.append(time.perf_counter() - t0)
         self.iters.append(it)
         self.U_prev = U
@@ -574,12 +574,12 @@ class EulerMPC:
     def __call__(self, k, R, Om):
         As = [self.AB[k + i][0] for i in range(self.N)]
         Bs = [self.AB[k + i][1] for i in range(self.N)]
-        H, F = condense(As, Bs, self.Qh, self.Rh, self.Pf)[:2]
+        P_UU, P_Us = condense(As, Bs, self.Qh, self.Rh, self.Pf)[:2]
         s0 = np.r_[wrap(euler_of(R) - self.eul_k[k]), Om - self.ref(k * self.h)[1]]
         ff = self.tau_d[k:k + self.N].ravel()
         t0 = time.perf_counter()
         warm = None if self.U_prev is None else np.r_[self.U_prev[3:], np.zeros(3)]
-        U, it = box_qp(H, F @ s0, -self.tau_max - ff, self.tau_max - ff, warm)
+        U, it = box_qp(P_UU, P_Us @ s0, -self.tau_max - ff, self.tau_max - ff, warm)
         self.times.append(time.perf_counter() - t0)
         self.iters.append(it)
         self.U_prev = U
@@ -643,7 +643,7 @@ plt.xlabel("time (s)"); plt.ylabel("attitude error (deg)"); plt.legend(); plt.sh
 
 
 # %% [markdown]
-# ## What is convex, and what is not
+# ## 5. What is convex, and what is not
 #
 # The QP is convex. The model inside it is first order. A pure attitude error is propagated exactly at any size. A velocity error is not.
 
@@ -684,26 +684,26 @@ print("first torque at 179 deg:", t179, "\nfirst torque at 181 deg:", t181)
 
 
 # %% [markdown]
-# ## From tracking to planning
+# ## 6. From tracking to planning
 #
 # Direct transcription of a rest-to-rest turn with torque bounds and a keep-out cone for the body axis $e_1$:
 #
 # $$\min\ \tfrac{h}{2}\sum_k\|\tau_k\|^2 \quad\text{subject to}\quad \log\big(R_{k+1}^\top R_k\exp(h\,\Omega_k^\wedge)\big)^\vee = 0,\quad J(\Omega_{k+1}-\Omega_k) = h\,(J\Omega_k\times\Omega_k + \tau_k),$$
 #
-# $|\tau_{k,i}| \le \tau_{\max}$ and $q_c\cdot R_k e_1 \le \cos 30^\circ$. The unknowns are rotation matrices and vectors. The steps are $(\eta_k, \delta\Omega_k, \delta\tau_k)$, applied as $R_k \leftarrow R_k\exp(\eta_k^\wedge)$. We check the Jacobians along those steps by finite differences.
+# $|\tau_{k,i}| \le \tau_{\max}$ and $q_c\cdot R_k e_1 \le \cos\theta_{\max}$ with $\theta_{\max} = 30^\circ$. The unknowns are rotation matrices and vectors. The steps are $(\eta_k, \delta\Omega_k, \delta\tau_k)$, applied as $R_k \leftarrow R_k\exp(\eta_k^\wedge)$. We check the Jacobians along those steps by finite differences.
 
 
 # %%
 class Reorient:
     """Minimum-effort rest-to-rest reorientation with torque bounds and a keep-out cone."""
 
-    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, cone_deg=30.0, tau_max=0.15, J=J_B):
+    def __init__(self, N=20, h=0.1, R0=I3, RN=None, q_c=None, theta_max_deg=30.0, tau_max=0.15, J=J_B):
         self.N, self.h, self.J, self.tau_max = N, h, J, tau_max
         self.R0 = np.array(R0, float)
         self.RN = Rz(np.radians(120.0)) if RN is None else np.array(RN, float)
         self.q_c = unit([np.cos(np.radians(60.0)), np.sin(np.radians(60.0)), 0.15] if q_c is None else q_c)
-        self.cos_c = np.cos(np.radians(cone_deg))
-        self.cone_deg = cone_deg
+        self.cos_theta_max = np.cos(np.radians(theta_max_deg))
+        self.theta_max_deg = theta_max_deg
         self.n = 9 * N - 6                               # tangent dimension
         self.n_eq = 6 * N
         self.n_in = 6 * N + (N - 1)
@@ -769,16 +769,16 @@ class Reorient:
         R, Om = x["R"], x["Om"]
         A = np.zeros((6 * N, self.n))
         for k in range(N):
-            F = expm_so3(h * Om[k])
-            rho = log_so3(R[k + 1].T @ R[k] @ F)
-            Di = dexp_inv(rho)
+            step = expm_so3(h * Om[k])
+            r_k = log_so3(R[k + 1].T @ R[k] @ step)
+            Di = dexp_inv(r_k)
             rows, rows_w = slice(6 * k, 6 * k + 3), slice(6 * k + 3, 6 * k + 6)
             if k >= 1:
-                A[rows, self.i_eta(k)] = Di @ F.T
+                A[rows, self.i_eta(k)] = Di @ step.T
                 A[rows, self.i_dOm(k)] = h * Di @ dexp(h * Om[k])
                 A[rows_w, self.i_dOm(k)] = -J - h * (hat(J @ Om[k]) - hat(Om[k]) @ J)
             if k + 1 <= N - 1:
-                A[rows, self.i_eta(k + 1)] = -dexp_inv(-rho)
+                A[rows, self.i_eta(k + 1)] = -dexp_inv(-r_k)
                 A[rows_w, self.i_dOm(k + 1)] = J
             A[rows_w, self.i_tau(k)] = -h * I3
         return A
@@ -789,7 +789,7 @@ class Reorient:
         c[:3 * N] = x["tau"].ravel() - self.tau_max
         c[3 * N:6 * N] = -x["tau"].ravel() - self.tau_max
         for k in range(1, N):
-            c[6 * N + k - 1] = self.q_c @ x["R"][k] @ E1 - self.cos_c
+            c[6 * N + k - 1] = self.q_c @ x["R"][k] @ E1 - self.cos_theta_max
         return c
 
     def ineq_jac(self, x):
@@ -803,15 +803,15 @@ class Reorient:
             A[6 * N + k - 1, self.i_eta(k)] = np.cross(E1, x["R"][k].T @ self.q_c)
         return A
 
-    def lag_grad(self, x, y, z):
-        return self.cost_grad(x) + self.eq_jac(x).T @ y + self.ineq_jac(x).T @ z
+    def lag_grad(self, x, nu_r, nu_c):
+        return self.cost_grad(x) + self.eq_jac(x).T @ nu_r + self.ineq_jac(x).T @ nu_c
 
-    def lag_hess(self, x, y, z, eps=1e-5):
+    def lag_hess(self, x, nu_r, nu_c, eps=1e-5):
         """Hessian of the Lagrangian along the retraction: the symmetrized difference of its gradient.
 
         The Lagrangian couples only neighboring stages, so three colors of stages suffice.
         """
-        n, H = self.n, np.zeros((self.n, self.n))
+        n, Hess = self.n, np.zeros((self.n, self.n))
         nb = self.N                                      # blocks of 9 (the last has 3)
         for color in range(3):
             for comp in range(9):
@@ -820,14 +820,14 @@ class Reorient:
                     continue
                 d = np.zeros(n)
                 d[cols] = eps
-                gp = self.lag_grad(self.retract(x, d), y, z)
-                gm = self.lag_grad(self.retract(x, -d), y, z)
+                gp = self.lag_grad(self.retract(x, d), nu_r, nu_c)
+                gm = self.lag_grad(self.retract(x, -d), nu_r, nu_c)
                 dg = (gp - gm) / (2 * eps)
                 for col in cols:
                     j = col // 9
                     lo, hi = max(9 * (j - 1), 0), min(9 * (j + 2), n)
-                    H[lo:hi, col] = dg[lo:hi]
-        return 0.5 * (H + H.T)
+                    Hess[lo:hi, col] = dg[lo:hi]
+        return 0.5 * (Hess + Hess.T)
 
     def boresight(self, x):
         return x["R"][:, :, 0]
@@ -843,46 +843,46 @@ print("Jacobian of the bounds and the cone, error: ", np.abs(fd - prob.ineq_jac(
 
 
 # %% [markdown]
-# ## Walls made of logarithms
+# ## 7. Walls made of logarithms
 #
-# A primal-dual interior point: slacks $w > 0$ with $c(x) + w = 0$, multipliers $y$ and $z > 0$, and Newton's method on
+# A primal-dual interior-point method: slack variables $w > 0$ with $c(x) + w = 0$, multipliers $\nu_r$ and $\nu_c > 0$, and Newton's method on
 #
-# $$\operatorname{grad}\Phi + A_r^\top y + A_c^\top z = 0,\qquad r = 0,\qquad c + w = 0,\qquad w_i z_i = \mu,$$
+# $$\operatorname{grad}\Phi + A_r^\top \nu_r + A_c^\top \nu_c = 0,\qquad r = 0,\qquad c + w = 0,\qquad w_i\,\nu_{c,i} = \mu,$$
 #
-# with $\mu$ reduced toward zero. The primal step is applied by the retraction. Read the docstring of `interior_point` for exactly what it does and does not do.
+# with the barrier parameter $\mu$ reduced toward zero. The primal step is applied by the retraction. Read the docstring of `interior_point` for exactly what it does and does not do.
 
 
 # %%
-def kkt_error(prob, x, y, z, w, mu):
+def kkt_error(prob, x, nu_r, nu_c, w, mu):
     """The four blocks of the primal-dual residual and its largest entry."""
-    gL = prob.lag_grad(x, y, z)
+    gL = prob.lag_grad(x, nu_r, nu_c)
     r, c = prob.eq(x), prob.ineq(x)
-    blocks = (gL, r, c + w, w * z - mu)
+    blocks = (gL, r, c + w, w * nu_c - mu)
     return blocks, max(float(np.max(np.abs(b))) for b in blocks)
 
 
 def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, state=None, log=None, split=True):
-    """Primal-dual interior point with on-manifold primal steps.
+    """Primal-dual interior-point method with on-manifold primal steps.
 
-    Unknowns: x (attitudes, velocities, torques), multipliers y of the dynamics, multipliers z >= 0
+    Unknowns: x (attitudes, velocities, torques), multipliers nu_r of the dynamics, multipliers nu_c >= 0
     and slacks w > 0 of the inequalities c(x) + w = 0. Each iteration solves the Newton system of
-        grad Phi + A_r^T y + A_c^T z = 0,  r = 0,  c + w = 0,  w z = mu,
-    shortens the step so that w and z stay positive, backtracks on the norm of that residual,
+        grad Phi + A_r^T nu_r + A_c^T nu_c = 0,  r = 0,  c + w = 0,  w nu_c = mu,
+    shortens the step so that w and nu_c stay positive, backtracks on the norm of that residual,
     retracts x and adds the rest. The barrier parameter mu is reduced when the residual is below
     10 mu. With ``fixed_mu`` the subproblem for that mu alone is solved (a point of the central path).
     """
     x = x0
     mu = mu0 if fixed_mu is None else fixed_mu
     if state is None:
-        y = np.zeros(prob.n_eq)
+        nu_r = np.zeros(prob.n_eq)
         w = np.maximum(-prob.ineq(x), 0.05)
-        z = mu / w
+        nu_c = mu / w
     else:
-        y, z, w = (np.array(v, float) for v in state)
+        nu_r, nu_c, w = (np.array(v, float) for v in state)
     hist = []
     for it in range(max_iter):
-        blocks, E_mu = kkt_error(prob, x, y, z, w, mu)
-        E_0 = max(float(np.max(np.abs(b))) for b in (blocks[0], blocks[1], blocks[2], w * z))
+        blocks, E_mu = kkt_error(prob, x, nu_r, nu_c, w, mu)
+        E_0 = max(float(np.max(np.abs(b))) for b in (blocks[0], blocks[1], blocks[2], w * nu_c))
         hist.append(dict(E0=E_0, Emu=E_mu, mu=mu, cost=prob.cost(x), alpha=np.nan))
         if log is not None:
             log(it, x, mu)
@@ -891,15 +891,15 @@ def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, sta
                 break
             if E_mu <= 10 * mu and mu > tol / 10:
                 mu = max(tol / 10, min(0.2 * mu, mu**1.5))
-                blocks, E_mu = kkt_error(prob, x, y, z, w, mu)
+                blocks, E_mu = kkt_error(prob, x, nu_r, nu_c, w, mu)
         elif E_mu <= tol:
             break
         gL, r, cw, comp = blocks
         Ar, Ac = prob.eq_jac(x), prob.ineq_jac(x)
-        H = prob.lag_hess(x, y, z)
-        Sig = z / w
+        Hess = prob.lag_hess(x, nu_r, nu_c)
+        Sig = nu_c / w
         K = np.zeros((prob.n + prob.n_eq, prob.n + prob.n_eq))
-        Hbar = H + Ac.T @ (Sig[:, None] * Ac)
+        Hbar = Hess + Ac.T @ (Sig[:, None] * Ac)
         K[:prob.n, prob.n:], K[prob.n:, :prob.n] = Ar.T, Ar
         rhs = -np.r_[gL + Ac.T @ (Sig * cw - comp / w), r]
         delta = 0.0
@@ -910,28 +910,28 @@ def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, sta
                 break
             delta = 1e-4 if delta == 0.0 else 10 * delta
         sol = np.linalg.solve(K, rhs)
-        dx, dy = sol[:prob.n], sol[prob.n:]
+        dx, dnu_r = sol[:prob.n], sol[prob.n:]
         dw = -cw - Ac @ dx
-        dz = -comp / w - Sig * dw
+        dnu_c = -comp / w - Sig * dw
         frac = max(0.99, 1 - mu)
-        a, az = 1.0, 1.0                                 # primal step for (x, w, y), dual step for z
+        a, a_nu = 1.0, 1.0                                 # primal step for (x, w, nu_r), dual step for nu_c
         if np.any(dw < 0):
             a = min(1.0, float(np.min(-frac * w[dw < 0] / dw[dw < 0])))
-        if np.any(dz < 0):
-            az = min(1.0, float(np.min(-frac * z[dz < 0] / dz[dz < 0])))
+        if np.any(dnu_c < 0):
+            a_nu = min(1.0, float(np.min(-frac * nu_c[dnu_c < 0] / dnu_c[dnu_c < 0])))
         if not split:
-            a = az = min(a, az)
+            a = a_nu = min(a, a_nu)
         psi0 = np.sqrt(sum(float(b @ b) for b in blocks))
         for _ in range(30):
-            xn, yn, zn, wn = prob.retract(x, dx, a), y + a * dy, z + az * dz, w + a * dw
-            bn, _ = kkt_error(prob, xn, yn, zn, wn, mu)
+            xn, nu_r_new, nu_c_new, wn = prob.retract(x, dx, a), nu_r + a * dnu_r, nu_c + a_nu * dnu_c, w + a * dw
+            bn, _ = kkt_error(prob, xn, nu_r_new, nu_c_new, wn, mu)
             if np.sqrt(sum(float(b @ b) for b in bn)) <= (1 - 1e-4 * a) * psi0 or delta > 0:
                 break
             a *= 0.5
-            az = a if not split else az
-        x, y, z, w = xn, yn, zn, wn
+            a_nu = a if not split else a_nu
+        x, nu_r, nu_c, w = xn, nu_r_new, nu_c_new, wn
         hist[-1]["alpha"], hist[-1]["delta"] = a, delta
-    return dict(x=x, y=y, z=z, w=w, mu=mu, hist=hist, iters=len(hist) - 1,
+    return dict(x=x, nu_r=nu_r, nu_c=nu_c, w=w, mu=mu, hist=hist, iters=len(hist) - 1,
                 converged=(hist[-1]["E0"] <= tol) if fixed_mu is None else (hist[-1]["Emu"] <= tol))
 
 
@@ -939,10 +939,10 @@ def central_path(prob, x0, mus):
     """Solve the barrier problem for each mu in turn, each started from the previous one."""
     out, state, x = [], None, x0
     for mu in mus:
-        if state is not None:                            # keep w z near the new mu
+        if state is not None:                            # keep w nu_c near the new mu
             state = (state[0], mu / state[2], state[2])
         res = interior_point(prob, x, fixed_mu=mu, tol=1e-9, state=state)
-        x, state = res["x"], (res["y"], res["z"], res["w"])
+        x, state = res["x"], (res["nu_r"], res["nu_c"], res["w"])
         out.append(res)
     return out
 
@@ -966,7 +966,7 @@ def shooting_check(prob, tau0):
 
     def cone(u):
         R, _ = rollout(prob, u.reshape(N, 3))
-        return prob.cos_c - R[1:N, :, 0] @ prob.q_c
+        return prob.cos_theta_max - R[1:N, :, 0] @ prob.q_c
 
     res = minimize(lambda u: 0.5 * prob.h * u @ u, tau0.ravel(), jac=lambda u: prob.h * u, method="SLSQP",
                    bounds=[(-prob.tau_max, prob.tau_max)] * (3 * N),
@@ -994,7 +994,7 @@ ax[0].semilogy([hh["mu"] for hh in sol["hist"]], drawstyle="steps-post", label="
 ax[0].set_xlabel("iteration"); ax[0].legend()
 # the camera axis in longitude and latitude, with the cone
 lonlat = lambda P: (np.degrees(np.arctan2(P[:, 1], P[:, 0])), np.degrees(np.arcsin(P[:, 2])))
-cone = np.array([expm_so3(a_ * prob.q_c) @ expm_so3(np.radians(prob.cone_deg) * unit(np.cross(prob.q_c, E3))) @ prob.q_c
+cone = np.array([expm_so3(a_ * prob.q_c) @ expm_so3(np.radians(prob.theta_max_deg) * unit(np.cross(prob.q_c, E3))) @ prob.q_c
                  for a_ in np.linspace(0, 2 * np.pi, 200)])
 ax[1].plot(*lonlat(cone), "r")
 for P in snaps[::4]:
@@ -1018,5 +1018,5 @@ plt.tight_layout(); plt.show()
 # %%
 path = central_path(prob, prob.initial_guess(0.0), [1e-2, 1e-3, 1e-4, 1e-5, 1e-6])
 for p_, mu in zip(path, [1e-2, 1e-3, 1e-4, 1e-5, 1e-6]):
-    margin = np.degrees(np.arccos(prob.ineq(p_["x"])[6 * prob.N:].max() + prob.cos_c)) - prob.cone_deg
+    margin = np.degrees(np.arccos(prob.ineq(p_["x"])[6 * prob.N:].max() + prob.cos_theta_max)) - prob.theta_max_deg
     print(f"mu = {mu:.0e}: cost {prob.cost(p_['x']):.5f}, margin to the cone {margin:.3f} deg")

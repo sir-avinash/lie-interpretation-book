@@ -342,7 +342,7 @@ What the full method achieves is reported by Teng et al. (2026). They plan for a
 
 **Linearization.** Error-state MPC is exactly as local as [](#sec7-local) says, plus the jump of the logarithm at half a turn. With no bounds and a Riccati terminal weight it *is* the LQR of [](#def7-feedback), fed with the error state.
 
-**Guarantees.** Nothing here proves that a constraint will hold on the real system. The bound in [](#ex13-flip) held because the QP enforces it on the input directly. A state constraint enforced on a linearized prediction can be violated by the plant. A safety filter ([](#eq8-safety-filter)) takes the opposite position: it makes no plan, and changes whatever input it is given by the smallest amount that keeps one inequality true at the next instant. The two are complements. MPC looks ahead with an approximate model. A filter looks at the present with a certificate.
+**Guarantees.** Nothing here proves that a constraint will hold on the real system. The bound in [](#ex13-flip) held because the QP enforces it on the input directly. A state constraint enforced on a linearized prediction can be violated by the plant. A safety filter, the program [](#eq8-safety-filter), takes the opposite position: it makes no plan, and changes whatever input it is given by the smallest amount that keeps one inequality true at the next instant. The two are complements. MPC looks ahead with an approximate model. A filter looks at the present with a certificate.
 
 ## Exercises {#sec13-exercises .unnumbered}
 

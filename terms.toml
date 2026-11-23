@@ -110,6 +110,11 @@ use = 'no math in section headings'
 where = ['chapters']
 
 [[rule]]
+pattern = '\(\[\]\(#eq[^)]*\)\)'
+use = 'an equation reference without extra parentheses: it already renders as (6.2)'
+where = ['chapters']
+
+[[rule]]
 pattern = '(Chapter|Section|Figure|Table|Theorem|Definition|Proposition|Example|Exercise|Appendix) \[\]\(#'
 use = 'the bare reference [](#label): it already carries its name'
 where = ['chapters']

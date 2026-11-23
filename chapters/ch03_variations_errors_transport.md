@@ -200,7 +200,7 @@ $$
 The vector $e_{\text{vel}}$ is the velocity error. On $\SO(3)$ it is the $e_\Omega$ of [](#def-error-so3).
 :::
 
-Compatibility says that the height changes only through the velocity error, exactly as $\ddt\tfrac12\|x - x_d\|^2 = (x - x_d)\cdot(\dot x - \dot x_d)$ on a flat space. It is the property that makes $\Psi$ plus a kinetic term into a Lyapunov function.
+Compatibility says that the height changes only through the velocity error, exactly as $\ddt\tfrac12\|x - x_d\|^2 = (x - x_d)\cdot(\dot x - \dot x_d)$ on a flat space. It is the property that makes $\Psi$ plus a kinetic term into a Lyapunov function, as [](#eq6-V0-dot) will show.
 
 **On $\SO(3)$.** Differentiate the relative rotation $R_d\T R$, using $\dot R = R\,\Omega^\wedge$ and $\dot R_d = R_d\,\Omega_d^\wedge$:
 
@@ -297,7 +297,7 @@ $$
 \dot\chi = -\ad_{\zeta_d}\chi + (\zeta - \zeta_d), \label{eq3-lie-algebra-error}
 $$
 
-where on $\SO(3)$ the operator $\ad_{\Omega_d}$ is the cross product with $\Omega_d$. This is a linear system whose coefficients depend on the reference velocity alone. Teng et al. (2022) and Jang, Teng and Ghaffari (2023) build quadratic costs and convex model predictive controllers on it. One linear model serves along the whole trajectory, where a model in coordinates would have to be recomputed at every attitude. [](#sec7-lie) derives the same equation from the linearization, and the chapters on filtering on Lie groups and on error-state MPC return to both uses.
+where on $\SO(3)$ the operator $\ad_{\Omega_d}$ is the cross product with $\Omega_d$. This is a linear system whose coefficients depend on the reference velocity alone. Teng et al. (2022) and Jang, Teng and Ghaffari (2023) build quadratic costs and convex model predictive controllers on it. One linear model serves along the whole trajectory, where a model in coordinates would have to be recomputed at every attitude. [](#sec7-lie) derives the same equation from the linearization. [](#sec13-error) builds a predictive controller on it, and the chapter on filtering on Lie groups returns to the other use.
 
 Equation [](#eq3-lie-algebra-error) is linear in $\chi$, and $\chi$ is a small rotation vector. So is the variation $\eta$. Are they the same thing?
 

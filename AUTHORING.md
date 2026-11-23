@@ -105,6 +105,7 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - **One question per figure.** If the caption needs "and also", make two figures.
 - **Stroke tiers.** Silhouette thickest, vectors next, construction lines thin, hidden lines dashed. Use the kit's constants.
 - **Palette.** Ink for structure. Indigo for the main object or the "good" path. Terracotta for the contrasting object, error or failure. Teal for a third role. Pastel fills only. A quantity keeps its color across chapters: the trace error is indigo and the logarithm error is teal wherever they are plotted.
+- **The same object is drawn the same way in every chapter.** A reference next to a motion that tracks it is a thin dashed gray line with a hollow marker, and the motion is solid. The boundary of a constraint is ink and its forbidden side pale terracotta. A quadrotor is drawn with `figkit.quadrotor`. The appendix lists these conventions under "References, targets and constraints in figures".
 - **Labels use the book's symbols and terms exactly.** A label is checked by `tools/check_terms.py` like any sentence.
 - **Labels sit next to what they name**, with the halo the kit applies. Math in labels uses `$...$`. Words use `fontfamily="Source Sans 3"` at size 9 to 10.
 - Mathtext in labels cannot draw a postfix `^\wedge` or `\mathcal` well. Keep hats and calligraphic letters out of figure labels.

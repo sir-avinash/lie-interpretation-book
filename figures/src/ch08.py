@@ -91,7 +91,7 @@ def l1():
     lo, hi = ax1.get_ylim()
     ax1.set_ylim(lo, hi + 0.22 * (hi - lo))
     y0 = hi + 0.17 * (hi - lo)
-    ax1.text(1.1, y0, r"true $\Delta$", color=INK, fontsize=10, va="center")
+    ax1.text(1.1, y0, r"true $\Delta$", color=INK, fontsize=10, va="center", **SANS)
     ax1.text(2.05, y0, r"raw estimate", color=MUTED, fontsize=10, va="center", **SANS)
     ax1.text(3.55, y0, r"after the filter", color=TEAL, fontsize=10, va="center", **SANS)
     save(fig, OUT / "ch08-l1.svg")

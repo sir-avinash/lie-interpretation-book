@@ -240,7 +240,7 @@ At rest, [](#eq7-so3-lin) is three decoupled double integrators and the Riccati 
 $$
 K = \begin{bmatrix} k_R I & \operatorname{diag}(k_{\Omega,i}) \end{bmatrix}, \qquad k_R = \sqrt{100/20} = 2.24, \qquad k_{\Omega,i} = \sqrt{1/20 + 2 J_i k_R} = (0.43,\ 0.52,\ 0.60).
 $$
-The same $K$ holds the body level, nose-up or inverted.
+The same $K$ holds the body level, nose-up or inverted. It has the form of the feedback part of the tracking law [](#eq6-law), with one gain per axis on the velocity error.
 
 For comparison, design an LQR the usual way: linearize the same dynamics in yaw, pitch, roll and $\Omega$ about the target, use the same $Q$ and $R_u$, and feed back wrapped angle differences. Start both loops 20° from the target about the axis $(1,1,1)$.
 
@@ -303,7 +303,7 @@ $$
 
 On $\SO(3)$ the operator $\ad_\Omega$ is $\Omega^\wedge$, and [](#eq7-lie) is the first row of [](#eq7-so3-lin) with $\chi$ in place of $\eta$. The two are the same vector to first order. On $\SE(3)$ the operator is a $6\times 6$ matrix built from the reference twist, and it couples position and attitude errors correctly.
 
-This form matters beyond LQR. Given the reference, [](#eq7-lie) is linear in the unknowns $(\chi, \zeta)$, and so is the linearized momentum equation. Discretize over a horizon, add a quadratic cost in $\chi$ and linear bounds on the inputs, and the tracking problem is a quadratic program: convex, with fast reliable solvers. The same problem posed in $R$ and $\Omega$ is not convex. Teng et al. (2022) show that the logarithm error keeps its convergence rate out to large angles: the right-hand panel of [](#fig7-large) again. Jang, Teng and Ghaffari (2023) build the convex predictive controller on $\SE(3)$ for marine vehicles. The chapter on error-state MPC and on-manifold solvers takes it from there.
+This form matters beyond LQR. Given the reference, [](#eq7-lie) is linear in the unknowns $(\chi, \zeta)$, and so is the linearized momentum equation. Discretize over a horizon, add a quadratic cost in $\chi$ and linear bounds on the inputs, and the tracking problem is a quadratic program: convex, with fast reliable solvers. The same problem posed in $R$ and $\Omega$ is not convex. Teng et al. (2022) show that the logarithm error keeps its convergence rate out to large angles: the right-hand panel of [](#fig7-large) again. Jang, Teng and Ghaffari (2023) build the convex predictive controller on $\SE(3)$ for marine vehicles. [](#sec13-qp) writes that quadratic program out and flies it against a torque bound, and [](#thm13-se3) gives the model on $\SE(3)$.
 
 ## Exercises {#sec7-exercises .unnumbered}
 

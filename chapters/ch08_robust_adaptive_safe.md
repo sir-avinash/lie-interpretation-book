@@ -192,7 +192,7 @@ $$
 then the prediction error $(\tilde e_R, \tilde e_\Omega)$ is exponentially input-to-state stable. The function $V = \tfrac12\tilde e_\Omega\cdot J_0\,\tilde e_\Omega + \tilde k_R\tilde\Psi + c\,\tilde e_R\cdot\tilde e_\Omega + \tfrac{1}{2k_\Delta}\|\tilde\Delta\|^2$, which is [](#eq8-V) for the prediction error plus a term for the estimate, satisfies $\dot V + \gamma V \le \gamma\,V_\infty$ for a rate $\gamma > 0$ and a level $V_\infty > 0$, and $V_\infty$ is proportional to $1/k_\Delta$.
 :::
 
-The proof, in Appendix A.1 of the thesis, repeats [](#thm8-bound) for the prediction error, with the projection property removing the terms in $\tilde\Delta$. Start the predictor at the vehicle's state and the initial conditions hold trivially.
+The proof, in Appendix A.1 of the thesis, repeats [](#thm8-bound) for the prediction error, with the projection property removing the terms in $\tilde\Delta$.^[The condition on $\tilde e_\Omega(0)$ is quoted as the thesis states it. The fence of [](#sec6-lyapunov) asks for slightly more: the kinetic term itself below the rim, $\tfrac12\,\tilde e_\Omega\cdot J_0\,\tilde e_\Omega < \tilde k_R\,(2 - \tilde\Psi)$.] Start the predictor at the vehicle's state and the initial conditions hold trivially.
 
 Be exact about what this says. The predictor and the vehicle come together exponentially, to within a distance that shrinks like $1/k_\Delta$. The theorem is about the prediction error. It does not bound the tracking error $e_R$ of the vehicle, and the filter does not appear in it. The tracking error has a second ingredient. By [](#eq8-l1-law) the predictor follows the reference while being pushed by $\Xi\,\hat\Delta - \Delta_f$, the part of the estimate that the filter did not pass. A slow filter leaves more of it.
 

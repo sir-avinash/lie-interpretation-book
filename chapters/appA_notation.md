@@ -29,7 +29,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 
 **Desired quantities.** The subscript $d$ marks the configuration or motion that a controller aims for: $R_d$, $q_d$, $x_d$, $\Omega_d$, $\omega_d$, and also the force $F_d$, the yaw $\psi_d$ and the input $u_d$ or $\tau_d$ that go with it. A fixed one is called the target. A moving one is called the reference. No other mark ("ref", "des", a star) is used.
 
-**Order of arguments.** The actual configuration comes first and the desired one second, in formulas and in code: $\Psi_R$ is built from $R_d\T R$, and a function is called as `e_R(R, Rd)`. An error is the actual quantity minus the desired one: $e_x = x - x_d$, $e_F = f R\,e_3 - F_d$. For a prediction error the state predictor is the actual one and the vehicle the desired one ([](#eq8-pred-error)).
+**Order of arguments.** The actual configuration comes first and the desired one second, in formulas and in code: $\Psi_R$ is built from $R_d\T R$, and a function is called as `e_R(R, Rd)`. An error is the actual quantity minus the desired one: $e_x = x - x_d$, $e_F = f R\,e_3 - F_d$. For a prediction error the state predictor is the actual one and the vehicle the desired one, as in [](#eq8-pred-error).
 
 **The tracking law.** The attitude law is always written in the form of [](#eq6-law): the feedback part $-k_R\,e_R - k_\Omega\,e_\Omega$, then the feedforward $\Omega\times J\Omega - J(\Omega\times R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d)$, with the cross product written with $\times$. On the sphere the gains $k_q$, $k_\omega$ multiply the errors in the angular acceleration, as in [](#eq6-law-s2). Every chapter that restates these laws uses the same form and cites them.
 
@@ -439,11 +439,13 @@ The book has more quantities than letters. Each letter below keeps its meaning f
 
 **Matched uncertainty.** An uncertainty that enters the dynamics at the same place as the input, so that a known one could be canceled. [](#sec8-uncertainty).
 
+**Model predictive control.** Control by solving an optimization problem over a receding horizon at every sample. Abbreviated MPC. [](#def13-mpc).
+
 **Multicopter.** A vehicle lifted by several rotors. A quadrotor is a multicopter with four.
 
 **Pitfall.** A block that warns of a trap. It is always referred to by that name.
 
-**Plain controller.** The tracking law of [](#eq6-law) with no adaptation and no safety filter. [](#sec8-free).
+**Plain controller.** The tracking law of [](#eq6-law) with no adaptation and no safety filter. [](#sec8-baseline).
 
 **Prediction error.** The error between the state predictor and the vehicle, measured with the error function, the error vector and the transport map. [](#eq8-pred-error).
 

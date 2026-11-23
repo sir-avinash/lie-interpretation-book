@@ -58,9 +58,8 @@ def opening():
     s.dot(tip, color=TERRACOTTA, size=5.2)
     s.dot(1.002 * q0, color=INDIGO, size=5.4)
     s.dot(1.002 * q1, color=INDIGO, size=5.4)
-    s.label(q0, r"$q_0$", dx=-13, dy=-4, color=INDIGO)
-    s.label(q1, r"$q_1$", dx=-4, dy=-13, color=INDIGO)
-    s.label(tip, r"$q_0 + \xi\times q_0$", dx=12, dy=7, color=TERRACOTTA, ha="left")
+    s.label(q0, r"$q$", dx=-13, dy=-4, color=INDIGO)
+    s.label(tip, r"$q + \xi\times q$", dx=12, dy=7, color=TERRACOTTA, ha="left")
     s.label(tip, "a plain step leaves the sphere", dx=12, dy=-7, color=TERRACOTTA, size=9.5, ha="left", **SANS)
     s.label(q1, "the same step, wrapped onto the sphere", dx=14, dy=1, color=INDIGO, size=9.5, ha="left", **SANS)
     s.pad_to([tip + 2.1 * s.right, q0 - 1.9 * s.right])
@@ -163,10 +162,10 @@ def horizon_data():
     for k in range(45):
         As = [ctrl.AB[k + i][0] for i in range(N)]
         Bs = [ctrl.AB[k + i][1] for i in range(N)]
-        H, F, Sx, Su = V.condense(As, Bs, ctrl.Qh, ctrl.Rh, ctrl.Pf)
+        P_UU, P_Us, Sx, Su = V.condense(As, Bs, ctrl.Qh, ctrl.Rh, ctrl.Pf)
         s0 = ctrl.error_state(k, run["R"][k], run["Om"][k])
         ff = ctrl.tau_d[k:k + N].ravel()
-        U, _ = V.box_qp(H, F @ s0, -sc["tau_max"] - ff, sc["tau_max"] - ff)
+        U, _ = V.box_qp(P_UU, P_Us @ s0, -sc["tau_max"] - ff, sc["tau_max"] - ff)
         pred = (Sx @ s0 + Su @ U).reshape(N, 6)
         axis = [run["R"][k] @ E3] + [sc["ref"]((k + i + 1) * h)[0] @ V.expm_so3(pred[i, :3]) @ E3 for i in range(N)]
         plans.append(np.array(axis))
@@ -186,16 +185,16 @@ def horizon_frame(t):
     s.shadow((0, 0, -1.12), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     ref_axis = np.array([sc["ref"](x)[0] @ E3 for x in np.linspace(0, 1.5, 400)])
-    s.sphere_curve(ref_axis, color=INK, lw=0.8, alpha=0.8)
+    s.sphere_curve(ref_axis, color=MUTED, lw=0.9, linestyle=DASH)
     past = run["R"][:k + 1, :, 2]
     if k >= 1:
         s.sphere_curve(1.002 * past, color=INDIGO, lw=2.3, zorder=31, show_hidden=False)
     s.sphere_curve(1.002 * d["plans"][k], color=TEAL, lw=1.4, zorder=30, show_hidden=False)
     s.dot(1.003 * d["plans"][k][-1], color=TEAL, size=3.2)
     qd = sc["ref"](k * h)[0] @ E3
-    s.dot(1.003 * qd, color=INK, size=5.5, hollow=True)
+    s.dot(1.003 * qd, color=MUTED, size=5.5, hollow=True)
     s.dot(1.004 * past[-1], color=INDIGO, size=6)
-    s.label(qd, "reference", dx=-12, dy=3, size=9.5, ha="right", **SANS)
+    s.label(qd, "reference", dx=-12, dy=3, size=9.5, ha="right", color=MUTED, **SANS)
     s.label(past[-1], r"$R\,e_3$", dx=13, dy=-6, color=INDIGO, ha="left")
     # --- the torque strip, drawn in canvas coordinates
     x0, x1, y0, yr = 1.62, 3.42, -0.05, 0.62            # y = y0 + yr * tau
@@ -235,7 +234,7 @@ def horizon():
             width_px=760, stills=(0.0, 0.42, 0.6, 1.0), strip_px=900, strip_cols=2)
 
 
-# --------------------------------- animation: interior point around a cone
+# ------------------------- animation: interior-point method around a cone
 _IPM = {}
 
 
@@ -257,13 +256,13 @@ def cone_scene(xlim=None, ylim=None, width=6.4, height=3.7):
     s.shadow((0, 0, -1.12), 1.0)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     s.sphere_curve(great_circle(E3), color=INK, lw=0.5, alpha=0.35)
-    cap = small_circle(prob.q_c, np.radians(prob.cone_deg), 200)
+    cap = small_circle(prob.q_c, np.radians(prob.theta_max_deg), 200)
     xy = s.project(1.001 * cap)
     from matplotlib.patches import Polygon
     s.ax.add_patch(Polygon(xy, closed=True, fc=PEACH, ec="none", alpha=0.9, zorder=13))
-    s.sphere_curve(1.001 * cap, color=TERRACOTTA, lw=1.3, zorder=16)
-    s.arrow(prob.q_c, 1.42 * prob.q_c, color=TERRACOTTA, zorder=32)
-    s.label(1.42 * prob.q_c, r"$q_c$", dx=10, dy=4, color=TERRACOTTA)
+    s.sphere_curve(1.001 * cap, color=INK, lw=1.7, zorder=16)
+    s.arrow(prob.q_c, 1.42 * prob.q_c, color=INK, zorder=32)
+    s.label(1.42 * prob.q_c, r"$q_c$", dx=10, dy=4)
     a, b = prob.R0 @ E1, prob.RN @ E1
     s.dot(1.003 * a, color=INK, size=5)
     s.dot(1.003 * b, color=INK, size=5)
@@ -295,7 +294,7 @@ def cone_frame(t):
     A, B = snaps[i][0], snaps[min(i + 1, n)][0]
     pts = np.array([unit((1 - f) * a + f * b) for a, b in zip(A, B)])
     draw_path(s, snaps[0][0], MUTED, 0.9, dots=False, zorder=28)
-    inside = pts @ prob.q_c > prob.cos_c + 1e-9
+    inside = pts @ prob.q_c > prob.cos_theta_max + 1e-9
     col = INDIGO if t >= 0.92 else TEAL
     draw_path(s, pts, col, 2.0)
     for p in pts[inside]:
@@ -317,7 +316,7 @@ def cone():
             width_px=620, stills=(0.0, 0.3, 0.55, 1.0), strip_px=760, strip_cols=2)
 
 
-# ------------------------------------------- the interior point in numbers
+# ----------------------------------- the interior-point method in numbers
 def ipm():
     d = ipm_data()
     prob, sol = d["prob"], d["sol"]
@@ -334,9 +333,9 @@ def ipm():
     ax0.set_yticks([1, 1e-3, 1e-6, 1e-9])
     ax0.minorticks_off()
     # the reduced KKT matrix, ordered by stage
-    x, y, z, w = sol["x"], sol["y"], sol["z"], sol["w"]
+    x, nu_r, nu_c, w = sol["x"], sol["nu_r"], sol["nu_c"], sol["w"]
     Ac, Ar = prob.ineq_jac(x), prob.eq_jac(x)
-    K = np.block([[prob.lag_hess(x, y, z) + Ac.T @ ((z / w)[:, None] * Ac), Ar.T], [Ar, np.zeros((prob.n_eq,) * 2)]])
+    K = np.block([[prob.lag_hess(x, nu_r, nu_c) + Ac.T @ ((nu_c / w)[:, None] * Ac), Ar.T], [Ar, np.zeros((prob.n_eq,) * 2)]])
     order = V.stage_order(prob)
     P = np.abs(K[np.ix_(order, order)]) > 1e-10
     from matplotlib.colors import ListedColormap
