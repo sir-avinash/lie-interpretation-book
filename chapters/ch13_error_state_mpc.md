@@ -5,6 +5,8 @@ id: ch-mpc
 summary: What an optimizer's variables should be when the state is a rotation, how tracking on a group becomes a quadratic program, and how Newton and interior-point methods work on the manifold itself.
 notebook: notebooks/ch13_error_state_mpc.ipynb
 verify: verify/ch13.py
+epigraph: "Plans are worthless, but planning is everything."
+epigraph_source: "Dwight D. Eisenhower, quoting an Army saying, 14 November 1957"
 ---
 
 Model predictive control is a simple loop. Solve an optimization problem over the next $N$ steps. Apply the first input. Measure, and solve again. The loop needs a solver, and every textbook solver expects its unknowns to be a vector in $\R^n$: it adds a step to the current guess and tries again.
