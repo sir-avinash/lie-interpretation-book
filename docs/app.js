@@ -11,6 +11,12 @@ function loadScript(src) {
 
 async function ensureLibraries() {
   const tasks = [];
+  if (!window.KC_DIAGRAMS) {
+    tasks.push(loadScript('diagrams.js'));
+  }
+  if (!window.BOOK_SECTIONS) {
+    tasks.push(loadScript('book_data.js'));
+  }
   if (!window.marked) {
     tasks.push(loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js'));
   }
@@ -178,8 +184,8 @@ async function selectSection(id) {
 }
 
 async function initBook() {
-  buildNav();
   await ensureLibraries();
+  buildNav();
   const params = new URLSearchParams(window.location.search);
   if (params.get('print') === 'all') {
     await renderFullBook();
