@@ -1072,25 +1072,32 @@ ck.true("grid: Euler law uses several times the peak torque and effort of the ge
         fl["rest"]["euler_peak_median"] > 3 * fl["rest"]["geo_peak_median"] and fl["rest"]["effort_ratio_median"] > 2,
         f"peak {fl['rest']['euler_peak_median']:.1f} vs {fl['rest']['geo_peak_median']:.1f} N m, effort x{fl['rest']['effort_ratio_median']:.1f}")
 ck.true("grid: the Euler law is faster where it works", fl["rest"]["euler_t5_max"] < fl["rest"]["geo_t5_median"] + 2.0)
-# the three attitudes not yet inside 1e-3 after 3 s with the initial rate do converge, later
-late = [Rg for Rg in fl_R0 if fl_run(Rg, np.array([1.0, -1.0, 1.0]), tau_geo)[0] >= 1e-3]
-late_final = [fl_run(Rg, np.array([1.0, -1.0, 1.0]), tau_geo, t_f=8.0)[0] for Rg in late]
-ck.true("the late starters of the moving grid converge within 8 s", all(v < 1e-6 for v in late_final), f"{len(late)} attitudes")
+# the attitudes that do not converge with this initial rate: half turns whose axis is perpendicular to the rate.
+# The rate then slides the body along the family of half turns, where the restoring torque stays zero.
+Om_g = np.array([1.0, -1.0, 1.0])
+late = [Rg for Rg in fl_R0 if fl_run(Rg, Om_g, tau_geo)[0] >= 1e-3]
+late_ok = all(abs(np.trace(Rg) + 1) < 1e-9 and abs(unit(log_so3(Rg)) @ Om_g) < 1e-6 for Rg in late)
+late_final = [fl_run(Rg, Om_g, tau_geo, t_f=8.0)[0] for Rg in late]
+ck.true("moving grid: the 3 attitudes that stay are half turns about an axis perpendicular to the initial rate, and they end at another half turn",
+        len(late) == 3 and late_ok and all(abs(v - 2) < 1e-6 for v in late_final), f"{len(late)} attitudes, final Psi_R {np.round(late_final, 6)}")
 ck.record("fl_late", len(late))
+# a nudge of 0.001 rad/s along the axis frees them
+free = [fl_run(Rg, Om_g + 1e-3 * unit(log_so3(Rg)), tau_geo, t_f=8.0)[0] for Rg in late]
+ck.true("the same three starts with 0.001 rad/s added along the axis converge", all(v < 1e-6 for v in free))
 
 # near the chart singularity with a modest body rate: Euler torque grows like 1/cos(pitch)
 near = {}
-for pitch in (0.0, 60.0, 85.0, 89.0, 89.9):
+for pitch in (0.0, 60.0, 89.9, 89.99):
     Rg = Ry(np.radians(pitch)) @ Rx(0.3)
     Om0 = np.array([1.0, -1.0, 1.0])
-    near[f"{pitch:g}"] = {"euler_Nm": float(np.linalg.norm(tau_euler(Rg, Om0))), "geo_Nm": float(np.linalg.norm(tau_geo(Rg, Om0)))}
+    Th = euler_zyx(Rg)
+    near[f"{pitch:g}"] = {"euler_Nm": float(np.linalg.norm(tau_euler(Rg, Om0))), "geo_Nm": float(np.linalg.norm(tau_geo(Rg, Om0))),
+                          "yaw_rate": float(np.linalg.solve(E_mat(Th[1], Th[2]), Om0)[0])}
 ck.record("fl_near_singularity", near)
-ck.true("Euler torque at 89.9 degrees of pitch is over 100 times the geometric one, which stays bounded",
-        near["89.9"]["euler_Nm"] > 100 * near["89.9"]["geo_Nm"] and near["89.9"]["geo_Nm"] < 30,
-        f"{near['89.9']['euler_Nm']:.0f} vs {near['89.9']['geo_Nm']:.1f} N m")
-r = near["89.9"]["euler_Nm"] / near["89"]["euler_Nm"]
-ck.true("between 89 and 89.9 degrees the Euler torque grows by about cos(89)^2/cos(89.9)^2 or cos ratio (blow-up)", r > 9, f"ratio {r:.1f}")
-ck.record("fl_blowup_ratio_89_to_899", float(r))
+ck.true("near 90 degrees of pitch the Euler torque is several times the geometric one and still growing; the geometric one is flat",
+        near["89.99"]["euler_Nm"] > 5 * near["89.9"]["euler_Nm"] > 25 * near["89.9"]["geo_Nm"]
+        and abs(near["89.99"]["geo_Nm"] - near["89.9"]["geo_Nm"]) < 0.1,
+        f"{near['89.9']['euler_Nm']:.0f}, {near['89.99']['euler_Nm']:.0f} against {near['89.9']['geo_Nm']:.1f} N m")
 # output linearization of y = e_R itself needs C_R^-1: singular at 90 and 180 degrees
 ck.close("det C_R = 0 at 90 degrees of error", np.linalg.det(C_R(expm_so3(np.pi / 2 * unit([1.0, 2, 3])), I3)), 0.0)
 # range of the two error measures on the grid

@@ -130,6 +130,6 @@ Formulas below are in plain LaTeX.
 - **Input limits.** The condition can demand more than the actuators have (6.2 N for a 4.9 N bob arriving at 29° at 1.5 rad/s). Add the limits to the program and count infeasible steps. Zero is the only acceptable count.
 - **Sampling.** At slow sample rates the input chatters at the boundary (force jumps of 18 N at 20 ms against 0.013 N at 2 ms in the pendulum example). Run the program at the attitude-loop rate.
 - **Measure-zero sets.** The input drops out of the cone condition at `q = ±q_c` and out of the augmented barrier when the thrust axis is parallel to `x - x_o`. A reference aimed exactly at the center of an obstacle stalls. Offset it.
-- **Cutoff set by the tracking plot.** Raising `kappa` spends delay margin. With a 20 ms motor lag a cutoff of 3000 rad/s is unstable.
+- **Cutoff set by the tracking plot.** Raising `kappa` spends delay margin. With a 20 ms motor lag a cutoff of 3000 rad/s oscillates, with the torque bounded only by the projection ball.
 - **Projection ball too small.** The estimate is clipped and an offset returns (35° in the chapter's example with `Delta_max = 1` N·m against 2.16 N·m).
 - **Plain barrier on an underactuated vehicle.** The program becomes infeasible when the thrust axis points toward the obstacle. In the chapter's example it fails 1.88 m from the center and the vehicle hits.

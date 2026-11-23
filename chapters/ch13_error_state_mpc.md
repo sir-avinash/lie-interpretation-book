@@ -45,7 +45,7 @@ Each term is the error vector $e_q = q_d \times q$ of [](#def-error-s2) with $q_
 
 For the four readings of [](#fig13-opening) the plain average has length 0.82. Start Newton's method at the first reading instead. The distance to the minimizer goes 29°, 0.41°, 0.00003°. The figure starts 58° away to make the step visible: 58°, 2.5°, 0.0011°, then $2\times10^{-10}$ degrees. Added to $q_0$ as a vector, that first step of 60° would land at a distance 1.45 from the center.
 
-The same construction works on the rotation group, where there is nothing to draw and more to gain.
+The same construction works on the rotation group.
 
 ::: {.definition #def13-newton name="Gradient, Hessian and Newton step on $\SO(3)$"}
 For a cost $\Phi$ on $\SO(3)$, the **gradient** $\operatorname{grad}\Phi(R) \in \R^3$ and the **Hessian** $\operatorname{Hess}\Phi(R) \in \R^{3\times3}$, symmetric, are the coefficients of
@@ -98,11 +98,10 @@ The pair $s = (\chi, \delta\Omega)$ is the **error state**. It is the linear sta
 How does $\chi$ move? [](#eq3-left-error-dynamics) gives $\dot E_\ell$. Turning that into $\dot\chi$ needs the derivative of the exponential,
 
 $$
-\exp\big((x + \delta x)^\wedge\big) = \exp(x^\wedge)\,\exp\big((\operatorname{dexp}_x\,\delta x)^\wedge\big) + O(\|\delta x\|^2), \qquad
-\operatorname{dexp}_x = I - \frac{1-\cos\theta}{\theta^2}\,x^\wedge + \frac{\theta - \sin\theta}{\theta^3}\,(x^\wedge)^2, \label{eq13-dexp}
+\exp\big((x + \delta x)^\wedge\big) = \exp(x^\wedge)\,\exp\big((\operatorname{dexp}_x\,\delta x)^\wedge\big) + O(\|\delta x\|^2), \label{eq13-dexp}
 $$
 
-with $\theta = \|x\|$. The result is exact at any size of error:
+which on $\SO(3)$ is $\operatorname{dexp}_x = I - \tfrac{1-\cos\theta}{\theta^2}\,x^\wedge + \tfrac{\theta - \sin\theta}{\theta^3}\,(x^\wedge)^2$ with $\theta = \|x\|$. The result is exact at any size of error:
 
 $$
 \dot\chi = \operatorname{dexp}_\chi^{-1}\big(\Omega - \exp(-\chi^\wedge)\,\Omega_d\big). \label{eq13-exact}
@@ -138,7 +137,7 @@ $$
 M\,\dot\zeta = \ad_\zeta\T M\,\zeta + u, \qquad M = \begin{bmatrix} m I & 0 \\ 0 & J \end{bmatrix}. \label{eq13-ep}
 $$
 
-The second equation is the rigid body in the body frame, $m(\dot V + \Omega\times V) = $ force and $J\dot\Omega + \Omega\times J\Omega = $ torque, with the wrench $u$ stacked in the same order.
+The second equation is the rigid body in the body frame: $m(\dot V + \Omega\times V)$ equals the force and $J\dot\Omega + \Omega\times J\Omega$ equals the torque. The wrench $u$ stacks force and torque in the same order as the twist.
 
 ::: {.proposition #thm13-se3 name="Error-state model on $\SE(3)$"}
 With $\chi = \log(X_d^{-1}X)^\vee \in \R^6$, $\delta\zeta = \zeta - \zeta_d$ and $\delta u = u - u_d$, to first order
@@ -146,8 +145,10 @@ $$
 \ddt\begin{bmatrix}\chi \\ \delta\zeta\end{bmatrix} =
 \begin{bmatrix} -\ad_{\zeta_d} & I_6 \\[2pt] 0 & M^{-1}H_d \end{bmatrix}
 \begin{bmatrix}\chi \\ \delta\zeta\end{bmatrix} +
-\begin{bmatrix} 0 \\ M^{-1} \end{bmatrix} \delta u, \qquad
-H_d = \begin{bmatrix} -m\,\Omega_d^\wedge & m\,V_d^\wedge \\ 0 & (J\Omega_d)^\wedge - \Omega_d^\wedge J \end{bmatrix}. \label{eq13-se3}
+\begin{bmatrix} 0 \\ M^{-1} \end{bmatrix} \delta u, \label{eq13-se3}
+$$
+$$
+H_d = \begin{bmatrix} -m\,\Omega_d^\wedge & m\,V_d^\wedge \\ 0 & (J\Omega_d)^\wedge - \Omega_d^\wedge J \end{bmatrix}.
 $$
 The reference pose $X_d$ does not appear.
 :::
@@ -225,17 +226,15 @@ Two honest notes on the table.
 
 The Euler-angle MPC does well. Its worst error is under twice that of the error-state MPC. The flip passes the chart singularity in a few hundredths of a second, too briefly for the model to do harm, as [](#sec7-worked) found for LQR. Ask it to linger and the result changes. Hold the nose-up attitude of [](#ex7-hold) at 85° of pitch, from a 20° error, with the same bound. The error-state MPC is within 1° after 0.54 s and never uses more than 0.41 N·m. The Euler-angle MPC tumbles to 177° of error, sits on the bound for 99% of the steps, and is still 76° off after 3 s. Its QP is convex and solved exactly. The model inside it is wrong.
 
-The solve time is small because the problem is small. The projected Newton solver needs 1.3 iterations on average and at most 3, warm-started from the previous plan shifted by one step. In NumPy on one laptop core the median is 0.2 ms and the worst case a few milliseconds, against a period of 20 ms. Jang, Teng and Ghaffari (2023) report the same pattern at scale. With $N = 100$ on a surface vessel in simulation, their QP took about 50 ms on average. Two nonlinear MPC baselines took 460 to 950 ms. They also report what the linearization costs: overshoot and slower convergence from large initial errors, and slightly larger tracking error than nonlinear MPC. Their controller constrains inputs only.
+The solve time is small because the problem is small. The projected Newton solver needs 1.3 iterations on average and at most 3, warm-started from the previous plan shifted by one step. In NumPy on one laptop core the median is 0.2 ms and the worst case stays below a few milliseconds, against a period of 20 ms. Jang, Teng and Ghaffari (2023) report the same pattern at scale. With $N = 100$ on a surface vessel in simulation, their QP took about 50 ms on average. Two nonlinear MPC baselines took 460 to 950 ms. They also report what the linearization costs: overshoot and slower convergence from large initial errors, and slightly larger tracking error than nonlinear MPC. Their controller constrains inputs only.
 
 ## What is convex, and what is not {#sec13-convex}
 
-The QP [](#eq13-qp) is convex. That statement is about the problem the solver receives.
-
-The problem you care about is not convex. Its states live on $\SO(3)$, which is not a convex set. Its dynamics are nonlinear equality constraints. Its natural cost, $\|\log(R_d\T R)\|^2$, has a crease at half a turn. The QP is a convex model of that problem, valid near the reference, and the reference had to come from somewhere.
+The QP [](#eq13-qp) is convex. The problem you care about is not. Its states live on $\SO(3)$, which is not a convex set. Its dynamics are nonlinear equality constraints. Its natural cost, $\|\log(R_d\T R)\|^2$, has a crease at half a turn. The QP is a convex model of that problem, valid near the reference, and the reference had to come from somewhere.
 
 How near is near? One part of the model is better than first order.
 
-Give the body a pure attitude error, with $\delta\Omega = 0$ and the feedforward torque. Both bodies then have the same angular velocity forever, since the momentum equation does not contain $R$. Then [](#eq13-exact) reduces to $\dot\chi = -\Omega_d\times\chi$ exactly. The linear model propagates a 120° attitude error as accurately as a 10° one: the prediction half a second ahead is off by 0.09% in both cases, all of it from sampling. This is the property that Barrau and Bonnabel (2017) exploit in filtering, seen from the control side.
+Give the body a pure attitude error, with $\delta\Omega = 0$ and the feedforward torque. Both bodies then have the same angular velocity forever, since the momentum equation does not contain $R$. Then [](#eq13-exact) reduces to $\dot\chi = -\Omega_d\times\chi$ exactly. The linear model propagates a 120° attitude error as accurately as a 10° one: the prediction half a second ahead is off by 0.09% in both cases, all of it from sampling.
 
 The model breaks through velocity. Add a velocity error of $2\ \text{s}^{-1}$ times the angle and the same prediction is off by 1.5% at 2°, 7.4% at 10°, 22% at 30° and 41% at 60°. The neglected terms are the ones dropped from [](#eq13-exact): the curvature of the group, through $\operatorname{dexp}^{-1}$, and the quadratic gyroscopic term.
 
@@ -333,13 +332,11 @@ What the full method achieves is reported by Teng et al. (2026). They plan for a
 
 ## Limits {#sec13-limits}
 
-**Local minima.** Bulge the initial guess of [](#ex13-cone) the other way and the same solver converges, just as cleanly, to a path over the cone. It costs 16% more. Both pass the second-order test for a minimum. The solver cannot tell you which one you have. A cone on a sphere has two sides, and no local method sees both.
-
-**Initialization.** The answer depends on where you start, and so does whether you get one. The cut locus is one reason: two attitudes half a turn apart are joined by many shortest turns, and an interpolated guess picks one arbitrarily.
+**Local minima and initialization.** Bulge the initial guess of [](#ex13-cone) the other way and the same solver converges, just as cleanly, to a path over the cone. It costs 16% more. Both pass the second-order test for a minimum. The solver cannot tell you which one you have. A cone on a sphere has two sides, and no local method sees both. The answer depends on the initial guess.
 
 **Time.** A QP with 75 unknowns is solved in a fraction of a millisecond. A nonlinear program is solved in "a few iterations, usually". Real-time use needs a time limit and a plan for when it is hit, as in the hardware experiments above.
 
-**Warm starts.** Both methods of this chapter start each solve from the previous one, shifted by a step. The projected Newton solver gains a great deal from this. An interior-point method gains less, because yesterday's solution sits on the boundary and the method wants to start inside.
+**Warm starts.** The QP solver starts each solve from the previous plan, shifted by a step, and usually finds it nearly optimal. An interior-point method gains less from a warm start: the old solution sits on the boundary, and the method wants to start inside.
 
 **Linearization.** Error-state MPC is exactly as local as [](#sec7-local) says, plus the jump of the logarithm at half a turn. With no bounds and a Riccati terminal weight it *is* the LQR of [](#ch-linearization).
 
@@ -356,7 +353,7 @@ Derive [](#eq13-mean) from [](#eq13-dexp). You will need $\chi\T\operatorname{de
 :::
 
 ::: {.exercise #exr13-se3}
-Derive $H_d$ in [](#eq13-se3) by varying the second equation of [](#eq13-ep). Then add linear drag, a force $-D_v V$ and a torque $-D_\Omega\Omega$ with constant matrices (named here only), and write the new $H_d$. Does the reference pose appear?
+Derive $H_d$ in [](#eq13-se3) by varying the second equation of [](#eq13-ep). Then add linear drag, a force $-c_1 V$ and a torque $-c_2\,\Omega$ with positive constants $c_1, c_2$, and write the new $H_d$. Does the reference pose appear?
 :::
 
 ::: {.exercise #exr13-lqr}
@@ -377,7 +374,7 @@ In the notebook, follow the central path of [](#ex13-cone) from the guess that b
 
 ## Notes and sources {#sec13-notes .unnumbered}
 
-Optimization on manifolds with retractions, and the convergence theory of Newton's method in that setting, are set out by Absil, Mahony and Sepulchre (2008) and Boumal (2023). The quadratic cost in the Lie algebra, its gradient and the linearized error dynamics are from Teng et al. (2022), and the convex error-state MPC on $\SE(3)$ is from Jang, Teng and Ghaffari (2023). Kotaru (2022, ch. 6) runs an MPC of the same kind on the variation-based linearization of a quadrotor with a cable-suspended load, with a Riccati terminal weight. The exact linearity of the logarithm of an invariant error is due to Barrau and Bonnabel (2017). The projected Newton method is that of Bertsekas (1982). Interior-point methods are treated by Nocedal and Wright (2006), and the line-search implementation that LieIPM follows is that of Wächter and Biegler (2006). LieIPM, its closed-form derivatives and its benchmarks are from Teng et al. (2026). Kotaru (2022, ch. 5) transcribes a quadrotor with a cable-suspended load by writing $R = R_0\exp(\eta^\wedge)$ and $q = \exp(\xi^\wedge)q_0$ with $\eta$ and $\xi$ as Euclidean decision variables, and handles the taut and slack cable with a complementarity constraint, which is beyond this chapter. Wu (2017) solves a QP at every instant to enforce safety constraints, the approach of [](#ch-robust). Siravuru (2019, ch. 5) derives a variational integrator for the Reaction Mass Biped.
+Optimization on manifolds with retractions, and the convergence theory of Newton's method in that setting, are set out by Absil, Mahony and Sepulchre (2008) and Boumal (2023). The quadratic cost in the Lie algebra, its gradient and the linearized error dynamics are from Teng et al. (2022), and the convex error-state MPC on $\SE(3)$ is from Jang, Teng and Ghaffari (2023). Kotaru (2022, ch. 6) runs an MPC of the same kind on the variation-based linearization of a quadrotor with a cable-suspended load, with a Riccati terminal weight. The exact linearity of the logarithm of an invariant error, met in [](#sec13-convex) for a pure attitude error, is due to Barrau and Bonnabel (2017). The projected Newton method is that of Bertsekas (1982). Interior-point methods are treated by Nocedal and Wright (2006), and the line-search implementation that LieIPM follows is that of Wächter and Biegler (2006). LieIPM, its closed-form derivatives and its benchmarks are from Teng et al. (2026). Kotaru (2022, ch. 5) transcribes a quadrotor with a cable-suspended load by writing $R = R_0\exp(\eta^\wedge)$ and $q = \exp(\xi^\wedge)q_0$ with $\eta$ and $\xi$ as Euclidean decision variables, and handles the taut and slack cable with a complementarity constraint, which is beyond this chapter. Wu (2017) solves a QP at every instant to enforce safety constraints, the approach of [](#ch-robust). Siravuru (2019, ch. 5) derives a variational integrator for the Reaction Mass Biped.
 
 - P.-A. Absil, R. Mahony and R. Sepulchre, [*Optimization Algorithms on Matrix Manifolds*](https://press.princeton.edu/absil), Princeton University Press, 2008.
 - A. Barrau and S. Bonnabel, ["The invariant extended Kalman filter as a stable observer"](https://doi.org/10.1109/TAC.2016.2594085), *IEEE Transactions on Automatic Control* 62(4), 2017.

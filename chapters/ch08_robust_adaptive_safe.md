@@ -5,6 +5,8 @@ id: ch-robust
 summary: A tracking controller assumes a perfect model and knows nothing of walls. An adaptive loop on the manifold supplies the first, a barrier function the second.
 notebook: notebooks/ch08_adaptive_safety.ipynb
 verify: verify/ch08.py
+epigraph: "… we had better be quite sure that the purpose put into the machine is the purpose which we really desire and not merely a colorful imitation of it."
+epigraph_source: "Norbert Wiener, *Some Moral and Technical Consequences of Automation* (1960)"
 ---
 
 A quadrotor hovers under a geometric tracking controller. Its attitude error is zero to the last digit. Now clip a 0.5 kg camera to it, 8 cm off-center. The controller measures the attitude a thousand times a second and corrects whatever it sees. Where does the attitude error settle?
@@ -204,7 +206,7 @@ Take $\gamma = 4000$, $\kappa = 20$ rad/s, $\Delta_{\max} = 3$ N·m, $\tilde k_R
 
 The right panel of [](#fig8-l1) is the co-pilot at work. With gyroscope noise of 0.02 rad/s, the raw estimate swings through 2.1 N·m around a truth that moves by 0.23. The filtered estimate tracks the truth.
 
-Now turn the cutoff ([](#fig8-filter), left). At $\kappa = 1$ rad/s the hand is too calm: the error is 3.3° RMS, because the gusts are faster than the filter. At $\kappa = 300$ rad/s the error is 0.06°, and the rate of change of the commanded torque has grown from 12 to 104 N·m/s. The noise is going to the motors. Add a motor lag of 20 ms and a cutoff of 3000 rad/s is unstable, while 30 rad/s is unaffected.
+Now turn the cutoff ([](#fig8-filter), left). At $\kappa = 1$ rad/s the hand is too calm: the error is 3.3° RMS, because the gusts are faster than the filter. At $\kappa = 300$ rad/s the error is 0.06°, and the rate of change of the commanded torque has grown from 12 to 104 N·m/s. The noise is going to the motors. Add a motor lag of 20 ms. At $\kappa = 30$ rad/s nothing changes. At $\kappa = 3000$ rad/s the loop oscillates: the error is 1.8° RMS instead of 0.38°, and the torque swings to 3.3 N·m, held back only by the projection ball.
 
 ![The filter cutoff trades tracking against robustness. Left: RMS attitude error and RMS rate of change of the commanded torque, with gyroscope noise. Right: the largest input delay for which the hover loop still settles. It falls as the cutoff rises, and does not move when the adaptation gain changes by a factor of 16.](figures/ch08-filter.svg){#fig8-filter}
 

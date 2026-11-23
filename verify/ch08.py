@@ -1003,10 +1003,19 @@ def main():
     ck.true("raising the cutoff from 10 to 300 rad/s multiplies the torque rate by more than 5",
             study[300.0][1] > 5 * study[10.0][1], f"{study[10.0][1]:.1f} -> {study[300.0][1]:.1f} N m/s")
     with np.errstate(all="ignore"):
-        o = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, kappa=3000.0)
-    ck.true("with a 20 ms motor lag, a cutoff of 3000 rad/s is unstable", o["diverged"] or deg(o["angle"].max()) > 90)
-    o = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, kappa=30.0)
-    ck.true("with the same lag, a cutoff of 30 rad/s is fine", not o["diverged"] and error_stats(o, 3.0)[0] < 1.0)
+        o_hi = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, kappa=3000.0)
+    o_lo = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, kappa=30.0)
+    hi_rms, lo_rms = error_stats(o_hi, 3.0)[0], error_stats(o_lo, 3.0)[0]
+    hi_tau, lo_tau = float(np.abs(o_hi["tau"][3000:]).max()), float(np.abs(o_lo["tau"][3000:]).max())
+    ck.true("with a 20 ms motor lag, a cutoff of 3000 rad/s oscillates: larger error, torque bounded only by the projection ball",
+            hi_rms > 3 * lo_rms and hi_tau > 3.0 and torque_rate_rms(o_hi, 3.0, h) > 400,
+            f"RMS {hi_rms:.2f} deg against {lo_rms:.2f} deg, peak torque {hi_tau:.2f} against {lo_tau:.2f} N m")
+    ck.true("with the same lag, a cutoff of 30 rad/s is fine", not o_lo["diverged"] and lo_rms < 1.0)
+    ck.record("lag_cutoff_3000_rms_deg", hi_rms)
+    ck.record("lag_cutoff_30_rms_deg", lo_rms)
+    ck.record("lag_cutoff_3000_peak_torque", hi_tau)
+    ck.record("lag_cutoff_30_peak_torque", lo_tau)
+    ck.record("lag_cutoff_3000_torque_rate", torque_rate_rms(o_hi, 3.0, h))
     # the L1 point: the delay margin is set by the filter, not by the adaptation gain
     dm_pd = delay_margin("pd")
     dm = {kappa: delay_margin("l1", kappa=kappa) for kappa in (3.0, 30.0, 300.0)}
