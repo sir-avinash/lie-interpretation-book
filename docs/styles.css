@@ -16,6 +16,11 @@
 
 * { box-sizing: border-box; }
 
+/* Override Jekyll minima wrapper so the book shell uses the full viewport */
+.site-header, .site-footer { display: none !important; }
+.page-content { padding: 0 !important; }
+.wrapper { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+
 body {
   margin: 0;
   background: var(--bg-paper);
@@ -23,8 +28,13 @@ body {
   font-family: var(--font-serif);
   font-size: 18.5px;
   line-height: 1.65;
+  min-height: 100vh;
+}
+
+.book-shell {
   display: flex;
   min-height: 100vh;
+  width: 100%;
 }
 
 /* Sidebar Navigation */

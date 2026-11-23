@@ -1,18 +1,42 @@
-if (window.mermaid) {
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: 'base',
-    themeVariables: {
-      background: '#fdfcf8',
-      primaryColor: '#f4f6fb',
-      primaryTextColor: '#1e242b',
-      primaryBorderColor: '#1b1f8a',
-      lineColor: '#2b2b2b',
-      secondaryColor: '#fbf7ef',
-      tertiaryColor: '#f3f8f8',
-      fontFamily: '"Source Sans 3", system-ui, sans-serif'
-    }
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
   });
+}
+
+async function ensureLibraries() {
+  const tasks = [];
+  if (!window.marked) {
+    tasks.push(loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js'));
+  }
+  if (!window.mermaid) {
+    tasks.push(loadScript('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js'));
+  }
+  if (!window.MathJax || !window.MathJax.typesetPromise) {
+    tasks.push(loadScript('https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'));
+  }
+  await Promise.all(tasks);
+  if (window.mermaid) {
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        background: '#fdfcf8',
+        primaryColor: '#f4f6fb',
+        primaryTextColor: '#1e242b',
+        primaryBorderColor: '#1b1f8a',
+        lineColor: '#2b2b2b',
+        secondaryColor: '#fbf7ef',
+        tertiaryColor: '#f3f8f8',
+        fontFamily: '"Source Sans 3", system-ui, sans-serif'
+      }
+    });
+  }
 }
 
 const navEl = document.getElementById('toc-nav');
@@ -153,11 +177,16 @@ async function selectSection(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-buildNav();
-const params = new URLSearchParams(window.location.search);
-if (params.get('print') === 'all') {
-  renderFullBook();
-} else {
-  const initialId = window.location.hash ? window.location.hash.slice(1) : BOOK_SECTIONS[0].id;
-  selectSection(initialId);
+async function initBook() {
+  buildNav();
+  await ensureLibraries();
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('print') === 'all') {
+    await renderFullBook();
+  } else {
+    const initialId = window.location.hash ? window.location.hash.slice(1) : BOOK_SECTIONS[0].id;
+    await selectSection(initialId);
+  }
 }
+
+initBook();
