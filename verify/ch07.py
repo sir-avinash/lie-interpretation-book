@@ -308,6 +308,24 @@ def wrap(a):
     return (a + np.pi) % (2 * np.pi) - np.pi
 
 
+def flip_euler_lqr(ref, P_final, n_grid=1501):
+    """The same finite-horizon LQR, designed and fed back in ZYX Euler angles."""
+    tg = np.linspace(0, ref.T, n_grid)
+    eul = np.array([euler_of(ref(t)[0]) for t in tg])
+    eul[:, 0], eul[:, 2] = np.unwrap(eul[:, 0]), np.unwrap(eul[:, 2])
+    AE = np.array([euler_A(np.r_[e, ref(t)[1]], ref(t)[2]) for e, t in zip(eul, tg)])
+    AEf, eulf = interp1d(tg, AE, axis=0), interp1d(tg, eul, axis=0)
+    ts, _, Ks = riccati_ltv(lambda t: AEf(t), lambda t: SO3_B, Q_ATT, R_ATT, P_final, ref.T, n_grid)
+    K = interp1d(ts, Ks, axis=0)
+
+    def ctrl(t, R, Om):
+        t = min(max(t, 0.0), ref.T)
+        _, Od, tau_d = ref(t)
+        return tau_d - K(t) @ np.r_[wrap(euler_of(R) - eulf(t)), Om - Od]
+
+    return dict(ts=ts, Ks=Ks, A=AE, euler=eul, tg=tg, ctrl=ctrl)
+
+
 def hold_compare(pitch_deg, err_deg, axis, T=4.0, n=801):
     """Hold R_d = R_y(pitch) from an initial error; geometric LQR against Euler-angle LQR."""
     Rd = Ry(np.radians(pitch_deg))
@@ -531,6 +549,10 @@ def main():
         ranks.append(np.linalg.matrix_rank(Mt, tol=1e-6))
         leak = max(leak, np.abs(s2_C(x[:3], x[3:]) @ Mt).max())
     ck.true("moving reference: rank [B, dB/dt - A B] = 4 = dim ker C at every sampled time", set(ranks) == {4})
+    x = ref.sol(0.7)
+    qdot = np.cross(x[3:], x[:3])
+    M1 = np.vstack([-hat(x[:3]), hat(qdot)]) / (M_P * L_P)
+    ck.close("moving reference: dB/dt - A B = (1/ml) [-hat(q_d); hat(q_d')]", M01(0.7)[:, 3:], M1, tol=1e-6)
     ck.close("moving reference: those columns lie in ker C(t)", leak, 0, tol=1e-6)
 
     def gram_rhs(t, y):                                     # Phi(0,t) and the Gramian on [0, t]
@@ -775,17 +797,19 @@ def main():
     ck.record("flip_rate_at_injection", float(ref.angle(t0)[1]))
 
     # ---- the Euler-angle LQR ------------------------------------------------
-    tg = np.linspace(0, ref.T, 1501)
-    eul = np.array([euler_of(ref(t)[0]) for t in tg])
-    eul[:, 0], eul[:, 2] = np.unwrap(eul[:, 0]), np.unwrap(eul[:, 2])
-    AE = np.array([euler_A(np.r_[e, ref(t)[1]], ref(t)[2]) for e, t in zip(eul, tg)])
-    ck.record("flip_euler_A_max", float(np.abs(AE).max()))
-    AEf = interp1d(tg, AE, axis=0)
-    _, _, KsE = riccati_ltv(lambda t: AEf(t), lambda t: SO3_B, Q_ATT, R_ATT, lq["P_inf"], ref.T, 1501)
-    kE = np.linalg.norm(KsE, axis=(1, 2))
+    fe = flip_euler_lqr(ref, lq["P_inf"])
+    ck.record("flip_euler_A_max", float(np.abs(fe["A"]).max()))
+    kE = np.linalg.norm(fe["Ks"], axis=(1, 2))
     ck.record("flip_euler_gain_norm_max", float(kE.max()))
     ck.true("flip: Euler-chart gain peaks several times above the geometric gain", kE.max() > 4 * knorm.max(),
             f"{kE.max():.1f} against {knorm.max():.1f}")
+    sE = so3_sim(expm_so3(np.radians(15) * ax), ZERO3, fe["ctrl"], ref.T, t_eval=te, max_step=1e-3)
+    finalE = np.degrees(np.linalg.norm(log_so3(ref(ref.T)[0].T @ sE.y[:9, -1].reshape(3, 3))))
+    ck.true("flip: the Euler LQR also tracks out the 15 deg error (the transit past the pole is brief)", finalE < 0.05,
+            f"final {finalE:.4f} deg")
+    ck.record("flip_euler_final_error_deg", float(finalE))
+    near = np.abs(np.degrees(fe["euler"][:, 1])) > 80
+    ck.record("flip_time_within_10deg_of_pole", float(near.sum() * (fe["tg"][1] - fe["tg"][0])))
 
     h0 = hold_compare(0.0, 20.0, (1, 1, 1))
     h85 = hold_compare(85.0, 20.0, (1, 1, 1))

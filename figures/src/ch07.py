@@ -137,8 +137,8 @@ def linear_vs_nonlinear():
         ax0.plot(tt, y, color=col, lw=1.5, zorder=6, ls="-")
         ax0.annotate(f"{deg}°", (tt[-1], y[-1]), xytext=(5, off), textcoords="offset points", color=col, fontsize=9.5,
                      va="center", **SANS)
-    ax0.text(0.04, 1.47, r"linear prediction $\|\xi(t)\|$", fontsize=10.5, path_effects=halo())
-    ax0.text(0.04, 0.1, r"simulated $\|e_q(t)\|$ / initial angle", fontsize=10.5, color=MUTED, path_effects=halo())
+    ax0.text(0.04, 1.47, r"grey band: linear prediction $\|\xi(t)\|$", fontsize=10.5, color=MUTED, path_effects=halo())
+    ax0.text(0.04, 0.1, r"lines: simulated $\|e_q(t)\|$ / initial angle", fontsize=10.5, path_effects=halo())
     ax0.set_xlim(0, T * 1.1)
     ax0.set_ylim(0, 1.6)
     ax0.set_xlabel("time (s)", fontsize=9.5, **SANS)
@@ -202,12 +202,8 @@ def hold_figure():
 def gain_history():
     ref = V.Flip()
     lq = V.flip_lqr(ref)
-    tg = np.linspace(0, ref.T, 1501)
-    eul = np.array([V.euler_of(ref(t)[0]) for t in tg])
-    eul[:, 0], eul[:, 2] = np.unwrap(eul[:, 0]), np.unwrap(eul[:, 2])
-    from scipy.interpolate import interp1d
-    AE = interp1d(tg, np.array([V.euler_A(np.r_[e, ref(t)[1]], ref(t)[2]) for e, t in zip(eul, tg)]), axis=0)
-    tsE, _, KsE = V.riccati_ltv(lambda t: AE(t), lambda t: V.SO3_B, V.Q_ATT, V.R_ATT, lq["P_inf"], ref.T, 1501)
+    fe = V.flip_euler_lqr(ref, lq["P_inf"])
+    tg, eul, tsE, KsE = fe["tg"], fe["euler"], fe["ts"], fe["Ks"]
 
     fig, (ax0, ax1) = new_plot(6.4, 3.5, nrows=2, sharex=True, gridspec_kw={"height_ratios": [1, 1.7]})
     fig.subplots_adjust(left=0.1, right=0.975, bottom=0.14, top=0.96, hspace=0.16)

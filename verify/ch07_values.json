@@ -62,6 +62,8 @@
   "flip_rate_at_injection": 5.541769440932395,
   "flip_euler_A_max": 873.2352994087478,
   "flip_euler_gain_norm_max": 18.045315137441538,
+  "flip_euler_final_error_deg": 0.004713084091324308,
+  "flip_time_within_10deg_of_pole": 0.092,
   "hold0": {
     "geometric": {
       "max_angle_deg": 20.0,
