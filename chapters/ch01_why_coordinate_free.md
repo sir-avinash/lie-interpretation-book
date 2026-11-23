@@ -5,6 +5,8 @@ id: ch-why
 summary: Euler angles break, quaternions unwind, and no continuous controller can be global. What to do about it.
 notebook: notebooks/ch01_singularities_unwinding.ipynb
 verify: verify/ch01.py
+epigraph: "The introduction of numbers as coordinates … is an act of violence …"
+epigraph_source: "Hermann Weyl, *Philosophy of Mathematics and Natural Science* (1949)"
 ---
 
 Here is a question that sounds too easy. Your robot's heading is 350°. You want it at 10°. What is the error?
