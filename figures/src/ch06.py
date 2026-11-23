@@ -11,8 +11,8 @@ from scipy.integrate import solve_ivp
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from figkit import (INDIGO, INK, MUTED, OCHRE, PAPER, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
-                    Scene, animate, ease, great_circle, halo, new_plot, phase, save, small_circle, unit)
+from figkit import (DASH, INDIGO, INK, MUTED, PAPER, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
+                    Scene, animate, ease, great_circle, halo, new_plot, phase, quadrotor, save, small_circle, unit)
 
 OUT = ROOT / "figures"
 E1, E2, E3 = np.eye(3)
@@ -24,7 +24,7 @@ G = 9.81
 m_Q = 4.34
 J = np.diag([0.0820, 0.0845, 0.1377])
 Jinv = np.linalg.inv(J)
-k_R, k_Om = 8.81, 2.54
+k_R, k_Omega = 8.81, 2.54
 k_x, k_v = 16 * m_Q, 5.6 * m_Q
 J_min, J_max = J[0, 0], J[2, 2]
 
@@ -87,7 +87,7 @@ def att_error_run(Re0, eOm0, t_f, n=801, law="trace"):
     def rhs(t, s):
         Re, eO = s[:9].reshape(3, 3), s[9:]
         e = e_R(Re, EYE) if law == "trace" else log_so3(Re)
-        return np.concatenate([(Re @ hat(eO)).ravel(), Jinv @ (-k_R * e - k_Om * eO)])
+        return np.concatenate([(Re @ hat(eO)).ravel(), Jinv @ (-k_R * e - k_Omega * eO)])
 
     ts = np.linspace(0, t_f, n)
     sol = solve_ivp(rhs, [0, t_f], np.concatenate([Re0.ravel(), eOm0]), t_eval=ts, rtol=1e-9, atol=1e-11)
@@ -149,20 +149,20 @@ def puzzle():
 
 
 # ------------------------------------------------- 2. the Lyapunov function
-def c_max(kR, kOm):
-    return min(np.sqrt(kR * J_min) / J_max, 4 * kR * kOm / (kOm**2 + 4 * kR * J_max))
+def c_max():
+    return min(np.sqrt(k_R * J_min) / J_max, 4 * k_R * k_Omega / (k_Omega**2 + 4 * k_R * J_max))
 
 
 def W_mats(c, psi):
     W1 = 0.5 * np.array([[k_R, -c * J_max], [-c * J_max, J_min]])
     W2 = 0.5 * np.array([[2 * k_R / (2 - psi), c * J_max], [c * J_max, J_max]])
-    W3 = np.array([[c * k_R, -c * k_Om / 2], [-c * k_Om / 2, k_Om - c * J_max]])
+    W3 = np.array([[c * k_R, -c * k_Omega / 2], [-c * k_Omega / 2, k_Omega - c * J_max]])
     return W1, W2, W3
 
 
 def best_rate(psi):
     best = (0.0, 0.0)
-    for c in np.linspace(0.002, 0.998, 499) * c_max(k_R, k_Om):
+    for c in np.linspace(0.002, 0.998, 499) * c_max():
         _, W2, W3 = W_mats(c, psi)
         g = np.linalg.eigvalsh(W3)[0] / np.linalg.eigvalsh(W2)[-1]
         best = max(best, (g, c))
@@ -183,7 +183,7 @@ def lyapunov():
     ax.semilogy(ts, V[0] * np.exp(-gam * ts), color=TERRACOTTA, lw=1.4)
     k0 = 600
     slope = np.polyfit(ts[k0:], np.log(V[k0:]), 1)
-    ax.semilogy(ts[400:], np.exp(np.polyval(slope, ts[400:])) * 3, color=MUTED, lw=0.9, ls=(0, (3.5, 3)))
+    ax.semilogy(ts[400:], np.exp(np.polyval(slope, ts[400:])) * 3, color=MUTED, lw=0.9, ls=DASH)
     ax.text(1.95, 0.05, f"slope {-slope[0]:.1f} s$^{{-1}}$:\ntwice the slowest pole", fontsize=9, color=MUTED, **SANS)
     ax.text(1.05, 30, f"guaranteed: $V(0)\\,e^{{-\\gamma t}}$,  $\\gamma$ = {gam:.3f} s$^{{-1}}$", fontsize=9.5, color=TERRACOTTA,
             path_effects=halo(), **SANS)
@@ -198,7 +198,7 @@ def lyapunov():
     bx.plot([psi_max], [gam], "o", ms=5, color=TERRACOTTA)
     bx.annotate("the example", (psi_max, gam), xytext=(-8, 22), textcoords="offset points", fontsize=9, ha="right",
                 color=INK, arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.7), **SANS)
-    bx.axvline(2.0, color=MUTED, lw=0.8, ls=(0, (3.5, 3)))
+    bx.axvline(2.0, color=MUTED, lw=0.8, ls=DASH)
     bx.text(1.96, 0.42, "half a turn", rotation=90, fontsize=9, color=MUTED, ha="right", va="center", **SANS)
     bx.set_xlim(0, 2.05)
     bx.set_ylim(0, 0.55)
@@ -238,9 +238,9 @@ def settle():
 
     bx.semilogx(gaps, t_tr, "o", ms=2.6, color=INDIGO, mew=0)
     bx.semilogx(gaps, t_lg, "o", ms=2.6, color=TEAL, mew=0)
-    lam = (-k_Om + np.sqrt(k_Om**2 + 4 * k_R * J[0, 0])) / (2 * J[0, 0])
+    lam = (-k_Omega + np.sqrt(k_Omega**2 + 4 * k_R * J[0, 0])) / (2 * J[0, 0])
     gg = np.array([1e-3, 1.0])
-    bx.semilogx(gg, 2.34 - np.log(gg) / lam, color=MUTED, lw=0.9, ls=(0, (3.5, 3)))
+    bx.semilogx(gg, 2.34 - np.log(gg) / lam, color=MUTED, lw=0.9, ls=DASH)
     bx.text(150, 4.45, r"0.73 s per factor of ten", fontsize=9, color=MUTED, **SANS)
     bx.set_xlim(200, 5e-4)
     bx.set_ylim(0, 5)
@@ -250,7 +250,7 @@ def settle():
 
 
 # --------------------------------------------------- 4. the sphere, animated
-k_q, k_om = 16.0, 5.6
+k_q, k_omega = 16.0, 5.6
 CONE, W_REF = np.radians(35), 1.2
 
 
@@ -267,7 +267,7 @@ def s2_rhs(t, s):
     qd, omd, omd_dot = ref_s2(t)
     e_q, e_omega = np.cross(qd, q), om - tangent(q, omd)
     # the closed loop of the chapter's law: this is the omega_dot it commands
-    return np.concatenate([np.cross(om, q), tangent(q, omd_dot) - (q @ omd) * np.cross(om, q) - k_q * e_q - k_om * e_omega])
+    return np.concatenate([np.cross(om, q), tangent(q, omd_dot) - (q @ omd) * np.cross(om, q) - k_q * e_q - k_omega * e_omega])
 
 
 def s2_run(angle_deg, side, t_f, n):
@@ -283,8 +283,8 @@ _s2_cache = {}
 
 def s2_data():
     if not _s2_cache:
-        _s2_cache["runs"] = [(s2_run(60.0, E2, S2_TF, S2_N), TEAL, "60°"),
-                             (s2_run(170.0, E1, S2_TF, S2_N), OCHRE, "170°"),
+        _s2_cache["runs"] = [(s2_run(60.0, E2, S2_TF, S2_N), INDIGO, "60°"),
+                             (s2_run(170.0, E1, S2_TF, S2_N), TEAL, "170°"),
                              (s2_run(179.9, E2, S2_TF, S2_N), TERRACOTTA, "179.9°")]
     return _s2_cache["runs"]
 
@@ -296,8 +296,8 @@ def sphere_frame(t):
     s.shadow((0, 0, -1.12), 1.0, strength=0.16)
     s.sphere((0, 0, 0), 1.0, color=PERIWINKLE)
     s.sphere_curve(great_circle(E3), color=INK, lw=0.6)
-    s.sphere_curve(small_circle(E3, CONE), color=INDIGO, lw=0.9)
-    s.sphere_curve(small_circle(-E3, CONE), color=MUTED, lw=0.7)
+    s.sphere_curve(small_circle(E3, CONE), color=MUTED, lw=0.9, linestyle=DASH)       # the reference: thin, dashed, gray
+    s.sphere_curve(small_circle(-E3, CONE), color=MUTED, lw=0.5, alpha=0.6)
     qd = ref_s2(tt)[0]
     for run, col, name in s2_data():
         trail = run[max(0, k - 150):k + 1]
@@ -305,9 +305,9 @@ def sphere_frame(t):
             s.sphere_curve(1.003 * trail, color=col, lw=1.6, show_hidden=True, zorder=24)
         vis = s.point_visible(run[k])
         s.dot(1.003 * run[k], color=col, size=6.5, hollow=not vis, zorder=40)
-    s.dot(1.003 * qd, color=INDIGO, size=7.5, hollow=not s.point_visible(qd), zorder=42)
-    s.label(1.003 * qd, r"$q_d$", dx=0, dy=13, size=12, color=INDIGO)
-    s.dot(-1.003 * qd, color=MUTED, size=5.5, hollow=True, zorder=38)
+    s.dot(1.003 * qd, color=MUTED, size=7.5, hollow=True, zorder=42)
+    s.label(1.003 * qd, r"$q_d$", dx=0, dy=13, size=12, color=MUTED)
+    s.dot(-1.003 * qd, color=MUTED, size=3.5, zorder=38)
     s.label(-1.003 * qd, r"$-q_d$", dx=0, dy=-13, size=11, color=MUTED)
     ang = [np.degrees(np.arccos(np.clip(run[k] @ qd, -1, 1))) for run, _, _ in s2_data()]
     if tt < 0.02:
@@ -377,7 +377,7 @@ def quad_ctrl(t, x, v, R, Om):
     F2 = -k_x * ev1 - k_v * ev2 + m_Q * sd
     Rd, Omd, Omd_dot = Rd_derivs(Fd, F1, F2, hd, hd1, hd2)
     e_Omega = Om - R.T @ Rd @ Omd
-    tau = (-k_R * e_R(R, Rd) - k_Om * e_Omega + np.cross(Om, J @ Om)
+    tau = (-k_R * e_R(R, Rd) - k_Omega * e_Omega + np.cross(Om, J @ Om)
            - J @ (np.cross(Om, R.T @ Rd @ Omd) - R.T @ Rd @ Omd_dot))
     return f, tau, Fd
 
@@ -403,16 +403,6 @@ def quad_data():
     return _q_cache["t"], _q_cache["S"], _q_cache["F"]
 
 
-def draw_vehicle(s, x, R, color=INK, arm=0.26):
-    for a in (R[:, 0], R[:, 1]):
-        s.curve(np.array([x - arm * a, x + arm * a]), color=color, lw=2.2, alpha=1.0, zorder=34)
-        for sg in (-1, 1):
-            c = x + sg * arm * a
-            th = np.linspace(0, 2 * np.pi, 30)
-            ring = c + 0.085 * (np.outer(np.cos(th), R[:, 0]) + np.outer(np.sin(th), R[:, 1])) + 0.02 * R[:, 2]
-            s.curve(ring, color=color, lw=0.9, alpha=1.0, zorder=34)
-
-
 def cascade_frame(t):
     s = Scene(width=6.4, height=3.9, azim=-52, elev=24, xlim=(-2.75, 2.75), ylim=(-1.98, 1.37))
     ts, S, info = quad_data()
@@ -424,15 +414,15 @@ def cascade_frame(t):
     th = np.linspace(0, 2 * np.pi, 241)
     circ = np.array([ref_pos(a)[0] for a in th])
     s.curve(np.column_stack([circ[:, 0], circ[:, 1], np.full(len(th), ground)]), color=MUTED, lw=0.6, alpha=0.5)
-    s.curve(circ, color=INDIGO, lw=1.0, alpha=0.9, zorder=20)
+    s.curve(circ, color=MUTED, lw=1.0, alpha=0.9, zorder=20, linestyle=DASH)          # the reference: thin, dashed, gray
     xd = ref_pos(tt)[0]
     x, R = S[k, :3], S[k, 6:15].reshape(3, 3)
     f, _, Fd = info[k]
     s.shadow((x[0], x[1], ground), 0.3, strength=0.2)
-    s.curve(S[:k + 1, :3], color=TEAL, lw=1.5, alpha=0.95, zorder=26)
-    s.dot(xd, color=INDIGO, size=7, zorder=30)
-    s.label(xd, r"$x_d$", dx=-12, dy=-12, size=12, color=INDIGO)
-    draw_vehicle(s, x, R)
+    s.curve(S[:k + 1, :3], color=INDIGO, lw=1.7, alpha=0.95, zorder=26)                # the motion that tracks it
+    s.dot(xd, color=MUTED, size=7, hollow=True, zorder=30)
+    s.label(xd, r"$x_d$", dx=-12, dy=-12, size=12, color=MUTED)
+    quadrotor(s, x, R, arm=0.26)
     s.arrow(x, x + 0.5 * R[:, 2], color=INK, lw=1.6, head=0.1, zorder=36)
     s.arrow(x, x + 0.34 * Fd / (m_Q * G), color=TERRACOTTA, lw=1.5, head=0.1, zorder=35)
     tilt = np.degrees(np.arccos(np.clip(R[2, 2], -1, 1)))
@@ -440,7 +430,7 @@ def cascade_frame(t):
     if tt < 0.02:
         msg = "released upside down, 0.88 m from the reference"
     elif f <= 0:
-        msg = "thrust cut: it falls and turns toward the wanted force"
+        msg = "thrust cut: it falls and turns toward the desired force"
     elif tilt > 25 and tt < 0.6:
         msg = "thrust back on: it rights itself and brakes the fall"
     elif err > 0.05:
@@ -450,7 +440,7 @@ def cascade_frame(t):
     s.text2d(0.0, -1.86, msg, fontsize=10, color=INK, **SANS)
     s.text2d(-2.2, 1.24, f"t = {tt:.2f} s", fontsize=10, color=MUTED, **SANS)
     s.text2d(1.55, 1.24, f"position error {err:.2f} m   tilt {tilt:.0f}°", fontsize=9.5, color=MUTED, **SANS)
-    s.text2d(-2.05, 0.75, r"$F_d$: wanted force", fontsize=9.5, color=TERRACOTTA, **SANS)
+    s.text2d(-2.05, 0.75, r"$F_d$: desired force", fontsize=9.5, color=TERRACOTTA, **SANS)
     s.text2d(-2.05, 0.97, r"$R\,e_3$: thrust axis", fontsize=9.5, color=INK, **SANS)
     return s
 

@@ -4,7 +4,7 @@
 # A tracking controller assumes a perfect model and knows nothing of walls. This notebook reproduces the chapter's experiments:
 #
 # 1. a camera clipped on off-center, and the offset it leaves;
-# 2. geometric L1 adaptation on $\mathrm{SO}(3)$, with its predictor, adaptation law and filter;
+# 2. geometric L1 adaptive control on $\mathrm{SO}(3)$, with its state predictor, adaptation law and filter;
 # 3. a barrier function for a point and a wall;
 # 4. a cone on $S^2$, enforced by a quadratic program while the reference leaves it;
 # 5. a tilt limit on $\mathrm{SO}(3)$.
@@ -56,11 +56,11 @@ def angle_between(R, Rd):
     return np.arccos(np.clip(1 - Psi_R(R, Rd), -1, 1))
 
 # %% [markdown]
-# ## What the tracker assumes
+# ## 1. What the tracker assumes
 #
-# The geometric PD law with feedforward, written with the inertia $J_0$ that the controller believes:
+# The plain controller: the PD law with feedforward of Chapter 6, written with the inertia $J_0$ that the controller believes,
 #
-# $$\tau = -k_R\,e_R - k_\Omega\,e_\Omega + \Omega\times J_0\Omega - J_0\big(\Omega^\wedge R^\top R_d\,\Omega_d - R^\top R_d\,\dot\Omega_d\big).$$
+# $$\tau = \tau_{\mathrm{fb}} + \Omega\times J_0\Omega - J_0\big(\Omega\times R^\top R_d\,\Omega_d - R^\top R_d\,\dot\Omega_d\big), \qquad \tau_{\mathrm{fb}} = -k_R\,e_R - k_\Omega\,e_\Omega .$$
 
 # %%
 J0 = np.diag([6.968e-3, 6.211e-3, 10.34e-3])       # inertia the controller believes
@@ -72,20 +72,20 @@ print("camera torque (N·m):", DELTA_CAM)
 
 
 def feedforward(R, Om, Rd, Omd, Omd_dot, J):
-    """Om x J Om - J (hat(Om) R^T Rd Omd - R^T Rd Omd_dot): cancels everything but the PD term."""
+    """Om x J Om - J (Om x R^T Rd Omd - R^T Rd Omd_dot): cancels everything but the feedback part."""
     return np.cross(Om, J @ Om) - J @ (hat(Om) @ R.T @ Rd @ Omd - R.T @ Rd @ Omd_dot)
 
-def pd_torque(R, Om, Rd, Omd, Omd_dot, J=J0, kR=K_R, kOm=K_OM):
-    """Geometric PD with feedforward, equation (eq8-pd)."""
-    mu = -kR * e_R(R, Rd) - kOm * e_Omega(R, Om, Rd, Omd)
-    return mu + feedforward(R, Om, Rd, Omd, Omd_dot, J), mu
+def pd_torque(R, Om, Rd, Omd, Omd_dot, J=J0, k_R=K_R, k_Omega=K_OM):
+    """The plain controller, equation (eq8-pd). Returns the torque and its feedback part."""
+    tau_fb = -k_R * e_R(R, Rd) - k_Omega * e_Omega(R, Om, Rd, Omd)
+    return tau_fb + feedforward(R, Om, Rd, Omd, Omd_dot, J), tau_fb
 
-def lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, Delta_e, J=J_TRUE, Jn=J0):
-    """Delta of (eq8-lumped): J0 e_Omega_dot = mu + Delta."""
+def lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, Delta_e, J=J_TRUE, Jn=J0):
+    """Delta of (eq8-lumped): J0 e_Omega_dot = tau_fb + Delta."""
     acc = hat(Om) @ R.T @ Rd @ Omd - R.T @ Rd @ Omd_dot
     Delta_m = -np.cross(Om, (J - Jn) @ Om) + (J - Jn) @ acc
     JJ = Jn @ np.linalg.inv(J)
-    return (JJ - I3) @ mu + JJ @ (Delta_m + Delta_e)
+    return (JJ - I3) @ tau_fb + JJ @ (Delta_m + Delta_e)
 
 def ref_hover(t):
     return I3, np.zeros(3), np.zeros(3)
@@ -124,9 +124,9 @@ def dist_camera_gust(t):
     return DELTA_CAM + gust(t)
 
 # %% [markdown]
-# ## What you do not know
+# ## 2. What you do not know
 #
-# With the true inertia $J$ and an unknown body torque $\Delta_e$, the error dynamics become $J_0\,\dot e_\Omega = \mu + \Delta$. The lumped uncertainty $\Delta$ enters where the input does. A constant torque leaves the offset $\sin\theta = \|\Delta_e\| / k_R$.
+# With the true inertia $J$ and an unknown body torque $\Delta_e$, the error dynamics become $J_0\,\dot e_\Omega = \tau_{\mathrm{fb}} + \Delta$. The lumped uncertainty $\Delta$ enters where the input does. A constant torque leaves the offset $\sin\theta = \|\Delta_e\| / k_R$.
 
 # %%
 def proj(theta, y, bound, eps=0.1):
@@ -143,62 +143,62 @@ class L1Attitude:
     State: predictor (Rp, Omp), estimate Dhat, filtered estimate Df.
     """
 
-    def __init__(self, R0, Om0, h, gamma=4000.0, kappa=20.0, bound=3.0, c=0.01,
-                 J=J0, kR=K_R, kOm=K_OM, kRt=K_R, kOmt=K_OM):
+    def __init__(self, R0, Om0, h, k_Delta=4000.0, k_f=20.0, bound=3.0, c=0.01,
+                 J=J0, k_R=K_R, k_Omega=K_OM, kRt=K_R, kOmt=K_OM):
         self.Rp, self.Omp = R0.copy(), Om0.copy()
         self.Dhat, self.Df = np.zeros(3), np.zeros(3)
-        self.h, self.gamma, self.kappa, self.bound, self.c = h, gamma, kappa, bound, c
+        self.h, self.k_Delta, self.k_f, self.bound, self.c = h, k_Delta, k_f, bound, c
         self.J, self.Ji = J, np.linalg.inv(J)
-        self.kR, self.kOm, self.kRt, self.kOmt = kR, kOm, kRt, kOmt
+        self.k_R, self.k_Omega, self.kRt, self.kOmt = k_R, k_Omega, kRt, kOmt
 
     def errors(self, R, Om):
         """Prediction errors: the predictor plays 'actual', the plant plays 'desired'."""
         return e_R(self.Rp, R), e_Omega(self.Rp, self.Omp, R, Om), Psi_R(self.Rp, R)
 
-    def U(self, R):
+    def Xi(self, R):
         return self.J @ self.Rp.T @ R @ self.Ji @ R.T @ self.Rp
 
     def torques(self, R, Om, Rd, Omd, Omd_dot):
-        """Return (tau, mu, mu_p) from the current controller state. Does not advance it."""
+        """Return (tau, tau_fb, tau_fb_p) from the current controller state. Does not advance it."""
         J, Ji, Rp, Omp = self.J, self.Ji, self.Rp, self.Omp
         eRt, eOmt, _ = self.errors(R, Om)
-        mu1p = -self.kR * e_R(Rp, Rd) - self.kOm * e_Omega(Rp, Omp, Rd, Omd)
-        mu_p = mu1p + self.U(R) @ self.Dhat - self.Df
+        pd_p = -self.k_R * e_R(Rp, Rd) - self.k_Omega * e_Omega(Rp, Omp, Rd, Omd)
+        tau_fb_p = pd_p + self.Xi(R) @ self.Dhat - self.Df
         eOm = e_Omega(R, Om, Rd, Omd)
-        mu = (J @ R.T @ Rp @ Ji @ (mu1p - self.Df + self.kRt * eRt + self.kOmt * eOmt)
+        tau_fb = (J @ R.T @ Rp @ Ji @ (pd_p - self.Df + self.kRt * eRt + self.kOmt * eOmt)
               + J @ R.T @ Rp @ hat(eOmt) @ Rp.T @ R @ eOm)
-        tau = mu + feedforward(R, Om, Rd, Omd, Omd_dot, J)
-        return tau, mu, mu_p
+        tau = tau_fb + feedforward(R, Om, Rd, Omd, Omd_dot, J)
+        return tau, tau_fb, tau_fb_p
 
     def adapt_direction(self, R, Om):
         eRt, eOmt, _ = self.errors(R, Om)
-        U = self.U(R)
-        return -(U.T @ eOmt + self.c * U.T @ self.Ji.T @ eRt)
+        Xi = self.Xi(R)
+        return -(Xi.T @ eOmt + self.c * Xi.T @ self.Ji.T @ eRt)
 
     def step(self, R, Om, Rd, Omd, Omd_dot):
-        """One controller period: torque from the current state, then advance the state.
+        """One sampling period: torque from the current state, then advance the state.
 
         The estimate is advanced first and the predictor uses the new value
         (semi-implicit Euler), which keeps the fast estimate-predictor loop
-        stable for sqrt(gamma / J) h < 2.
+        stable for sqrt(k_Delta / J) h < 2.
         """
         h = self.h
-        tau, mu, mu_p = self.torques(R, Om, Rd, Omd, Omd_dot)
-        self.last_mu = mu
-        U = self.U(R)
+        tau, tau_fb, tau_fb_p = self.torques(R, Om, Rd, Omd, Omd_dot)
+        self.last_tau_fb = tau_fb
+        Xi = self.Xi(R)
         eRt, eOmt, _ = self.errors(R, Om)
-        y = -(U.T @ eOmt + self.c * U.T @ self.Ji.T @ eRt)
-        Dhat_new = self.Dhat + h * self.gamma * proj(self.Dhat, y, self.bound)
+        y = -(Xi.T @ eOmt + self.c * Xi.T @ self.Ji.T @ eRt)
+        Dhat_new = self.Dhat + h * self.k_Delta * proj(self.Dhat, y, self.bound)
         size = np.linalg.norm(Dhat_new)
         if size > self.bound:                               # a finite step can overshoot the ball: pull it back
             Dhat_new = Dhat_new * (self.bound / size)
-        mu_p = mu_p + U @ (Dhat_new - self.Dhat)
+        tau_fb_p = tau_fb_p + Xi @ (Dhat_new - self.Dhat)
         self.Dhat = Dhat_new
-        Omp_dot = self.Ji @ mu_p - (hat(self.Omp) @ self.Rp.T @ Rd @ Omd - self.Rp.T @ Rd @ Omd_dot)
+        Omp_dot = self.Ji @ tau_fb_p - (hat(self.Omp) @ self.Rp.T @ Rd @ Omd - self.Rp.T @ Rd @ Omd_dot)
         Omp_new = self.Omp + h * Omp_dot
         self.Rp = self.Rp @ expm_so3(0.5 * h * (self.Omp + Omp_new))
         self.Omp = Omp_new
-        self.Df = self.Df + (1 - np.exp(-self.kappa * h)) * (self.Dhat - self.Df)
+        self.Df = self.Df + (1 - np.exp(-self.k_f * h)) * (self.Dhat - self.Df)
         return tau
 
 def body_step(R, Om, tau, h, J, Ji):
@@ -217,7 +217,7 @@ def run_attitude(controller, ref, dist, tf, h=1e-3, R0=I3, Om0=np.zeros(3), J=J_
     """Closed-loop attitude simulation.
 
     controller: "pd" or "l1".  noise: std of the gyroscope error (rad/s).
-    lag: motor time constant (s).  delay: input delay in controller periods.
+    lag: motor time constant (s).  delay: input delay in sampling periods.
     """
     rng = np.random.default_rng(seed)
     Ji = np.linalg.inv(J)
@@ -233,15 +233,15 @@ def run_attitude(controller, ref, dist, tf, h=1e-3, R0=I3, Om0=np.zeros(3), J=J_
         Om_meas = Om + noise * rng.normal(size=3)
         De = dist(t)
         if l1 is None:
-            tau, mu = pd_torque(R, Om_meas, Rd, Omd, Omd_dot)
+            tau, tau_fb = pd_torque(R, Om_meas, Rd, Omd, Omd_dot)
         else:
             out["Psi_pred"][k] = Psi_R(l1.Rp, R)
             out["eOm_pred"][k] = np.linalg.norm(e_Omega(l1.Rp, l1.Omp, R, Om))
             out["Psi_p"][k] = Psi_R(l1.Rp, Rd)
             out["Dhat"][k], out["Df"][k] = l1.Dhat, l1.Df
             tau = l1.step(R, Om_meas, Rd, Omd, Omd_dot)
-            mu = l1.last_mu
-        out["Delta"][k] = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, De, J)
+            tau_fb = l1.last_tau_fb
+        out["Delta"][k] = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, De, J)
         out["t"][k], out["Psi"][k], out["angle"][k] = t, Psi_R(R, Rd), angle_between(R, Rd)
         out["eOm"][k] = np.linalg.norm(e_Omega(R, Om, Rd, Omd))
         out["tau"][k], out["Om"][k] = tau, Om
@@ -268,19 +268,19 @@ print(f"offset: {np.degrees(o_pd['angle'][-1]):.2f} deg,  "
       f"predicted: {np.degrees(np.arcsin(np.linalg.norm(DELTA_CAM) / K_R)):.2f} deg")
 
 # %% [markdown]
-# ## A co-pilot who learns
+# ## 3. A co-pilot who learns
 #
 # The class `L1Attitude` above holds the state predictor $(R_p, \Omega_p)$, the estimate $\hat\Delta$ and the filtered estimate $\Delta_f$. One call of `step` computes the torque from
 #
-# $$\mu = J_0 R^\top R_p J_0^{-1}\big(-k_R e_R^p - k_\Omega e_\Omega^p - \Delta_f + \tilde k_R\tilde e_R + \tilde k_\Omega\tilde e_\Omega\big) + J_0 R^\top R_p\,\tilde e_\Omega^\wedge R_p^\top R\,e_\Omega,$$
+# $$\tau_{\mathrm{fb}} = J_0 R^\top R_p J_0^{-1}\big(-k_R e_R^p - k_\Omega e_\Omega^p - \Delta_f + \tilde k_R\tilde e_R + \tilde k_\Omega\tilde e_\Omega\big) + J_0 R^\top R_p\,\tilde e_\Omega^\wedge R_p^\top R\,e_\Omega,$$
 #
-# then advances $\dot{\hat\Delta} = \gamma\,\mathrm{Proj}(\hat\Delta, y)$, the predictor, and the filter $\dot\Delta_f = \kappa(\hat\Delta - \Delta_f)$.
+# then advances $\dot{\hat\Delta} = k_\Delta\,\operatorname{Proj}(\hat\Delta, y)$ with the adaptation gain $k_\Delta$, the predictor, and the filter $\dot\Delta_f = k_f(\hat\Delta - \Delta_f)$ with the cutoff $k_f$.
 
 # %%
 o_l1 = run_attitude("l1", ref_hover, dist_camera, 4.0)
 fig, ax = plt.subplots(1, 2, figsize=(10, 3.2))
-ax[0].plot(o_pd["t"], np.degrees(o_pd["angle"]), label="geometric PD")
-ax[0].plot(o_l1["t"], np.degrees(o_l1["angle"]), label="with L1 adaptation")
+ax[0].plot(o_pd["t"], np.degrees(o_pd["angle"]), label="plain controller")
+ax[0].plot(o_l1["t"], np.degrees(o_l1["angle"]), label="with L1 adaptive control")
 ax[0].set_xlabel("time (s)"); ax[0].set_ylabel("attitude error (deg)"); ax[0].legend()
 ax[1].plot(o_l1["t"], o_l1["Delta"][:, 1], "k", label="true uncertainty")
 ax[1].plot(o_l1["t"], o_l1["Dhat"][:, 1], lw=0.6, label="raw estimate")
@@ -290,7 +290,7 @@ plt.tight_layout(); plt.show()
 print(f"L1 peak error {np.degrees(o_l1['angle'].max()):.2f} deg, final {np.degrees(o_l1['angle'][-1]):.1e} deg")
 
 # %% [markdown]
-# ## Does it work?
+# ## 4. Does it work?
 #
 # A moving reference, the camera, and a gust torque. Then the same flight with gyroscope noise, for three filter cutoffs.
 
@@ -303,17 +303,17 @@ for ctrl in ("pd", "l1"):
     rms = np.sqrt(np.mean(np.degrees(o["angle"][3000:])**2))
     print(f"{ctrl}: RMS error {rms:.3f} deg")
 ax[0].set_xlabel("time (s)"); ax[0].set_ylabel("attitude error (deg)"); ax[0].legend()
-for kappa in (1.0, 30.0, 300.0):
-    o = run_attitude("l1", ConingReference(h), dist_camera_gust, 6.0, noise=0.02, kappa=kappa)
+for k_f in (1.0, 30.0, 300.0):
+    o = run_attitude("l1", ConingReference(h), dist_camera_gust, 6.0, noise=0.02, k_f=k_f)
     rate = np.linalg.norm(np.diff(o["tau"], axis=0), axis=1) / h
     rms = np.sqrt(np.mean(np.degrees(o["angle"][3000:])**2))
-    print(f"cutoff {kappa:5.0f} rad/s: RMS error {rms:.3f} deg, RMS torque rate {np.sqrt(np.mean(rate[3000:]**2)):.0f} N·m/s")
-    ax[1].plot(o["t"][3000:3600], o["tau"][3000:3600, 1], lw=0.8, label=f"cutoff {kappa:g}")
+    print(f"cutoff {k_f:5.0f} rad/s: RMS error {rms:.3f} deg, RMS torque rate {np.sqrt(np.mean(rate[3000:]**2)):.0f} N·m/s")
+    ax[1].plot(o["t"][3000:3600], o["tau"][3000:3600, 1], lw=0.8, label=f"cutoff {k_f:g}")
 ax[1].set_xlabel("time (s)"); ax[1].set_ylabel("torque about the second axis (N·m)"); ax[1].legend()
 plt.tight_layout(); plt.show()
 
 # %% [markdown]
-# ## Never, as opposed to eventually
+# ## 5. Never, as opposed to eventually
 #
 # A point with velocity input must not cross a wall. The barrier function is $H = d - n\cdot x$. The filter returns the velocity nearest to the tracker's $u_d$ that satisfies $\dot H \ge -\alpha H$:
 #
@@ -348,17 +348,18 @@ for alpha in (None, 1.0, 5.0, 25.0):
 plt.axvline(1.0, color="k"); plt.plot([2], [1.5], "o"); plt.axis("equal"); plt.legend(); plt.show()
 
 # %% [markdown]
-# ## Barriers on the sphere
+# ## 6. Barriers on the sphere
 #
 # A pendulum direction $q \in S^2$ must stay within $\theta_{\max}$ of the axis $q_c$: $H = q\cdot q_c - \cos\theta_{\max}$. Its derivatives are
 #
 # $$\dot H = \omega\cdot(q\times q_c), \qquad \ddot H = -\|\omega\|^2 (q\cdot q_c) + (I - q q^\top) q_c\cdot\frac{F - m g\,e_3}{m\,l}.$$
 #
-# With $H_1 = \dot H + \alpha_1 H$, the program minimizes $\tfrac12\|F_{\mathrm{fb}}\|^2 + \tfrac12 k_w w^2$ subject to $\dot V + k_V V \le w$ and $\dot H_1 + \alpha_2 H_1 \ge 0$.
+# With $H_1 = \dot H + \alpha_1 H$, the program (the CBF-CLF-QP) minimizes $\tfrac12\|F_{\mathrm{fb}}\|^2 + \tfrac12 k_w w^2$ subject to $\dot V + k_V V \le w$ and $\dot H_1 + \alpha_2 H_1 \ge 0$, with the slack variable $w$ and
+# $V = m l^2\big(\tfrac12\|e_\omega\|^2 + k_q\Psi_q + c\,e_q\cdot e_\omega\big)$. The code stores the gains as $m l^2 k_q$ and $m l^2 k_\omega$.
 
 # %%
 M_P, L_P = 0.5, 0.8
-K_Q, K_W_PD, C_V = 12.0, 2.5, 1.0
+ML2_K_Q, ML2_K_OMEGA, C_V = 12.0, 2.5, 1.0         # m l^2 k_q (N·m), m l^2 k_omega (N·m·s), and c of V on S^2
 CONE_AXIS, CONE_ANGLE = -E3, np.radians(30.0)
 
 
@@ -426,22 +427,22 @@ def s2_feedforward(q, om, omd, omd_dot):
     w = a - (a @ q) * q + GRAV / L_P * np.cross(q, E3)
     return -M_P * L_P * np.cross(q, w)
 
-def s2_pd_force(q, om, qd, omd, omd_dot, kq=K_Q, kw=K_W_PD):
-    """Geometric PD with feedforward on S^2."""
-    fb = -(kq * e_q(q, qd) + kw * e_omega(q, om, omd)) / (M_P * L_P**2)
+def s2_pd_force(q, om, qd, omd, omd_dot, ml2_k_q=ML2_K_Q, ml2_k_omega=ML2_K_OMEGA):
+    """The direction law with feedforward on S^2, as a force on the bob."""
+    fb = -(ml2_k_q * e_q(q, qd) + ml2_k_omega * e_omega(q, om, omd)) / (M_P * L_P**2)
     return s2_feedforward(q, om, omd, omd_dot) - M_P * L_P * np.cross(q, fb)
 
-def s2_V(q, om, qd, omd, kq=K_Q, c=C_V):
+def s2_V(q, om, qd, omd, ml2_k_q=ML2_K_Q, c=C_V):
     eq, ew = e_q(q, qd), e_omega(q, om, omd)
-    return 0.5 * M_P * L_P**2 * ew @ ew + kq * Psi_q(q, qd) + c * M_P * L_P**2 * eq @ ew
+    return 0.5 * M_P * L_P**2 * ew @ ew + ml2_k_q * Psi_q(q, qd) + c * M_P * L_P**2 * eq @ ew
 
-def s2_V_dot_terms(q, om, qd, omd, omd_dot, kq=K_Q, c=C_V):
+def s2_V_dot_terms(q, om, qd, omd, omd_dot, ml2_k_q=ML2_K_Q, c=C_V):
     """V_dot = aV + bV . F."""
     ml2 = M_P * L_P**2
     eq, ew = e_q(q, qd), e_omega(q, om, omd)
     a_d = s2_reference_accel(q, om, omd, omd_dot)
     eq_dot = (q @ qd) * ew + (q @ omd) * np.cross(q, eq) - (qd @ om) * q
-    aV = ml2 * (ew + c * eq) @ (-GRAV / L_P * np.cross(q, E3) - a_d) + kq * eq @ ew + c * ml2 * eq_dot @ ew
+    aV = ml2 * (ew + c * eq) @ (-GRAV / L_P * np.cross(q, E3) - a_d) + ml2_k_q * eq @ ew + c * ml2 * eq_dot @ ew
     bV = L_P * np.cross(ew + c * eq, q)
     return aV, bV
 
@@ -593,7 +594,7 @@ print(f"target 60 deg, limit 35 deg: the body stops at {np.degrees(o_t['tilt'][-
 # ## Starting points for the exercises
 #
 # - **Offset.** Change `M_ADD` and `R_ADD` and compare the rest attitude with $\sin\theta = \|\Delta_e\|/k_R$. Start `run_attitude("pd", ...)` from `R0 = expm_so3(np.radians(170) * E2)` and see which equilibrium it finds.
-# - **Integral term.** Add a state to `pd_torque` and compare with L1 under `dist_camera_gust`. `run_attitude(..., delay=d)` delays the torque by `d` controller periods.
+# - **Integral term.** Add a state to `pd_torque` and compare with L1 under `dist_camera_gust`. `run_attitude(..., delay=d)` delays the torque by `d` sampling periods.
 # - **Projection.** `proj(theta, y, bound)` is the operator of the chapter. Sample random pairs and test the inequality.
 # - **Wind.** `run_cone(ref, lap, wind=np.array([1.0, 0, 0]))` adds a force the program does not know. Try `alpha1=18, alpha2=18`, and a tightened cone with `angle=np.radians(25)`.
 # - **The sigmoid.** The cell below tests Wu's third condition for a sigmoid.

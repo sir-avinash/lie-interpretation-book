@@ -9,7 +9,7 @@ description: Design, tune and validate a geometric tracking controller (PD with 
 
 - The plant has a rigid body `R` in SO(3) with body torque, or a direction `q` in S^2 with a force or moment, possibly inside a cascade (position, direction, attitude).
 - You need a statement about large errors: a region with exponential convergence, or an almost-global claim.
-- Do not use it for optimal gains near a reference (use the variation-based LQR skill), or for model uncertainty, input limits and safety constraints (robust and safe control).
+- Do not use it for optimal gains near a reference (use the variation-based LQR skill), or for model uncertainty and safety constraints (use the adaptive and safety skill), or for input bounds (use the MPC skill).
 
 ## Conventions
 
@@ -48,7 +48,7 @@ Identities used in every proof: `|e_R|^2 = Psi_R (2 - Psi_R)`, `e_R_dot = C_R e_
    Rd e2 = (Rd e3 x Rz(psi_d) e1) / |Rd e3 x Rz(psi_d) e1|
    Rd e1 = Rd e2 x Rd e3
    ```
-   Then step 2 with this `Rd`. `Omegad`, `Omegad_dot` are derivatives of `Rd` along the closed loop: they need `F_d_dot`, `F_d_ddot`, which the model gives from the state (acceleration and jerk). The position error obeys `m e_v_dot = -k_x e_x - k_v e_v + Delta`, `|Delta| = |F_d| sin(tilt)`, and `|Delta| <= |F_d| |e_R|` when `Psi_R < 1`.
+   Then step 2 with this `Rd`. `Omegad`, `Omegad_dot` are derivatives of `Rd` along the closed loop: they need `F_d_dot`, `F_d_ddot`, which the model gives from the state (acceleration and jerk). The position error obeys `m e_v_dot = -k_x e_x - k_v e_v + e_F` with the force error `e_F = f R e3 - F_d`, `|e_F| = |F_d| sin(tilt)`, and `|e_F| <= |F_d| |e_R|` when `Psi_R < 1`.
 
 5. **Deeper cascade (cable-suspended load, `q` from quadrotor to load).**
    ```
@@ -69,9 +69,9 @@ Identities used in every proof: `|e_R|^2 = Psi_R (2 - Psi_R)`, `e_R_dot = C_R e_
      W2 = 1/2 [[2 k_R/(2 - Psi_max), c J_max], [c J_max, J_max]]
      W3 = [[c k_R, -c k_Omega/2], [-c k_Omega/2, k_Omega - c J_max]]
      ```
-     Rate: `gamma = eigmin(W3)/eigmax(W2)`. It is a floor, often orders of magnitude below the measured rate, and it goes to zero as `Psi_max -> 2`.
+     Rate: `gamma = lambda_min(W3)/lambda_max(W2)`, with `lambda_min`, `lambda_max` the smallest and largest eigenvalue. It is a floor, often orders of magnitude below the measured rate, and it goes to zero as `Psi_max -> 2`.
    - On S^2 with `|omegad| <= omega_max`: same with `J_min = J_max = 1`, `k_R -> k_q`, `c < min( sqrt(k_q), 4 k_q k_omega/((k_omega + omega_max)^2 + 4 k_q) )`, and `k_omega + omega_max` in the off-diagonal of `W3`.
-   - Almost-global: claim it only with a weighted error function, `Psi_R = tr(D (I - Rd^T R))`, `e_R = vee(D Rd^T R - R^T Rd D)`, `D = diag(d1, d2, d3)` with distinct positive entries. Then there are four isolated equilibria, three of them unstable, and the starts that converge to those have measure zero. With equal weights state the sublevel-set result instead.
+   - Almost-global: claim it only with a weighted error function, `Psi_R = tr(D (I - Rd^T R))`, `e_R = vee(D Rd^T R - R^T Rd D)`, `D = diag(d1, d2, d3)` with distinct positive entries. Then there are four isolated equilibria, three of them unstable, and the starts that converge to those have measure zero. With equal weights state the result on a sublevel set instead.
    - Cascade with exact feedforward and `F_d` never zero: attitude error is unaffected by the position loop, and all errors converge if `V0(0) < 2 k_R`. Without exact feedforward, say that stability rests on time-scale separation.
 
 ## Checks that must pass
@@ -89,7 +89,7 @@ Identities used in every proof: `|e_R|^2 = Psi_R (2 - Psi_R)`, `e_R_dot = C_R e_
 
 - **Naive velocity error.** `Omega - Omegad` instead of `e_Omega`. Passes at hover, fails check 2.
 - **Missing transport term.** Leaving `J (Omega x R^T Rd Omegad)` out of the torque. `V0` then increases when the reference turns.
-- **No feedforward and no separation.** `Omegad = 0` with attitude poles as slow as the position loop. The published gains `k_x = 16 m`, `k_v = 5.6 m`, `k_R = 8.81`, `k_Omega = 2.54` for `J = diag(0.0820, 0.0845, 0.1377)` track to 1e-10 m with exact feedforward and diverge without it. `kappa = 2` restores stability.
+- **No feedforward and no separation.** `Omegad = 0` with attitude poles as slow as the position loop. The published gains `k_x = 16 m`, `k_v = 5.6 m`, `k_R = 8.81` N·m, `k_Omega = 2.54` N·m·s for `J = diag(0.0820, 0.0845, 0.1377)` track to 1e-10 m with exact feedforward and diverge without it. `kappa = 2` restores stability.
 - **Quoting the Lyapunov rate as performance.** It is a lower bound for the whole sublevel set.
 - **Claiming "global".** Impossible for a continuous law. Claiming "almost-global" from tests on a grid of round angles is also wrong: such grids land on half turns.
 - **`F_d` near zero.** `Rd` is undefined. Bound the reference acceleration and the position error, or freeze `Rd`.

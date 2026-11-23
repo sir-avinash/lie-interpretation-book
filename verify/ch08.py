@@ -68,16 +68,16 @@ def feedforward(R, Om, Rd, Omd, Omd_dot, J):
 
 def pd_torque(R, Om, Rd, Omd, Omd_dot, J=J0, kR=K_R, kOm=K_OM):
     """Geometric PD with feedforward, equation (eq8-pd)."""
-    mu = -kR * e_R(R, Rd) - kOm * e_Omega(R, Om, Rd, Omd)
-    return mu + feedforward(R, Om, Rd, Omd, Omd_dot, J), mu
+    tau_fb = -kR * e_R(R, Rd) - kOm * e_Omega(R, Om, Rd, Omd)
+    return tau_fb + feedforward(R, Om, Rd, Omd, Omd_dot, J), tau_fb
 
 
-def lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, Delta_e, J=J_TRUE, Jn=J0):
-    """Delta of (eq8-lumped): J0 e_Omega_dot = mu + Delta."""
+def lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, Delta_e, J=J_TRUE, Jn=J0):
+    """Delta of (eq8-lumped): J0 e_Omega_dot = tau_fb + Delta."""
     acc = hat(Om) @ R.T @ Rd @ Omd - R.T @ Rd @ Omd_dot
     Delta_m = -np.cross(Om, (J - Jn) @ Om) + (J - Jn) @ acc
     JJ = Jn @ np.linalg.inv(J)
-    return (JJ - I3) @ mu + JJ @ (Delta_m + Delta_e)
+    return (JJ - I3) @ tau_fb + JJ @ (Delta_m + Delta_e)
 
 
 # ---- references ------------------------------------------------------
@@ -140,11 +140,11 @@ class L1Attitude:
     State: predictor (Rp, Omp), estimate Dhat, filtered estimate Df.
     """
 
-    def __init__(self, R0, Om0, h, gamma=4000.0, kappa=20.0, bound=3.0, c=0.01,
+    def __init__(self, R0, Om0, h, k_Delta=4000.0, k_f=20.0, bound=3.0, c=0.01,
                  J=J0, kR=K_R, kOm=K_OM, kRt=K_R, kOmt=K_OM):
         self.Rp, self.Omp = R0.copy(), Om0.copy()
         self.Dhat, self.Df = np.zeros(3), np.zeros(3)
-        self.h, self.gamma, self.kappa, self.bound, self.c = h, gamma, kappa, bound, c
+        self.h, self.k_Delta, self.k_f, self.bound, self.c = h, k_Delta, k_f, bound, c
         self.J, self.Ji = J, np.linalg.inv(J)
         self.kR, self.kOm, self.kRt, self.kOmt = kR, kOm, kRt, kOmt
 
@@ -152,50 +152,50 @@ class L1Attitude:
         """Prediction errors: the predictor plays 'actual', the plant plays 'desired'."""
         return e_R(self.Rp, R), e_Omega(self.Rp, self.Omp, R, Om), Psi_R(self.Rp, R)
 
-    def U(self, R):
+    def Xi(self, R):
         return self.J @ self.Rp.T @ R @ self.Ji @ R.T @ self.Rp
 
     def torques(self, R, Om, Rd, Omd, Omd_dot):
-        """Return (tau, mu, mu_p) from the current controller state. Does not advance it."""
+        """Return (tau, tau_fb, tau_fb_p) from the current controller state. Does not advance it."""
         J, Ji, Rp, Omp = self.J, self.Ji, self.Rp, self.Omp
         eRt, eOmt, _ = self.errors(R, Om)
-        mu1p = -self.kR * e_R(Rp, Rd) - self.kOm * e_Omega(Rp, Omp, Rd, Omd)
-        mu_p = mu1p + self.U(R) @ self.Dhat - self.Df
+        pd_p = -self.kR * e_R(Rp, Rd) - self.kOm * e_Omega(Rp, Omp, Rd, Omd)
+        tau_fb_p = pd_p + self.Xi(R) @ self.Dhat - self.Df
         eOm = e_Omega(R, Om, Rd, Omd)
-        mu = (J @ R.T @ Rp @ Ji @ (mu1p - self.Df + self.kRt * eRt + self.kOmt * eOmt)
+        tau_fb = (J @ R.T @ Rp @ Ji @ (pd_p - self.Df + self.kRt * eRt + self.kOmt * eOmt)
               + J @ R.T @ Rp @ hat(eOmt) @ Rp.T @ R @ eOm)
-        tau = mu + feedforward(R, Om, Rd, Omd, Omd_dot, J)
-        return tau, mu, mu_p
+        tau = tau_fb + feedforward(R, Om, Rd, Omd, Omd_dot, J)
+        return tau, tau_fb, tau_fb_p
 
     def adapt_direction(self, R, Om):
         eRt, eOmt, _ = self.errors(R, Om)
-        U = self.U(R)
-        return -(U.T @ eOmt + self.c * U.T @ self.Ji.T @ eRt)
+        Xi = self.Xi(R)
+        return -(Xi.T @ eOmt + self.c * Xi.T @ self.Ji.T @ eRt)
 
     def step(self, R, Om, Rd, Omd, Omd_dot):
         """One controller period: torque from the current state, then advance the state.
 
         The estimate is advanced first and the predictor uses the new value
         (semi-implicit Euler), which keeps the fast estimate-predictor loop
-        stable for sqrt(gamma / J) h < 2.
+        stable for sqrt(k_Delta / J) h < 2.
         """
         h = self.h
-        tau, mu, mu_p = self.torques(R, Om, Rd, Omd, Omd_dot)
-        self.last_mu = mu
-        U = self.U(R)
+        tau, tau_fb, tau_fb_p = self.torques(R, Om, Rd, Omd, Omd_dot)
+        self.last_tau_fb = tau_fb
+        Xi = self.Xi(R)
         eRt, eOmt, _ = self.errors(R, Om)
-        y = -(U.T @ eOmt + self.c * U.T @ self.Ji.T @ eRt)
-        Dhat_new = self.Dhat + h * self.gamma * proj(self.Dhat, y, self.bound)
+        y = -(Xi.T @ eOmt + self.c * Xi.T @ self.Ji.T @ eRt)
+        Dhat_new = self.Dhat + h * self.k_Delta * proj(self.Dhat, y, self.bound)
         size = np.linalg.norm(Dhat_new)
         if size > self.bound:                               # a finite step can overshoot the ball: pull it back
             Dhat_new = Dhat_new * (self.bound / size)
-        mu_p = mu_p + U @ (Dhat_new - self.Dhat)
+        tau_fb_p = tau_fb_p + Xi @ (Dhat_new - self.Dhat)
         self.Dhat = Dhat_new
-        Omp_dot = self.Ji @ mu_p - (hat(self.Omp) @ self.Rp.T @ Rd @ Omd - self.Rp.T @ Rd @ Omd_dot)
+        Omp_dot = self.Ji @ tau_fb_p - (hat(self.Omp) @ self.Rp.T @ Rd @ Omd - self.Rp.T @ Rd @ Omd_dot)
         Omp_new = self.Omp + h * Omp_dot
         self.Rp = self.Rp @ expm_so3(0.5 * h * (self.Omp + Omp_new))
         self.Omp = Omp_new
-        self.Df = self.Df + (1 - np.exp(-self.kappa * h)) * (self.Dhat - self.Df)
+        self.Df = self.Df + (1 - np.exp(-self.k_f * h)) * (self.Dhat - self.Df)
         return tau
 
 
@@ -232,15 +232,15 @@ def run_attitude(controller, ref, dist, tf, h=1e-3, R0=I3, Om0=np.zeros(3), J=J_
         Om_meas = Om + noise * rng.normal(size=3)
         De = dist(t)
         if l1 is None:
-            tau, mu = pd_torque(R, Om_meas, Rd, Omd, Omd_dot)
+            tau, tau_fb = pd_torque(R, Om_meas, Rd, Omd, Omd_dot)
         else:
             out["Psi_pred"][k] = Psi_R(l1.Rp, R)
             out["eOm_pred"][k] = np.linalg.norm(e_Omega(l1.Rp, l1.Omp, R, Om))
             out["Psi_p"][k] = Psi_R(l1.Rp, Rd)
             out["Dhat"][k], out["Df"][k] = l1.Dhat, l1.Df
             tau = l1.step(R, Om_meas, Rd, Omd, Omd_dot)
-            mu = l1.last_mu
-        out["Delta"][k] = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, De, J)
+            tau_fb = l1.last_tau_fb
+        out["Delta"][k] = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, De, J)
         out["t"][k], out["Psi"][k], out["angle"][k] = t, Psi_R(R, Rd), angle_between(R, Rd)
         out["eOm"][k] = np.linalg.norm(e_Omega(R, Om, Rd, Omd))
         out["tau"][k], out["Om"][k] = tau, Om
@@ -318,7 +318,7 @@ def run_wall(alpha, x0=(0.0, 0.0), xd=(2.0, 1.5), k=1.0, tf=8.0, h=1e-3):
 
 # ---- a pendulum that must stay inside a cone (S^2) -------------------
 M_P, L_P = 0.5, 0.8                                # the pendulum of Chapter 7
-K_Q, K_W_PD, C_V = 12.0, 2.5, 1.0                  # tracking gains on S^2 and the cross term of V
+ML2_K_Q, ML2_K_OMEGA, C_V = 12.0, 2.5, 1.0         # m l^2 k_q (N·m), m l^2 k_omega (N·m·s), and c of V on S^2
 CONE_AXIS, CONE_ANGLE = -E3, np.radians(30.0)
 
 
@@ -368,24 +368,24 @@ def s2_feedforward(q, om, omd, omd_dot):
     return -M_P * L_P * np.cross(q, w)
 
 
-def s2_pd_force(q, om, qd, omd, omd_dot, kq=K_Q, kw=K_W_PD):
+def s2_pd_force(q, om, qd, omd, omd_dot, ml2_k_q=ML2_K_Q, ml2_k_omega=ML2_K_OMEGA):
     """Geometric PD with feedforward on S^2."""
-    fb = -(kq * e_q(q, qd) + kw * e_omega(q, om, omd)) / (M_P * L_P**2)
+    fb = -(ml2_k_q * e_q(q, qd) + ml2_k_omega * e_omega(q, om, omd)) / (M_P * L_P**2)
     return s2_feedforward(q, om, omd, omd_dot) - M_P * L_P * np.cross(q, fb)
 
 
-def s2_V(q, om, qd, omd, kq=K_Q, c=C_V):
+def s2_V(q, om, qd, omd, ml2_k_q=ML2_K_Q, c=C_V):
     eq, ew = e_q(q, qd), e_omega(q, om, omd)
-    return 0.5 * M_P * L_P**2 * ew @ ew + kq * Psi_q(q, qd) + c * M_P * L_P**2 * eq @ ew
+    return 0.5 * M_P * L_P**2 * ew @ ew + ml2_k_q * Psi_q(q, qd) + c * M_P * L_P**2 * eq @ ew
 
 
-def s2_V_dot_terms(q, om, qd, omd, omd_dot, kq=K_Q, c=C_V):
+def s2_V_dot_terms(q, om, qd, omd, omd_dot, ml2_k_q=ML2_K_Q, c=C_V):
     """V_dot = aV + bV . F."""
     ml2 = M_P * L_P**2
     eq, ew = e_q(q, qd), e_omega(q, om, omd)
     a_d = s2_reference_accel(q, om, omd, omd_dot)
     eq_dot = (q @ qd) * ew + (q @ omd) * np.cross(q, eq) - (qd @ om) * q
-    aV = ml2 * (ew + c * eq) @ (-GRAV / L_P * np.cross(q, E3) - a_d) + kq * eq @ ew + c * ml2 * eq_dot @ ew
+    aV = ml2 * (ew + c * eq) @ (-GRAV / L_P * np.cross(q, E3) - a_d) + ml2_k_q * eq @ ew + c * ml2 * eq_dot @ ew
     bV = L_P * np.cross(ew + c * eq, q)
     return aV, bV
 
@@ -708,21 +708,21 @@ def delay_margin(controller, hi=80, **kw):
 
 
 def lyapunov_matrices(c, kR=K_R, kOm=K_OM, J=J0, psi=1.0):
-    """W, W1, W2 of the proof of Lee, Leok and McClamroch (2010), as in (eq8-bound)."""
-    lm, lM = np.linalg.eigvalsh(J)[[0, -1]]
-    W = np.array([[c * kR / lM, -c * kOm / (2 * lm)], [-c * kOm / (2 * lm), kOm - c]])
-    W1 = 0.5 * np.array([[kR, -c], [-c, lm]])
-    W2 = 0.5 * np.array([[2 * kR / (2 - psi), c], [c, lM]])
-    return W, W1, W2, lm, lM
+    """W3, W1, W2 of the proof of Lee, Leok and McClamroch (2010), as in (eq8-bound)."""
+    J_min, J_max = np.linalg.eigvalsh(J)[[0, -1]]
+    W3 = np.array([[c * kR / J_max, -c * kOm / (2 * J_min)], [-c * kOm / (2 * J_min), kOm - c]])
+    W1 = 0.5 * np.array([[kR, -c], [-c, J_min]])
+    W2 = 0.5 * np.array([[2 * kR / (2 - psi), c], [c, J_max]])
+    return W3, W1, W2, J_min, J_max
 
 
 def ultimate_bound_gain(c, **kw):
     """K such that limsup |(e_R, e_Omega)| <= K * sup|Delta|, or inf if c is not admissible."""
-    W, W1, W2, lm, _ = lyapunov_matrices(c, **kw)
-    if np.linalg.eigvalsh(W)[0] <= 0 or np.linalg.eigvalsh(W1)[0] <= 0:
+    W3, W1, W2, J_min, _ = lyapunov_matrices(c, **kw)
+    if np.linalg.eigvalsh(W3)[0] <= 0 or np.linalg.eigvalsh(W1)[0] <= 0:
         return np.inf
-    rho = np.sqrt(1 + (c / lm)**2) / np.linalg.eigvalsh(W)[0]
-    return float(rho * np.sqrt(np.linalg.eigvalsh(W2)[-1] / np.linalg.eigvalsh(W1)[0]))
+    gain = np.sqrt(1 + (c / J_min)**2) / np.linalg.eigvalsh(W3)[0]
+    return float(gain * np.sqrt(np.linalg.eigvalsh(W2)[-1] / np.linalg.eigvalsh(W1)[0]))
 
 
 # =====================================================================
@@ -799,20 +799,20 @@ def main():
     geomech_checks(ck, rng)
 
     # ------------------------------------------------------------------
-    # 1. How uncertainty enters: J0 e_Omega_dot = mu + Delta
+    # 1. How uncertainty enters: J0 e_Omega_dot = tau_fb + Delta
     # ------------------------------------------------------------------
     Ji_true = np.linalg.inv(J_TRUE)
     worst, worst_match, worst_fd, worst_C = 0.0, 0.0, 0.0, 0.0
     for _ in range(30):
         R, Rd = random_rotation(rng), random_rotation(rng)
         Om, Omd, Omd_dot, De = rng.normal(size=3), rng.normal(size=3), rng.normal(size=3), rng.normal(size=3)
-        tau, mu = pd_torque(R, Om, Rd, Omd, Omd_dot)
+        tau, tau_fb = pd_torque(R, Om, Rd, Omd, Omd_dot)
         Om_dot = Ji_true @ (tau + De - np.cross(Om, J_TRUE @ Om))
         eOm_dot = Om_dot + hat(Om) @ R.T @ Rd @ Omd - R.T @ Rd @ Omd_dot
-        Delta = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, De)
-        worst = max(worst, np.max(np.abs(J0 @ eOm_dot - mu - Delta)))
+        Delta = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, De)
+        worst = max(worst, np.max(np.abs(J0 @ eOm_dot - tau_fb - Delta)))
         # with the right inertia the only uncertainty is the disturbance torque itself
-        worst_match = max(worst_match, np.max(np.abs(lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, De, J=J0) - De)))
+        worst_match = max(worst_match, np.max(np.abs(lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, De, J=J0) - De)))
         # e_Omega_dot by finite differences along the true motion
         dt = 1e-6
         Rp_, Rm_ = R @ expm_so3(dt * Om), R @ expm_so3(-dt * Om)
@@ -822,7 +822,7 @@ def main():
         worst_fd = max(worst_fd, np.max(np.abs(fd - eOm_dot)))
         eOm = e_Omega(R, Om, Rd, Omd)
         worst_C = max(worst_C, eOm @ C_R(R, Rd) @ eOm - eOm @ eOm, np.linalg.norm(C_R(R, Rd), 2) - 1)
-    ck.close("error dynamics: J0 e_Omega_dot = mu + Delta with Delta of (eq8-lumped)", worst, 0, tol=1e-9)
+    ck.close("error dynamics: J0 e_Omega_dot = tau_fb + Delta with Delta of (eq8-lumped)", worst, 0, tol=1e-9)
     ck.close("with J = J0 the lumped uncertainty is the disturbance torque", worst_match, 0, tol=1e-12)
     ck.close("e_Omega_dot = Om_dot + hat(Om) R^T Rd Omd - R^T Rd Omd_dot (finite differences)", worst_fd, 0, tol=1e-6)
     ck.true("spectral norm of C_R at most 1, so e_Omega . C_R e_Omega <= |e_Omega|^2", worst_C < 1e-12, f"max excess {worst_C:.1e}")
@@ -855,8 +855,8 @@ def main():
     gains = np.array([ultimate_bound_gain(c) for c in cs])
     c_best = float(cs[np.argmin(gains)])
     K_ub = float(gains.min())
-    W, W1, W2, lm, lM = lyapunov_matrices(c_best)
-    ck.true("W and W1 positive definite for the chosen c", np.linalg.eigvalsh(W)[0] > 0 and np.linalg.eigvalsh(W1)[0] > 0, f"c = {c_best:.3f}")
+    W3, W1, W2, J_min, J_max = lyapunov_matrices(c_best)
+    ck.true("W3 and W1 positive definite for the chosen c", np.linalg.eigvalsh(W3)[0] > 0 and np.linalg.eigvalsh(W1)[0] > 0, f"c = {c_best:.3f}")
     worst_v, worst_lo, worst_hi = -np.inf, -np.inf, -np.inf
     J0i = np.linalg.inv(J0)
     for _ in range(400):
@@ -868,10 +868,10 @@ def main():
         eOm_dot = J0i @ (-K_R * eR - K_OM * eOm + Delta)
         V = 0.5 * eOm @ J0 @ eOm + K_R * Psi_R(R, Rd) + c_best * eR @ eOm
         V_dot = eOm @ J0 @ eOm_dot + K_R * eR @ eOm + c_best * (C_R(R, Rd) @ eOm) @ eOm + c_best * eR @ eOm_dot
-        bound = -z @ W @ z + (z[1] + c_best / lm * z[0]) * np.linalg.norm(Delta)
+        bound = -z @ W3 @ z + (z[1] + c_best / J_min * z[0]) * np.linalg.norm(Delta)
         worst_v = max(worst_v, V_dot - bound)
         worst_lo, worst_hi = max(worst_lo, z @ W1 @ z - V), max(worst_hi, V - z @ W2 @ z)
-    ck.true("V_dot <= -z'Wz + (|e_Omega| + c |e_R| / lambda_min) |Delta|", worst_v < 1e-9, f"max excess {worst_v:.1e}")
+    ck.true("V_dot <= -z'W3 z + (|e_Omega| + c |e_R| / J_min) |Delta|", worst_v < 1e-9, f"max excess {worst_v:.1e}")
     ck.true("z'W1 z <= V <= z'W2 z while Psi_R <= 1", worst_lo < 1e-9 and worst_hi < 1e-9)
     ck.record("bound_c", c_best)
     ck.record("bound_gain_per_Nm", K_ub)
@@ -899,31 +899,31 @@ def main():
         l1 = L1Attitude(random_rotation(rng), rng.normal(size=3), h, kR=1.3, kOm=0.4, kRt=2.2, kOmt=0.31)
         l1.Dhat, l1.Df = rng.normal(size=3), rng.normal(size=3)
         Rp, Omp = l1.Rp, l1.Omp
-        tau, mu, mu_p = l1.torques(R, Om, Rd, Omd, Omd_dot)
+        tau, tau_fb, tau_fb_p = l1.torques(R, Om, Rd, Omd, Omd_dot)
         Om_dot = Ji_true @ (tau + De - np.cross(Om, J_TRUE @ Om))
-        Delta = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, mu, De)
-        Omp_dot = J0i @ mu_p - (hat(Omp) @ Rp.T @ Rd @ Omd - Rp.T @ Rd @ Omd_dot)
-        # predictor: J0 e^p_Omega_dot = mu_p
+        Delta = lumped_uncertainty(R, Om, Rd, Omd, Omd_dot, tau_fb, De)
+        Omp_dot = J0i @ tau_fb_p - (hat(Omp) @ Rp.T @ Rd @ Omd - Rp.T @ Rd @ Omd_dot)
+        # predictor: J0 e^p_Omega_dot = tau_fb_p
         ep_dot = Omp_dot + hat(Omp) @ Rp.T @ Rd @ Omd - Rp.T @ Rd @ Omd_dot
-        worst_pred = max(worst_pred, np.max(np.abs(J0 @ ep_dot - mu_p)))
+        worst_pred = max(worst_pred, np.max(np.abs(J0 @ ep_dot - tau_fb_p)))
         # prediction error dynamics, differentiated directly
         RpR_dot = -hat(Omp) @ Rp.T @ R + Rp.T @ R @ hat(Om)
         et_dot = Omp_dot - RpR_dot @ Om - Rp.T @ R @ Om_dot
         eRt, eOmt, _ = l1.errors(R, Om)
-        U = l1.U(R)
-        rhs = -l1.kRt * eRt - l1.kOmt * eOmt + U @ (l1.Dhat - Rp.T @ R @ Delta)
+        Xi = l1.Xi(R)
+        rhs = -l1.kRt * eRt - l1.kOmt * eOmt + Xi @ (l1.Dhat - Rp.T @ R @ Delta)
         worst_dyn = max(worst_dyn, np.max(np.abs(J0 @ et_dot - rhs)))
-        # the relation between mu and mu_p (Kotaru 2022, eq. 3.32)
-        rel = (J0 @ R.T @ Rp @ J0i @ (mu_p + l1.kRt * eRt + l1.kOmt * eOmt) - R.T @ Rp @ l1.Dhat
+        # the relation between tau_fb and tau_fb_p (Kotaru 2022, eq. 3.32)
+        rel = (J0 @ R.T @ Rp @ J0i @ (tau_fb_p + l1.kRt * eRt + l1.kOmt * eOmt) - R.T @ Rp @ l1.Dhat
                + J0 @ R.T @ Rp @ hat(eOmt) @ Rp.T @ R @ e_Omega(R, Om, Rd, Omd))
-        worst_rel = max(worst_rel, np.max(np.abs(rel - mu)))
+        worst_rel = max(worst_rel, np.max(np.abs(rel - tau_fb)))
     for _ in range(2000):
         th_true = unit(rng.normal(size=3)) * rng.uniform(0, 3.0 / np.sqrt(1.1))
         th_hat = unit(rng.normal(size=3)) * rng.uniform(2.5, 3.0)
         y = rng.normal(size=3)
         worst_proj = max(worst_proj, (th_hat - th_true) @ (proj(th_hat, y, 3.0) - y))
-    ck.close("predictor: J0 e^p_Omega_dot = mu_p", worst_pred, 0, tol=1e-9)
-    ck.close("prediction error: J0 e~_Omega_dot = -k~_R e~_R - k~_Omega e~_Omega + U Delta~ (eq8-pred-dyn)", worst_dyn, 0, tol=1e-9)
+    ck.close("predictor: J0 e^p_Omega_dot = tau_fb_p", worst_pred, 0, tol=1e-9)
+    ck.close("prediction error: J0 e~_Omega_dot = -k~_R e~_R - k~_Omega e~_Omega + Xi Delta~ (eq8-pred-dyn)", worst_dyn, 0, tol=1e-9)
     ck.close("plant and predictor inputs are related as in Kotaru (2022, eq. 3.32)", worst_rel, 0, tol=1e-9)
     ck.true("projection: Delta~ . (Proj(Delta^, y) - y) <= 0 whenever |Delta| <= 0.95 Delta_max", worst_proj < 1e-12, f"max {worst_proj:.1e}")
 
@@ -969,14 +969,14 @@ def main():
     ck.record("gust_bound_Nm", float(0.25 * 1.51))
     # prediction error against adaptation gain: the quantity the theorem is about
     pred = {}
-    for gamma in (250.0, 1000.0, 4000.0, 16000.0):
-        o = run_attitude("l1", ConingReference(h), dist_camera_gust, 5.0, gamma=gamma)
-        pred[gamma] = float(o["eOm_pred"][1000:].max())
-        ck.record(f"pred_error_rate_gamma_{int(gamma)}", pred[gamma])
+    for k_Delta in (250.0, 1000.0, 4000.0, 16000.0):
+        o = run_attitude("l1", ConingReference(h), dist_camera_gust, 5.0, k_Delta=k_Delta)
+        pred[k_Delta] = float(o["eOm_pred"][1000:].max())
+        ck.record(f"pred_error_rate_k_Delta_{int(k_Delta)}", pred[k_Delta])
     ck.true("prediction error shrinks as the adaptation gain grows", pred[250.0] > pred[1000.0] > pred[4000.0] > pred[16000.0],
             ", ".join(f"{v:.1e}" for v in pred.values()))
 
-    o = run_attitude("l1", ConingReference(h), dist_camera_gust, 5.0, noise=0.02, kappa=10.0)
+    o = run_attitude("l1", ConingReference(h), dist_camera_gust, 5.0, noise=0.02, k_f=10.0)
     sel = o["t"] > 1
     raw_swing = float(np.ptp(o["Dhat"][sel, 1]))
     true_swing = float(np.ptp(o["Delta"][sel, 1]))
@@ -987,24 +987,24 @@ def main():
     ck.record("raw_estimate_swing_Nm", raw_swing)
     ck.record("true_uncertainty_swing_Nm", true_swing)
     # the filter: cutoff against tracking error and torque activity, with gyroscope noise
-    kappas = (1.0, 3.0, 10.0, 30.0, 100.0, 300.0)
+    cutoffs = (1.0, 3.0, 10.0, 30.0, 100.0, 300.0)
     study = {}
-    for kappa in kappas:
-        o = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, kappa=kappa)
-        study[kappa] = (error_stats(o, 3.0)[0], torque_rate_rms(o, 3.0, h))
-        ck.record(f"cutoff_{int(kappa)}_rms_deg", study[kappa][0])
-        ck.record(f"cutoff_{int(kappa)}_torque_rate", study[kappa][1])
+    for k_f in cutoffs:
+        o = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, k_f=k_f)
+        study[k_f] = (error_stats(o, 3.0)[0], torque_rate_rms(o, 3.0, h))
+        ck.record(f"cutoff_{int(k_f)}_rms_deg", study[k_f][0])
+        ck.record(f"cutoff_{int(k_f)}_torque_rate", study[k_f][1])
     o = run_attitude("pd", ConingReference(h), dist_camera_gust, 7.0, noise=0.02)
     ck.record("cutoff_pd_rms_deg", error_stats(o, 3.0)[0])
     ck.record("cutoff_pd_torque_rate", torque_rate_rms(o, 3.0, h))
-    errs_k = [study[k][0] for k in kappas]
+    errs_k = [study[k][0] for k in cutoffs]
     ck.true("raising the cutoff lowers the tracking error", all(a > b for a, b in zip(errs_k, errs_k[1:])),
             ", ".join(f"{e:.2f}" for e in errs_k))
     ck.true("raising the cutoff from 10 to 300 rad/s multiplies the torque rate by more than 5",
             study[300.0][1] > 5 * study[10.0][1], f"{study[10.0][1]:.1f} -> {study[300.0][1]:.1f} N m/s")
     with np.errstate(all="ignore"):
-        o_hi = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, kappa=3000.0)
-    o_lo = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, kappa=30.0)
+        o_hi = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, k_f=3000.0)
+    o_lo = run_attitude("l1", ConingReference(h), dist_camera_gust, 7.0, noise=0.02, lag=0.02, k_f=30.0)
     hi_rms, lo_rms = error_stats(o_hi, 3.0)[0], error_stats(o_lo, 3.0)[0]
     hi_tau, lo_tau = float(np.abs(o_hi["tau"][3000:]).max()), float(np.abs(o_lo["tau"][3000:]).max())
     ck.true("with a 20 ms motor lag, a cutoff of 3000 rad/s oscillates: larger error, torque bounded only by the projection ball",
@@ -1018,13 +1018,13 @@ def main():
     ck.record("lag_cutoff_3000_torque_rate", torque_rate_rms(o_hi, 3.0, h))
     # the L1 point: the delay margin is set by the filter, not by the adaptation gain
     dm_pd = delay_margin("pd")
-    dm = {kappa: delay_margin("l1", kappa=kappa) for kappa in (3.0, 30.0, 300.0)}
-    dm_gamma = {gamma: delay_margin("l1", kappa=30.0, gamma=gamma) for gamma in (1000.0, 16000.0)}
+    dm = {k_f: delay_margin("l1", k_f=k_f) for k_f in (3.0, 30.0, 300.0)}
+    dm_gamma = {k_Delta: delay_margin("l1", k_f=30.0, k_Delta=k_Delta) for k_Delta in (1000.0, 16000.0)}
     ck.record("delay_margin_pd_ms", dm_pd)
-    for kappa, d in dm.items():
-        ck.record(f"delay_margin_cutoff_{int(kappa)}_ms", d)
-    for gamma, d in dm_gamma.items():
-        ck.record(f"delay_margin_gamma_{int(gamma)}_ms", d)
+    for k_f, d in dm.items():
+        ck.record(f"delay_margin_cutoff_{int(k_f)}_ms", d)
+    for k_Delta, d in dm_gamma.items():
+        ck.record(f"delay_margin_k_Delta_{int(k_Delta)}_ms", d)
     ck.true("delay margin falls as the cutoff rises", dm_pd >= dm[3.0] > dm[30.0] > dm[300.0], f"PD {dm_pd}, L1 {list(dm.values())} ms")
     ck.true("delay margin does not depend on the adaptation gain (within 1 ms)",
             max(abs(dm_gamma[1000.0] - dm[30.0]), abs(dm_gamma[16000.0] - dm[30.0])) <= 1, f"{list(dm_gamma.values())} ms")
@@ -1114,8 +1114,8 @@ def main():
         acc = s2_accel(q, om, F)
         a_d = s2_reference_accel(q, om, omd, omd_dot)
         tang = (acc - a_d) - ((acc - a_d) @ q) * q
-        worst = max(worst, np.max(np.abs(M_P * L_P**2 * tang + K_Q * e_q(q, qd) + K_W_PD * e_omega(q, om, omd))))
-    ck.close("S^2 tracker: m l^2 (tangent part of e_omega_dot) = -k_q e_q - k_omega e_omega", worst, 0, tol=1e-10)
+        worst = max(worst, np.max(np.abs(M_P * L_P**2 * tang + ML2_K_Q * e_q(q, qd) + ML2_K_OMEGA * e_omega(q, om, omd))))
+    ck.close("S^2 tracker: tangent part of e_omega_dot = -k_q e_q - k_omega e_omega", worst, 0, tol=1e-10)
 
     ref = cone_reference()
     lap = 2 * np.pi / 0.9
@@ -1144,9 +1144,9 @@ def main():
     ck.true("cone: the slack is below 0.03 while the reference is 15 deg or more inside", np.nanmax(o_cqp["slack"][ref_angle < 15]) < 3e-2,
             f"{np.nanmax(o_cqp['slack'][ref_angle < 15]):.1e}")
     o = run_cone(ref, lap, cone=cone_swinging)
-    ck.true("moving cone: held to within 1e-4 at a 2 ms sample time", o["H"].min() >= -1e-4 and o["feasible"].all(), f"min H {o['H'].min():.1e}")
+    ck.true("moving cone: held to within 1e-4 at a 2 ms sampling period", o["H"].min() >= -1e-4 and o["feasible"].all(), f"min H {o['H'].min():.1e}")
     o = run_cone(ref, lap, cone=cone_swinging, h=5e-4)
-    ck.true("moving cone: the dip shrinks with the sample time", o["H"].min() >= -1e-5, f"min H {o['H'].min():.1e} at 0.5 ms")
+    ck.true("moving cone: the dip shrinks with the sampling period", o["H"].min() >= -1e-5, f"min H {o['H'].min():.1e} at 0.5 ms")
     ck.record("moving_cone_min_H", float(o["H"].min()))
 
     # sampling: the same QP at slower rates

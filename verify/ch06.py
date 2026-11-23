@@ -91,7 +91,7 @@ m_Q = 4.34
 J = np.diag([0.0820, 0.0845, 0.1377])
 k_R, k_Om = 8.81, 2.54
 k_x, k_v = 16 * m_Q, 5.6 * m_Q
-lam_m, lam_M = J[0, 0], J[2, 2]
+J_min, J_max = J[0, 0], J[2, 2]
 Jinv = np.linalg.inv(J)
 ck.record("vehicle", {"m": m_Q, "J_diag": np.diag(J).tolist(), "k_R": k_R, "k_Omega": k_Om, "k_x": k_x, "k_v": k_v})
 
@@ -213,22 +213,22 @@ def c_max_att(kR, kOm, lm, lM):
 
 
 def mats_att(kR, kOm, lm, lM, c, psi):
-    M1 = 0.5 * np.array([[kR, -c * lM], [-c * lM, lm]])
-    M2 = 0.5 * np.array([[2 * kR / (2 - psi), c * lM], [c * lM, lM]])
-    W = np.array([[c * kR, -c * kOm / 2], [-c * kOm / 2, kOm - c * lM]])
-    return M1, M2, W
+    W1 = 0.5 * np.array([[kR, -c * lM], [-c * lM, lm]])
+    W2 = 0.5 * np.array([[2 * kR / (2 - psi), c * lM], [c * lM, lM]])
+    W3 = np.array([[c * kR, -c * kOm / 2], [-c * kOm / 2, kOm - c * lM]])
+    return W1, W2, W3
 
 
 def rate_att(kR, kOm, lm, lM, psi, c=None):
-    """Best guaranteed rate beta = lambda_min(W)/lambda_max(M2) over admissible c (or at a given c)."""
+    """Best guaranteed rate gamma = lambda_min(W3)/lambda_max(W2) over admissible c (or at a given c)."""
     cm = c_max_att(kR, kOm, lm, lM)
     cs = [c] if c is not None else np.linspace(0.002, 0.998, 499) * cm
     best = (0.0, None)
     for c_ in cs:
-        M1, M2, W = mats_att(kR, kOm, lm, lM, c_, psi)
-        beta = np.linalg.eigvalsh(W)[0] / np.linalg.eigvalsh(M2)[-1]
-        if beta > best[0]:
-            best = (beta, c_)
+        W1, W2, W3 = mats_att(kR, kOm, lm, lM, c_, psi)
+        gamma = np.linalg.eigvalsh(W3)[0] / np.linalg.eigvalsh(W2)[-1]
+        if gamma > best[0]:
+            best = (gamma, c_)
     return best
 
 
@@ -278,25 +278,25 @@ for trial in range(4000):
     Psi, eR = Psi_R(R, Rd), e_R(R, Rd)
     z = np.array([np.linalg.norm(eR), np.linalg.norm(eO)])
     viol_sand = max(viol_sand, 0.5 * eR @ eR - Psi, Psi - eR @ eR / (2 - psi))
-    M1, M2, W = mats_att(kR, kOm, lm, lM, c, psi)
+    W1, W2, W3 = mats_att(kR, kOm, lm, lM, c, psi)
     V = 0.5 * eO @ J_ @ eO + kR * Psi + c * eR @ J_ @ eO
-    viol_lo = max(viol_lo, z @ M1 @ z - V)
-    viol_up = max(viol_up, V - z @ M2 @ z)
+    viol_lo = max(viol_lo, z @ W1 @ z - V)
+    viol_up = max(viol_up, V - z @ W2 @ z)
     C = C_R(R, Rd)
     JeO_dot = -kR * eR - kOm * eO
     Vdot = eO @ JeO_dot + kR * eR @ eO + c * (C @ eO) @ J_ @ eO + c * eR @ JeO_dot
     Vdot_formula = -kOm * eO @ eO + c * eO @ C.T @ J_ @ eO - c * kR * eR @ eR - c * kOm * eR @ eO
     err_dot = max(err_dot, abs(Vdot - Vdot_formula))
-    viol_dot = max(viol_dot, Vdot + z @ W @ z)
-    n_pd += (np.linalg.eigvalsh(M1)[0] > 0) and (np.linalg.eigvalsh(W)[0] > 0)
+    viol_dot = max(viol_dot, Vdot + z @ W3 @ z)
+    n_pd += (np.linalg.eigvalsh(W1)[0] > 0) and (np.linalg.eigvalsh(W3)[0] > 0)
 ck.true("1/2 |e_R|^2 <= Psi_R <= |e_R|^2/(2 - psi) on Psi_R <= psi < 2 (4000 samples)", viol_sand < 1e-12, f"max viol {viol_sand:.1e}")
-ck.true("V >= z'M1 z (4000 random states, inertias, gains)", viol_lo < 1e-10, f"max viol {viol_lo:.1e}")
-ck.true("V <= z'M2 z on the sublevel set (4000 random states, inertias, gains)", viol_up < 1e-10, f"max viol {viol_up:.1e}")
+ck.true("V >= z'W1 z (4000 random states, inertias, gains)", viol_lo < 1e-10, f"max viol {viol_lo:.1e}")
+ck.true("V <= z'W2 z on the sublevel set (4000 random states, inertias, gains)", viol_up < 1e-10, f"max viol {viol_up:.1e}")
 ck.true("V_dot = -k_Om|e_Om|^2 + c e_Om.C_R'J e_Om - c k_R|e_R|^2 - c k_Om e_R.e_Om", err_dot < 1e-9, f"err {err_dot:.1e}")
-ck.true("V_dot <= -z'W z (4000 random states, inertias, gains)", viol_dot < 1e-10, f"max viol {viol_dot:.1e}")
-ck.true("M1 > 0 and W > 0 for every c below the stated bound", n_pd == 4000, f"{n_pd}/4000")
+ck.true("V_dot <= -z'W3 z (4000 random states, inertias, gains)", viol_dot < 1e-10, f"max viol {viol_dot:.1e}")
+ck.true("W1 > 0 and W3 > 0 for every c below the stated bound", n_pd == 4000, f"{n_pd}/4000")
 
-# the bound on c is sharp for W and M1: just above each limit one of them loses definiteness
+# the bound on c is sharp for W3 and W1: just above each limit one of them loses definiteness
 sharp = 0
 for _ in range(500):
     lm = 0.01 + rng.random()
@@ -306,10 +306,10 @@ for _ in range(500):
     M1a, _, _ = mats_att(kR, kOm, lm, lM, 1.001 * c1, 1.0)
     _, _, Wa = mats_att(kR, kOm, lm, lM, 1.001 * c2, 1.0)
     sharp += (np.linalg.eigvalsh(M1a)[0] < 0) and (np.linalg.eigvalsh(Wa)[0] < 0)
-ck.true("M1 > 0 iff c < sqrt(k_R lam_m)/lam_M and W > 0 iff c < 4 k_R k_Om/(k_Om^2 + 4 k_R lam_M)", sharp == 500, f"{sharp}/500")
+ck.true("W1 > 0 iff c < sqrt(k_R J_min)/J_max and W3 > 0 iff c < 4 k_R k_Om/(k_Om^2 + 4 k_R J_max)", sharp == 500, f"{sharp}/500")
 
 # V_dot by finite differences along a closed-loop run (the formula describes the real closed loop)
-c_demo = 0.5 * c_max_att(k_R, k_Om, lam_m, lam_M)
+c_demo = 0.5 * c_max_att(k_R, k_Om, J_min, J_max)
 Vs = np.array([V_att(*a, c_demo) for a in run_mov])
 dV_fd = np.gradient(Vs, t_a, edge_order=2)
 dV_f = []
@@ -323,33 +323,33 @@ ck.true("V_dot formula matches the derivative of V along a simulated run", rel <
 V0s = np.array([V0_att(*a) for a in run_mov])
 Psis = np.array([Psi_R(a[0], a[2]) for a in run_mov])
 ck.true("V0 = 1/2 e_Om.J e_Om + k_R Psi_R never increases along the run", np.max(np.diff(V0s)) < 1e-9)
-psi_bar = V0s[0] / k_R
-ck.true("example starts inside the sublevel set V0 < 2 k_R", psi_bar < 2, f"psi_bar = {psi_bar:.4f}")
-ck.true("Psi_R(t) <= V0(0)/k_R for all t", np.max(Psis) <= psi_bar + 1e-9)
-beta, c_best = rate_att(k_R, k_Om, lam_m, lam_M, psi_bar)
-M1, M2, W = mats_att(k_R, k_Om, lam_m, lam_M, c_best, psi_bar)
+Psi_max = V0s[0] / k_R
+ck.true("example starts inside the sublevel set V0 < 2 k_R", Psi_max < 2, f"Psi_max = {Psi_max:.4f}")
+ck.true("Psi_R(t) <= V0(0)/k_R for all t", np.max(Psis) <= Psi_max + 1e-9)
+gamma, c_best = rate_att(k_R, k_Om, J_min, J_max, Psi_max)
+W1, W2, W3 = mats_att(k_R, k_Om, J_min, J_max, c_best, Psi_max)
 Vc = np.array([V_att(*a, c_best) for a in run_mov])
-ck.true("example: V(t) <= V(0) exp(-beta t) with the guaranteed rate", np.all(Vc <= Vc[0] * np.exp(-beta * t_a) * (1 + 1e-9) + 1e-12),
-        f"beta = {beta:.3f}")
+ck.true("example: V(t) <= V(0) exp(-gamma t) with the guaranteed rate", np.all(Vc <= Vc[0] * np.exp(-gamma * t_a) * (1 + 1e-9) + 1e-12),
+        f"gamma = {gamma:.3f}")
 zs = np.array([[np.linalg.norm(e_R(a[0], a[2])), np.linalg.norm(e_Omega(*a))] for a in run_mov])
 z2 = np.sum(zs**2, axis=1)
-kappa = np.linalg.eigvalsh(M2)[-1] / np.linalg.eigvalsh(M1)[0]
-ck.true("example: |z(t)|^2 <= (lam_max(M2)/lam_min(M1)) |z(0)|^2 exp(-beta t)", np.all(z2 <= kappa * z2[0] * np.exp(-beta * t_a) + 1e-12))
+overshoot = np.linalg.eigvalsh(W2)[-1] / np.linalg.eigvalsh(W1)[0]
+ck.true("example: |z(t)|^2 <= (lambda_max(W2)/lambda_min(W1)) |z(0)|^2 exp(-gamma t)", np.all(z2 <= overshoot * z2[0] * np.exp(-gamma * t_a) + 1e-12))
 # measured decay rate of V late in the run
 mask = (t_a > 1.5) & (Vc > 1e-9)
 meas = -np.polyfit(t_a[mask], np.log(Vc[mask]), 1)[0]
 ck.record("example_att", {"angle0_deg": 150.0, "Psi0": float(Psis[0]), "V0_0": float(V0s[0]), "two_kR": 2 * k_R,
-                          "psi_bar": float(psi_bar), "c_max": float(c_max_att(k_R, k_Om, lam_m, lam_M)),
-                          "c_best": float(c_best), "beta_guaranteed": float(beta), "beta_measured": float(meas),
-                          "overshoot_factor": float(kappa),
-                          "c_lim_M1": float(np.sqrt(k_R * lam_m) / lam_M),
-                          "c_lim_W": float(4 * k_R * k_Om / (k_Om**2 + 4 * k_R * lam_M))})
+                          "Psi_max": float(Psi_max), "c_max": float(c_max_att(k_R, k_Om, J_min, J_max)),
+                          "c_best": float(c_best), "gamma_guaranteed": float(gamma), "gamma_measured": float(meas),
+                          "overshoot_factor": float(overshoot),
+                          "c_lim_W1": float(np.sqrt(k_R * J_min) / J_max),
+                          "c_lim_W3": float(4 * k_R * k_Om / (k_Om**2 + 4 * k_R * J_max))})
 ck.true("measured decay of V is twice the slowest pole, and faster than the guarantee",
-        abs(meas + 2 * slowest_pole) < 0.3 and meas > beta, f"measured {meas:.2f}, 2|pole| {-2 * slowest_pole:.2f}, bound {beta:.2f}")
+        abs(meas + 2 * slowest_pole) < 0.3 and meas > gamma, f"measured {meas:.2f}, 2|pole| {-2 * slowest_pole:.2f}, bound {gamma:.2f}")
 # guaranteed rate for a small error (psi -> 0) and how it dies as psi -> 2
-ck.record("beta_vs_psi", {f"{p:g}": float(rate_att(k_R, k_Om, lam_m, lam_M, p)[0]) for p in (0.1, 1.0, 1.9, 1.99, 1.999)})
-betas = [rate_att(k_R, k_Om, lam_m, lam_M, p)[0] for p in (0.1, 1.0, 1.9, 1.99, 1.999)]
-ck.true("the guaranteed rate decreases as the sublevel set grows toward Psi_R = 2", np.all(np.diff(betas) < 0))
+ck.record("gamma_vs_Psi_max", {f"{p:g}": float(rate_att(k_R, k_Om, J_min, J_max, p)[0]) for p in (0.1, 1.0, 1.9, 1.99, 1.999)})
+gammas = [rate_att(k_R, k_Om, J_min, J_max, p)[0] for p in (0.1, 1.0, 1.9, 1.99, 1.999)]
+ck.true("the guaranteed rate decreases as the sublevel set grows toward Psi_R = 2", np.all(np.diff(gammas) < 0))
 
 # without the cross term: V0_dot = -k_Om |e_Om|^2 vanishes at rest away from the target
 R = expm_so3(1.0 * E1)
@@ -582,10 +582,10 @@ def c_max_s2(kq, kom, B):
 
 
 def mats_s2(kq, kom, B, c, psi):
-    M1 = 0.5 * np.array([[kq, -c], [-c, 1.0]])
-    M2 = 0.5 * np.array([[2 * kq / (2 - psi), c], [c, 1.0]])
-    W = np.array([[c * kq, -c * (kom + B) / 2], [-c * (kom + B) / 2, kom - c]])
-    return M1, M2, W
+    W1 = 0.5 * np.array([[kq, -c], [-c, 1.0]])
+    W2 = 0.5 * np.array([[2 * kq / (2 - psi), c], [c, 1.0]])
+    W3 = np.array([[c * kq, -c * (kom + B) / 2], [-c * (kom + B) / 2, kom - c]])
+    return W1, W2, W3
 
 
 viol_lo = viol_up = viol_dot = err_dot = 0.0
@@ -602,22 +602,22 @@ for _ in range(4000):
     om = ew + tangent(q, omd)
     eq, Psi = e_q(q, qd), Psi_q(q, qd)
     z = np.array([np.linalg.norm(eq), np.linalg.norm(ew)])
-    M1, M2, W = mats_s2(kq, kom, B, c, psi)
+    W1, W2, W3 = mats_s2(kq, kom, B, c, psi)
     V = 0.5 * ew @ ew + kq * Psi + c * eq @ ew
-    viol_lo, viol_up = max(viol_lo, z @ M1 @ z - V), max(viol_up, V - z @ M2 @ z)
+    viol_lo, viol_up = max(viol_lo, z @ W1 @ z - V), max(viol_up, V - z @ W2 @ z)
     ew_dot = -kq * eq - kom * ew + (np.cross(om, q) @ omd) * q
     eq_dot = (q @ qd) * ew + (q @ omd) * np.cross(q, eq) - (qd @ om) * q
     Vdot = ew @ ew_dot + kq * eq @ ew + c * (eq_dot @ ew + eq @ ew_dot)
     Vdot_formula = (-kom * ew @ ew + c * (q @ qd) * ew @ ew + c * (q @ omd) * np.cross(q, eq) @ ew
                     - c * kq * eq @ eq - c * kom * eq @ ew)
     err_dot = max(err_dot, abs(Vdot - Vdot_formula))
-    viol_dot = max(viol_dot, Vdot + z @ W @ z)
-    n_pd += (np.linalg.eigvalsh(M1)[0] > 0) and (np.linalg.eigvalsh(W)[0] > 0)
-ck.true("sphere: z'M1 z <= V <= z'M2 z on Psi_q <= psi (4000 random states and gains)", max(viol_lo, viol_up) < 1e-10,
+    viol_dot = max(viol_dot, Vdot + z @ W3 @ z)
+    n_pd += (np.linalg.eigvalsh(W1)[0] > 0) and (np.linalg.eigvalsh(W3)[0] > 0)
+ck.true("sphere: z'W1 z <= V <= z'W2 z on Psi_q <= psi (4000 random states and gains)", max(viol_lo, viol_up) < 1e-10,
         f"max viol {max(viol_lo, viol_up):.1e}")
 ck.true("sphere: V_dot formula with the cross term", err_dot < 1e-9, f"err {err_dot:.1e}")
-ck.true("sphere: V_dot <= -z'W z for |omega_d| <= B (4000 random states and gains)", viol_dot < 1e-10, f"max viol {viol_dot:.1e}")
-ck.true("sphere: M1 > 0 and W > 0 for every c below the stated bound", n_pd == 4000, f"{n_pd}/4000")
+ck.true("sphere: V_dot <= -z'W3 z for |omega_d| <= B (4000 random states and gains)", viol_dot < 1e-10, f"max viol {viol_dot:.1e}")
+ck.true("sphere: W1 > 0 and W3 > 0 for every c below the stated bound", n_pd == 4000, f"{n_pd}/4000")
 
 
 def s2_rhs(t, s):
@@ -644,13 +644,13 @@ for ang in (60.0, 170.0, 179.9):
     s2_times[f"{ang:g}"] = float(ts_[np.nonzero(ang_t > 5)[0][-1] + 1])
     if ang == 170.0:
         psi_bar_s = V0[0] / k_q
-        beta_s, c_s = max(((np.linalg.eigvalsh(mats_s2(k_q, k_om, B_ref, c_, psi_bar_s)[2])[0]
+        gamma_s, c_s = max(((np.linalg.eigvalsh(mats_s2(k_q, k_om, B_ref, c_, psi_bar_s)[2])[0]
                             / np.linalg.eigvalsh(mats_s2(k_q, k_om, B_ref, c_, psi_bar_s)[1])[-1]), c_)
                           for c_ in np.linspace(0.002, 0.998, 499) * c_max_s2(k_q, k_om, B_ref))
         Vc = np.array([0.5 * e_omega(q, om, r[1]) @ e_omega(q, om, r[1]) + k_q * Psi_q(q, r[0]) + c_s * e_q(q, r[0]) @ e_omega(q, om, r[1])
                        for q, om, r in zip(qs_, oms_, refs)])
-        ck.true("sphere run from 170 deg: V(t) <= V(0) exp(-beta t)", np.all(Vc <= Vc[0] * np.exp(-beta_s * ts_) * (1 + 1e-9) + 1e-12), f"beta {beta_s:.3f}")
-        ck.record("s2_example", {"psi_bar": float(psi_bar_s), "beta_guaranteed": float(beta_s), "c_max": float(c_max_s2(k_q, k_om, B_ref))})
+        ck.true("sphere run from 170 deg: V(t) <= V(0) exp(-gamma t)", np.all(Vc <= Vc[0] * np.exp(-gamma_s * ts_) * (1 + 1e-9) + 1e-12), f"gamma {gamma_s:.3f}")
+        ck.record("s2_example", {"Psi_max": float(psi_bar_s), "gamma_guaranteed": float(gamma_s), "c_max": float(c_max_s2(k_q, k_om, B_ref))})
 ck.record("s2_time_to_5deg_s", s2_times)
 # antipode of a fixed target: two unstable directions, rate from lam^2 + k_omega lam - k_q = 0
 lam_s2 = (-k_om + np.sqrt(k_om**2 + 4 * k_q)) / 2
@@ -746,7 +746,7 @@ def quad_run(x0, v0, R0, Om0, t_f, ff=True, eps=1.0, clip=True, n=2001, stop=Non
     return sol.t, sol.y.T
 
 
-# the thrust error: Delta = f R e3 - F_d has length |F_d| sin(tilt), and is bounded by |F_d| |e_R| when Psi_R < 1
+# the thrust error: e_F = f R e3 - F_d has length |F_d| sin(tilt), and is bounded by |F_d| |e_R| when Psi_R < 1
 w1 = 0.0
 viol = -np.inf
 for _ in range(2000):
@@ -755,19 +755,19 @@ for _ in range(2000):
     th = np.pi * rng.random()
     R = Rd @ expm_so3(th * unit(rng.normal(size=3)))
     b3 = R @ E3
-    Delta = (Fd @ b3) * b3 - Fd
+    e_F = (Fd @ b3) * b3 - Fd
     tilt = np.arccos(np.clip(b3 @ unit(Fd), -1, 1))
-    w1 = max(w1, abs(np.linalg.norm(Delta) - np.linalg.norm(Fd) * np.sin(tilt)), np.max(np.abs(Rd @ E3 - unit(Fd))),
+    w1 = max(w1, abs(np.linalg.norm(e_F) - np.linalg.norm(Fd) * np.sin(tilt)), np.max(np.abs(Rd @ E3 - unit(Fd))),
              np.max(np.abs(Rd.T @ Rd - I3)), abs(np.linalg.det(Rd) - 1), abs((Rd @ E2) @ hd), float(tilt > th + 1e-9))
     if Psi_R(R, Rd) < 1:
-        viol = max(viol, np.linalg.norm(Delta) - np.linalg.norm(Fd) * np.linalg.norm(e_R(R, Rd)))
-ck.true("R_d is a rotation with R_d e3 = F_d/|F_d| and second axis perpendicular to the heading; |Delta| = |F_d| sin(tilt); tilt <= theta",
+        viol = max(viol, np.linalg.norm(e_F) - np.linalg.norm(Fd) * np.linalg.norm(e_R(R, Rd)))
+ck.true("R_d is a rotation with R_d e3 = F_d/|F_d| and second axis perpendicular to the heading; |e_F| = |F_d| sin(tilt); tilt <= theta",
         w1 < 1e-9, f"err {w1:.1e}")
 ck.true("|f R e3 - F_d| <= |F_d| |e_R| whenever Psi_R < 1 (2000 samples)", viol < 1e-9, f"max viol {viol:.1e}")
 # the bound fails beyond 90 degrees
 R = Rd @ expm_so3(np.radians(170) * (Rd.T @ unit(np.cross(Rd @ E3, E1))))
 b3 = R @ E3
-ck.true("the bound |Delta| <= |F_d||e_R| can fail when Psi_R > 1", np.linalg.norm((Fd @ b3) * b3 - Fd) > np.linalg.norm(Fd) * np.linalg.norm(e_R(R, Rd)))
+ck.true("the bound |e_F| <= |F_d||e_R| can fail when Psi_R > 1", np.linalg.norm((Fd @ b3) * b3 - Fd) > np.linalg.norm(Fd) * np.linalg.norm(e_R(R, Rd)))
 
 # Omega_d from the finite-difference construction matches a direct derivative of R_d along a run
 x0 = ref_pos(0)[0] + np.array([0.6, -0.4, 0.5])
@@ -865,7 +865,7 @@ ck.record("load_params", {"m_Q": m_Q, "m_L": m_L, "l": l_c, "k_x": kxL, "k_v": k
 
 
 def load_force(x, v, q, om, xd):
-    """Thrust vector F wanted from the quadrotor, and the cable direction q_d the position loop asks for."""
+    """Thrust vector F asked of the quadrotor, and the cable direction q_d the position loop asks for."""
     A = -kxL * (x - xd) - kvL * v + (m_Q + m_L) * G * E3 + m_Q * l_c * (om @ om) * q
     qd = -unit(A)
     om_des = -kqL * e_q(q, qd) - komL * om                      # target fixed, omega_d taken as zero
@@ -939,9 +939,9 @@ rp_mod, rp_layout, rp_p = library("rigid_pendulum")
 m_3, rho_3 = 1.0, np.array([0.0, 0.0, -0.5])
 J_3 = np.diag([0.1625, 0.1625, 0.01])
 J3inv = np.linalg.inv(J_3)
-K_P, K_D = 100.0, 20.0
+k_p, k_d = 100.0, 20.0
 rp_p.update({"J": J_3, "m": m_3, "g": G, "\\rho": rho_3})
-ck.record("fl_params", {"m": m_3, "J_diag": np.diag(J_3).tolist(), "rho": rho_3.tolist(), "K_p": K_P, "K_d": K_D})
+ck.record("fl_params", {"m": m_3, "J_diag": np.diag(J_3).tolist(), "rho": rho_3.tolist(), "k_p": k_p, "k_d": k_d})
 
 
 def grav_3(R):
@@ -981,18 +981,18 @@ ck.close("euler_zyx inverts Rz Ry Rx", euler_zyx(R0), Th)
 
 
 def tau_geo(R, Om):
-    """Geometric feedback linearization: e_Omega_dot = -K_p e_R - K_d e_Omega (target R_d = I)."""
-    return J_3 @ (-K_P * e_R(R, I3) - K_D * Om) + np.cross(Om, J_3 @ Om) - grav_3(R)
+    """Geometric feedback linearization: e_Omega_dot = -k_p e_R - k_d e_Omega (target R_d = I)."""
+    return J_3 @ (-k_p * e_R(R, I3) - k_d * Om) + np.cross(Om, J_3 @ Om) - grav_3(R)
 
 
 def tau_euler(R, Om):
-    """Euler-angle feedback linearization: Theta_ddot = -K_p Theta - K_d Theta_dot."""
+    """Euler-angle feedback linearization: Theta_ddot = -k_p Theta - k_d Theta_dot."""
     Th = euler_zyx(R)
     if abs(np.cos(Th[1])) < 1e-9:
         return np.full(3, np.nan)
     Em = E_mat(Th[1], Th[2])
     Th1 = np.linalg.solve(Em, Om)
-    return J_3 @ (Em @ (-K_P * Th - K_D * Th1) + E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1) + np.cross(Om, J_3 @ Om) - grav_3(R)
+    return J_3 @ (Em @ (-k_p * Th - k_d * Th1) + E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1) + np.cross(Om, J_3 @ Om) - grav_3(R)
 
 
 # both laws do what they claim at random states
@@ -1000,15 +1000,15 @@ w1 = w2 = 0.0
 for _ in range(50):
     R, Om = random_rotation(rng), rng.normal(size=3)
     Om_dot = J3inv @ (tau_geo(R, Om) + grav_3(R) - np.cross(Om, J_3 @ Om))
-    w1 = max(w1, np.max(np.abs(Om_dot + K_P * e_R(R, I3) + K_D * Om)))
+    w1 = max(w1, np.max(np.abs(Om_dot + k_p * e_R(R, I3) + k_d * Om)))
     Th = euler_zyx(R)
     Em = E_mat(Th[1], Th[2])
     Th1 = np.linalg.solve(Em, Om)
     Om_dot = J3inv @ (tau_euler(R, Om) + grav_3(R) - np.cross(Om, J_3 @ Om))
     Th2 = np.linalg.solve(Em, Om_dot - E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1)
-    w2 = max(w2, np.max(np.abs(Th2 + K_P * Th + K_D * Th1)))
-ck.true("geometric law gives Omega_dot = -K_p e_R - K_d Omega exactly", w1 < 1e-10, f"err {w1:.1e}")
-ck.true("Euler law gives Theta_ddot = -K_p Theta - K_d Theta_dot exactly", w2 < 1e-8, f"err {w2:.1e}")
+    w2 = max(w2, np.max(np.abs(Th2 + k_p * Th + k_d * Th1)))
+ck.true("geometric law gives Omega_dot = -k_p e_R - k_d Omega exactly", w1 < 1e-10, f"err {w1:.1e}")
+ck.true("Euler law gives Theta_ddot = -k_p Theta - k_d Theta_dot exactly", w2 < 1e-8, f"err {w2:.1e}")
 
 
 def fl_run(R0, Om0, law, t_f=3.0):

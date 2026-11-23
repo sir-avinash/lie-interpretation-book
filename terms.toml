@@ -288,11 +288,11 @@ use = 'x_L, m_L for the load and x_Q, m_Q for the quadrotor'
 math = true
 
 [[rule]]
-pattern = '\be_[xyz]\b|\\hat\{?[xyz]\}?\b|e_\{[xyz]\}'
-use = 'e_1, e_2, e_3 for the standard basis'
+pattern = '\be_[yz]\b|e_\{[xyz]\}|\\hat\{?[xyz]\}?\b|R(_d)?(\\[,;])?\s*e_x\b|\be_x\s*\\times|\\times\s*e_x\b|\(e_x,\s*e_[y2]'
+use = 'e_1, e_2, e_3 for the standard basis (e_x is the position error and e_v the velocity error)'
 where = ['chapters', 'notebooks', 'skills', 'figures']
 math = true
-allow = ['e_x \cdot \delta x', 'e_x = \epsilon', '\hat R', '| $e_x$ |']
+allow = ['\hat R']
 
 [[rule]]
 pattern = '\\tilde\{?\\?(R|q|Omega|omega)\b|\bR_e\b|\\Omega_e\b|\bq_e\b|e_\{?\\dot\{?R|\be_w\b|e_\{\\Omega_d|e_\{\\text\{vel\}\}_'
@@ -351,8 +351,8 @@ where = ['chapters', 'skills', 'figures']
 math = false
 
 [[rule]]
-pattern = 'almost[ -]global(?!ly)\w*\s+(?!stab|asymp|guarantee|claim|result|converg|tracking|behav)\w+|almost global\b'
-use = 'almost-global (hyphenated, as an adjective before stability, convergence, tracking, claim, guarantee)'
+pattern = 'almost[ -]global(?!ly)\w*\s+(?!stab|asymp|exponential|attract|guarantee|claim|result|statement|theorem|propert|converg|tracking|regulat|behav|control|law\b|barrier|region|domain|basin)\w+|almost global\b|almost-globaly'
+use = 'almost-global (hyphenated, as an adjective before stability, attractiveness, convergence, tracking, control, claim, guarantee, result)'
 ignore_case = true
 math = false
 
@@ -462,7 +462,7 @@ where = ['chapters']
 math = false
 
 [[rule]]
-pattern = '\bet al\b(?!\.)|et\. al|and co-?authors|and colleagues|and coworkers'
+pattern = '\bet al\b(?!\.)|\bet\. al\b|\bet\.al\b|and co-?authors|and colleagues|and coworkers'
 use = 'et al.'
 ignore_case = true
 where = ['chapters', 'skills', 'notebooks']
@@ -574,3 +574,165 @@ use = 'R_dot, q_dot, Omega_dot for time derivatives in code-style formulas'
 where = ['skills']
 allow = ["slot 'q' must"]
 code = true
+
+# ---------------------------------------------------------------------------
+# Chapters 6, 8 and 13: tracking, adaptation, safety, optimization.
+# One letter, one meaning. See the tables of Appendix A.
+
+[[rule]]
+pattern = '\\mu_\{?\\?(min|max)|\\lambda_[mM]\b|\\sigma_\{?\\?(min|max)\}?\(|\\lambda_\{?\\?(text|mathrm)\{(min|max)'
+use = '\lambda_{\min}(\cdot), \lambda_{\max}(\cdot) for the smallest and largest eigenvalue; J_{\min}, J_{\max} for those of the inertia'
+math = true
+
+[[rule]]
+pattern = '\beigmin\b|\beigmax\b|\bmu_min\b|\bmu_max\b|\blam_m\b|\blam_M\b|lambda_m\b|lambda_M\b'
+use = 'lambda_min(W3), lambda_max(W2), J_min, J_max'
+where = ['skills', 'notebooks', 'figures']
+code = true
+
+[[rule]]
+pattern = 'z(\\T|\^\\top) ?W ?z|\bW\s*=\s*\\begin|\\lambda_\{\\min\}\(W\)|\bV_1\b|\bV_2\b|\\delta_V\b|\\dot V \+ \\beta|\\beta\\?,?\s*V\b'
+use = 'V_0 (no cross term), V (with it), W_1, W_2, W_3 for the bounds, \gamma for the rate, V_\infty for a residual level'
+math = true
+
+[[rule]]
+pattern = '\\gamma\\?,?\s*\\(operatorname|mathrm)\{Proj\}|\\tfrac\{1\}\{2\\gamma\}|1\s*/\s*\\gamma|\\gamma\s*=\s*\d{3,}|adaptation gain\*{0,2} \$\\gamma|\\propto 1/\\gamma|γ\s*=\s*\d'
+use = 'k_\Delta for the adaptation gain (\gamma is the guaranteed exponential rate)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+
+[[rule]]
+pattern = '\\kappa\\?,?\s*(\\big)?\(\\hat\\Delta|cutoff\*{0,2}\s+\$?\\?κ?kappa|\\kappa\s*=\s*[\d.]+\$? rad/s|cutoff\s+κ|\bkappa\b[^\n]{0,30}rad/s|κ\s+\(rad/s\)'
+use = 'k_f for the cutoff of the filter (\kappa is the factor that speeds up an inner loop)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = '`gamma`|\bGAMMA\b|\bKAPPA\b|gamma\s*=\s*\d{3,}|`kappa`: from|`kappa` (if|spends)|(cutoff|filter|margin)[^\n]{0,60}`kappa`|`kappa`[^\n]{0,60}(cutoff|margin|rad/s)|kappa = \d+ rad'
+use = 'k_Delta for the adaptation gain and k_f for the cutoff, in code as in the text'
+where = ['skills']
+code = true
+
+[[rule]]
+pattern = '\\mu_p\b|\\mu\s*\+\s*\\Delta|\}_\{\\mu\}|\\mu\s*=\s*-\s*k_R|\\tau\s*=\s*\\mu\b|\\mu\s*=\s*J_0|\)\s*\\mu\b|except `mu`|as `mu`|\bmu_p\b'
+use = '\tau_{\text{fb}} for the feedback part of the torque (\mu is the barrier parameter)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = '\\dot e_v[^$\n]*\+\s*\\Delta|\\Delta\s*=\s*f\\?,?\s*R|\\\|\\Delta\\\|\s*(=|\\le)\s*\\\|F_d|e_v \+ Delta\b|\|Delta\| (=|<=) \|F_d\|'
+use = 'e_F for the force error f R e_3 - F_d (\Delta is the lumped uncertainty)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = 'U\s*(\\[,;])?\s*\\(hat|tilde)\\Delta|U(\\T|\^\\top)\s*\\big|\bU\s*=\s*J_0|U\\hat|U\\tilde'
+use = '\Xi for the matrix J_0 R_p^\top R J_0^{-1} R^\top R_p (U is the stack of input corrections)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+math = true
+
+[[rule]]
+pattern = 'U(\\T|\^\\top)\s*H|H\^\{-1\}\s*F|\(F\s*s_0\)|\\mathcal\{H\}|\bH_d\b|H\^-1 F|U\^T H U|`Hc`|`H` is positive|\bF s_0\b|\(F s_0\)'
+use = 'P_{UU}, P_{Us} for the matrices of the quadratic program, A_{22} for the velocity block, \operatorname{Hess} for a Hessian (H is the barrier function, F a force)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = '\\rho_k\b|\\rho_\{k|\brho_k\b|dexp_inv\(-?rho'
+use = 'r_k for the value of a constraint (\rho is the vector to the center of mass)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = 'A_r(\\T|\^\\top|\^T)\s*y\b|A_c(\\T|\^\\top|\^T)\s*z\b|w_i\s*z_i|diag\}?\(z\s*/\s*w\)|y\s*\\cdot\s*r\b|z\s*\\cdot\s*c\b|y \. r \+ z \. c|multipliers? `?\$?y\b'
+use = '\nu_r, \nu_c for the multipliers of the equality and inequality constraints (z is the vector of error norms)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = '\\nabla|\\partial\^2 ?\\Phi|\\(mathrm|text)\{(Proj|grad|Hess|dexp)\}'
+use = '\operatorname{grad}, \operatorname{Hess}, \operatorname{Proj}, \operatorname{dexp}'
+math = true
+
+[[rule]]
+pattern = '\bK_[pd]\s*=\s*\d|-\s*K_p\\?,?\s*e_R|\{-K_p\}\\?,?\s*e_R|K_d\\?,?\s*e_\\Omega|K_d\\?,?\s*\\Omega\b|-K_p\\Theta|-\s*K_p \\Theta'
+use = 'k_p, k_d for scalar gains (K is a gain matrix)'
+where = ['chapters', 'notebooks', 'skills']
+math = true
+
+[[rule]]
+pattern = '\\theta_c\b|\btheta_c\b|\\theta_\{?\\?(text|mathrm)?\{?(cone|lim|limit|safe)\b|q_\{?\\?(text|mathrm)?\{?(axis|cone|sun)\b'
+use = 'q_c for the axis of a cone and \theta_{\max} for its half-angle'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = '(?<![A-Za-z_\\])f\s*\(\\hat\\Delta\)|\\!f\b|\bf > 0 \\text|\\,f \\ |convexity of \$f\$'
+use = 'f_\Delta for the function that defines the projection ball (f is the thrust)'
+where = ['chapters', 'notebooks', 'skills']
+math = true
+
+[[rule]]
+pattern = '\$\\mathcal\{L\}_1\$(?! norm)|L1[- ]adaptation|L1-adaptive|\$L_1\$|L_1 adaptive|\bL1 control\b|ℒ'
+use = 'L1 adaptive control in prose and labels (the script letter is kept for the \mathcal{L}_1 norm)'
+where = ['chapters', 'notebooks', 'skills', 'figures']
+
+[[rule]]
+pattern = 'feed-forward|feed forward|sub-level|sublevel-set|cross-term|time-step\b|timesteps?\b|warmstart|hot[- ]start'
+use = 'feedforward, sublevel set, cross term, time step, warm start'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'sample time|sampling time|sample period|sampling interval|sample interval|control period|controller periods?'
+use = 'sampling period (it is the time step h)'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '(nominal|baseline) (controller|control law|law|tracker|loop)|plain (PD|tracker|law)\b|geometric PD"'
+use = 'plain controller for the tracking law without adaptation or a safety filter'
+ignore_case = true
+where = ['chapters', 'notebooks', 'skills', 'figures']
+
+[[rule]]
+pattern = 'reference model'
+use = 'state predictor (reference is kept for the desired motion)'
+ignore_case = true
+math = false
+allow = ['calls it the reference model', 'call it the reference model']
+
+[[rule]]
+pattern = 'control barrier function|\bCBFs?\b(?!-CLF)|barrier certificate|safe region|safety set|unsafe set|\bCLF-CBF|\bCBF-QP\b|(?<!CBF-)\bCLF-QP\b'
+use = 'barrier function, safe set, safety filter, CBF-CLF-QP'
+ignore_case = true
+math = false
+allow = ['calls it a control barrier function', '](http']
+
+[[rule]]
+pattern = 'interior point\b|interior-point(?! method| methods|-point)\b|model-predictive|quadratic programme'
+use = 'interior-point method, model predictive control, quadratic program'
+ignore_case = true
+where = ['chapters', 'notebooks', 'skills', 'figures']
+allow = ['](http', 'interior-point filter line-search']
+
+[[rule]]
+pattern = 'replace the constraint by a \*\*barrier\*\*|log barrier|log-barrier|barrier term'
+use = 'logarithmic barrier for the term in a cost (a barrier function is a constraint on the motion)'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '^# ## (?!\d+\. |Starting points for the exercises$)'
+use = 'numbered section titles in a notebook: ## 3. Title'
+where = ['notebooks']
+
+[[rule]]
+pattern = '\bk_Om\b|\bk_om\b|\bkOm\b|\bk_W\b|\bkq\b|\bkR\b'
+use = 'k_R, k_Omega, k_q, k_omega for gains in code'
+where = ['notebooks', 'skills', 'figures']
+code = true
+
+[[rule]]
+pattern = 'OCHRE(?!,)'
+use = 'ink, indigo, terracotta and teal: a figure has at most three colored roles'
+where = ['figures']

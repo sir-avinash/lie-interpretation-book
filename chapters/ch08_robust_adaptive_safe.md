@@ -17,23 +17,31 @@ Here is a second question for the same controller. Its reference passes through 
 
 ![Two things a tracking controller does not have. Left: with a camera clipped on off-center, the simulated vehicle comes to rest with its thrust axis $R\,e_3$ tilted 11.3° from the target $R_d\,e_3$. The dashed outline is the attitude it was asked to hold. Right: a reference that crosses a wall is tracked across the wall.](figures/ch08-puzzle.svg){#fig8-puzzle}
 
-So two things are missing. One is a way to handle what the controller does not know. The other is a way to guarantee what must never happen. They are different kinds of requirement and they get different tools. Both tools are built from the error functions and transport maps of [](#ch-variations), so neither needs a coordinate.
+So two things are missing. One is a way to handle what the controller does not know. The other is a way to guarantee what must never happen. They are different kinds of requirement and they get different tools. Both tools are built from the error functions of [](#def3-error-vector) and the transport maps of [](#def3-transport), so neither needs a coordinate.
 
 ## What the tracker assumes {#sec8-baseline}
 
-The attitude controller of [](#ch-tracking) is a proportional and derivative law on $\SO(3)$ plus a feedforward term. With $e_R$ and $e_\Omega$ from [](#eq-error-so3), it reads
+The attitude controller of [](#sec6-pd) is a PD law on $\SO(3)$ plus a feedforward. With $e_R$ and $e_\Omega$ from [](#eq-error-so3), it is [](#eq6-law), which we restate with one change:
 
 $$
-\tau = \underbrace{-k_R\,e_R - k_\Omega\,e_\Omega}_{\mu} \;+\; \Omega\times J_0\Omega - J_0\big(\Omega^\wedge R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big). \label{eq8-pd}
+\tau = \underbrace{-k_R\,e_R - k_\Omega\,e_\Omega}_{\tau_{\text{fb}}} \;+\; \underbrace{\Omega\times J_0\Omega - J_0\big(\Omega\times R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big)}_{\text{feedforward}} . \label{eq8-pd}
 $$
 
-We write $J_0$ for the inertia the controller believes, and $\mu$ for the part of the torque that is left to design. The feedforward terms cancel the gyroscopic torque and supply the acceleration of the reference. Substitute [](#eq8-pd) into $J\dot\Omega + \Omega\times J\Omega = \tau$ of [](#eq4-quadrotor). If $J_0 = J$, everything cancels except $\mu$:
+We write $J_0$ for the inertia the controller believes, and $\tau_{\text{fb}}$ for the feedback part of the torque, the part that is left to design. The feedforward cancels the gyroscopic torque and supplies the acceleration of the reference. Substitute [](#eq8-pd) into $J\dot\Omega + \Omega\times J\Omega = \tau$ of [](#eq4-quadrotor). If $J_0 = J$, everything cancels except $\tau_{\text{fb}}$, and the closed loop is [](#eq6-closed) with [](#eq3-eR-dot):
 
 $$
 J_0\,\dot e_\Omega = -k_R\,e_R - k_\Omega\,e_\Omega , \qquad \dot e_R = C_R\,e_\Omega .
 $$
 
-This is a spring and a damper on the manifold. The function $V = \tfrac12\,e_\Omega\cdot J_0\,e_\Omega + k_R\,\Psi_R + c\,e_R\cdot e_\Omega$, with a small constant $c > 0$, decreases along every solution that starts less than half a turn from the reference and not too fast, and the errors go to zero exponentially (Lee, Leok and McClamroch, 2010). Our vehicle has $J_0 = \operatorname{diag}(6.97,\ 6.21,\ 10.3)\times10^{-3}$ kg·m², $k_R = 2$ N·m and $k_\Omega = 0.25$ N·m·s.
+This is a spring and a damper on the manifold. [](#thm6-exp) says what it does. From a start in the sublevel set $V_0(0) < 2k_R$ of [](#eq6-V0), which is less than half a turn from the reference and not too fast, a Lyapunov function with a cross term decreases and the errors go to zero exponentially. In this chapter the cross term is taken without the inertia:
+
+$$
+V = \tfrac12\,e_\Omega\cdot J_0\,e_\Omega + k_R\,\Psi_R + c\,e_R\cdot e_\Omega , \label{eq8-V}
+$$
+
+with a small constant $c > 0$. This is the form of Lee, Leok and McClamroch (2010), and the adaptation law of [](#sec8-l1) is built on it. It differs from [](#eq6-V) by the factor $J$ in the last term. The matrices $W_1$, $W_2$, $W_3$ of [](#eq6-W) keep their roles and change their entries ([](#thm8-bound)).
+
+Our vehicle has $J_0 = \operatorname{diag}(6.97,\ 6.21,\ 10.3)\times10^{-3}$ kg·m², $k_R = 2$ N·m and $k_\Omega = 0.25$ N·m·s. We call [](#eq8-pd), with nothing added to it, the **plain controller**.
 
 Every step of that argument used $J_0 = J$ and a body on which only $\tau$ acts.
 
@@ -48,13 +56,13 @@ $$
 Apply the same control law [](#eq8-pd), which still uses $J_0$. The cancellation is no longer exact. Collect what is left over and the error dynamics become
 
 $$
-J_0\,\dot e_\Omega = \mu + \Delta, \qquad
-\Delta = \big(J_0 J^{-1} - I\big)\mu + J_0 J^{-1}\big(\Delta_m + \Delta_e\big), \label{eq8-lumped}
+J_0\,\dot e_\Omega = \tau_{\text{fb}} + \Delta, \qquad
+\Delta = \big(J_0 J^{-1} - I\big)\tau_{\text{fb}} + J_0 J^{-1}\big(\Delta_m + \Delta_e\big), \label{eq8-lumped}
 $$
 
-where $\Delta_m = -\Omega\times(J - J_0)\Omega + (J - J_0)\big(\Omega^\wedge R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big)$ is the part of the feedforward that used the wrong inertia.
+where $\Delta_m = -\Omega\times(J - J_0)\Omega + (J - J_0)\big(\Omega\times R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big)$ is the part of the feedforward that used the wrong inertia.
 
-Three different mistakes, a wrong inertia, a wrong feedforward and an outside torque, arrive as one vector $\Delta$, the **lumped uncertainty**. It enters the equation at the same place as the input $\mu$. An uncertainty with that property is called **matched**: if you knew $\Delta$ you could cancel it with torque. The kinematic equation $\dot e_R = C_R\,e_\Omega$ is untouched, because no model error can change how rotations compose. The price is that $\Delta$ is not a constant. It depends on the state and, through $\mu$, on the control itself.
+Three different mistakes, a wrong inertia, a wrong feedforward and an outside torque, arrive as one vector $\Delta$, the **lumped uncertainty**. It enters the equation at the same place as the input $\tau_{\text{fb}}$. An uncertainty with that property is called **matched**: if you knew $\Delta$ you could cancel it with torque. The kinematic equation $\dot e_R = C_R\,e_\Omega$ is untouched, because no model error can change how rotations compose. The price is that $\Delta$ is not a constant. It depends on the state and, through $\tau_{\text{fb}}$, on the control itself.
 
 ::: {.thought #thought8-spring name="A door on a spring"}
 A door is held shut by a spring. Lean on it with a steady hand. The door opens until the spring pushes back as hard as you do, and then it stays open by that much. It cannot return to shut, because a shut door means an unstretched spring and no force to oppose you.
@@ -65,7 +73,7 @@ The term $-k_R\,e_R$ is that spring. A steady torque is balanced only by a stead
 ::: {.example #ex8-camera name="The camera"}
 The camera has mass $0.5$ kg and sits at $(0.08,\ 0,\ -0.03)$ m in the body frame. In hover the thrust equals the total weight and no longer passes through the center of mass, which gives a constant body torque $\Delta_e = (0,\ 0.392,\ 0)$ N·m. The camera also raises the three principal inertias by 6%, 59% and 31%.
 
-At rest $\mu + \Delta_e = 0$, so $k_R\,e_R = \Delta_e$ and by [](#eq-error-angle)
+At rest $\tau_{\text{fb}} + \Delta_e = 0$, so $k_R\,e_R = \Delta_e$ and by [](#eq-error-angle)
 
 $$
 \sin\theta = \frac{\|\Delta_e\|}{k_R} = \frac{0.392}{2}, \qquad \theta = 11.3^\circ .
@@ -80,27 +88,27 @@ A fixed offset can be removed by an integrator. But the torques that matter are 
 
 ## Robustness you get for free {#sec8-free}
 
-The Lyapunov function that proved convergence also bounds the damage. Write $z = (\|e_R\|, \|e_\Omega\|)$, and let $\lambda_{\min}$ and $\lambda_{\max}$ denote the smallest and largest eigenvalues of a symmetric matrix, with $\lambda_m = \lambda_{\min}(J_0)$ and $\lambda_M = \lambda_{\max}(J_0)$.
+The Lyapunov function that proved convergence also bounds the damage. As in [](#thm6-exp), write $z = (\|e_R\|, \|e_\Omega\|)$, let $\lambda_{\min}$ and $\lambda_{\max}$ denote the smallest and largest eigenvalues of a symmetric matrix, and let $J_{\min}$ and $J_{\max}$ be those of the inertia, here $J_0$.
 
 ::: {.proposition #thm8-bound name="Ultimate bound for the plain controller"}
-Consider $J_0\,\dot e_\Omega = -k_R\,e_R - k_\Omega\,e_\Omega + \Delta$ with $\dot e_R = C_R\,e_\Omega$. Choose $c > 0$ so small that
+Consider $J_0\,\dot e_\Omega = -k_R\,e_R - k_\Omega\,e_\Omega + \Delta$ with $\dot e_R = C_R\,e_\Omega$, and the function $V$ of [](#eq8-V). Choose $c > 0$ so small that
 $$
-W = \begin{bmatrix} \dfrac{c\,k_R}{\lambda_M} & -\dfrac{c\,k_\Omega}{2\lambda_m} \\[6pt] -\dfrac{c\,k_\Omega}{2\lambda_m} & k_\Omega - c \end{bmatrix}, \qquad
-W_1 = \frac12\begin{bmatrix} k_R & -c \\ -c & \lambda_m \end{bmatrix}
+W_1 = \frac12\begin{bmatrix} k_R & -c \\ -c & J_{\min} \end{bmatrix}, \qquad
+W_3 = \begin{bmatrix} \dfrac{c\,k_R}{J_{\max}} & -\dfrac{c\,k_\Omega}{2J_{\min}} \\[6pt] -\dfrac{c\,k_\Omega}{2J_{\min}} & k_\Omega - c \end{bmatrix}
 $$
-are positive definite, and let $W_2 = \tfrac12\begin{bmatrix} 2k_R & c \\ c & \lambda_M \end{bmatrix}$. Along any solution with $\Psi_R \le 1$ and $\|\Delta\| \le \Delta_{\max}$,
+are positive definite, and let $W_2 = \tfrac12\begin{bmatrix} 2k_R & c \\ c & J_{\max} \end{bmatrix}$. Along any solution with $\Psi_R \le 1$ and $\|\Delta\| \le \Delta_{\max}$,
 $$
 z\T W_1 z \le V \le z\T W_2 z, \qquad
-\dot V \le -z\T W z + \sqrt{1 + c^2/\lambda_m^2}\;\Delta_{\max}\,\|z\| , \label{eq8-bound}
+\dot V \le -z\T W_3 z + \sqrt{1 + c^2/J_{\min}^2}\;\Delta_{\max}\,\|z\| , \label{eq8-bound}
 $$
 and therefore
 $$
-\limsup_{t\to\infty}\|z(t)\| \;\le\; \sqrt{\frac{\lambda_{\max}(W_2)}{\lambda_{\min}(W_1)}}\;\frac{\sqrt{1 + c^2/\lambda_m^2}}{\lambda_{\min}(W)}\;\Delta_{\max} .
+\limsup_{t\to\infty}\|z(t)\| \;\le\; \sqrt{\frac{\lambda_{\max}(W_2)}{\lambda_{\min}(W_1)}}\;\frac{\sqrt{1 + c^2/J_{\min}^2}}{\lambda_{\min}(W_3)}\;\Delta_{\max} .
 $$
 :::
 
 ::: {.proof}
-Differentiate $V$ with $\dot\Psi_R = e_R\cdot e_\Omega$ and [](#eq3-eR-dot). The terms $\pm k_R\,e_R\cdot e_\Omega$ cancel. Bound what remains with $e_\Omega\cdot C_R\,e_\Omega \le \|e_\Omega\|^2$ and the eigenvalues of $J_0$. The term in $\Delta$ is $(e_\Omega + c\,J_0^{-1}e_R)\cdot\Delta$. The bounds on $V$ use $\tfrac12\|e_R\|^2 \le \Psi_R \le \|e_R\|^2$, valid while $\Psi_R \le 1$. Then $\dot V < 0$ whenever $\|z\|$ exceeds $\sqrt{1 + c^2/\lambda_m^2}\,\Delta_{\max}/\lambda_{\min}(W)$, so $V$ ends up below its largest value on that ball. This is the argument of Lee, Leok and McClamroch (2010) with one more term.
+Differentiate $V$ with $\dot\Psi_R = e_R\cdot e_\Omega$ and [](#eq3-eR-dot). The terms $\pm k_R\,e_R\cdot e_\Omega$ cancel. Bound what remains with $e_\Omega\cdot C_R\,e_\Omega \le \|e_\Omega\|^2$ and the eigenvalues of $J_0$. The term in $\Delta$ is $(e_\Omega + c\,J_0^{-1}e_R)\cdot\Delta$. The bounds on $V$ use $\tfrac12\|e_R\|^2 \le \Psi_R \le \|e_R\|^2$, valid while $\Psi_R \le 1$. Then $\dot V < 0$ whenever $\|z\|$ exceeds $\sqrt{1 + c^2/J_{\min}^2}\,\Delta_{\max}/\lambda_{\min}(W_3)$, so $V$ ends up below its largest value on that ball. This is the proof of [](#thm6-exp), for the cross term of [](#eq8-V) and the sublevel set $\Psi_{\max} = 1$, with one more term.
 :::
 
 So a bounded uncertainty gives a bounded error. Nothing diverges, as long as the solution stays within a quarter turn of the reference. That is real robustness and it cost nothing.
@@ -125,7 +133,7 @@ $$
 \dot R_p = R_p\,\Omega_p^\wedge, \qquad J_0\,\dot\Omega_p + \Omega_p\times J_0\Omega_p = \tau_p .
 $$
 
-It lives on the manifold too, and it is driven by a torque $\tau_p$ of the form [](#eq8-pd), evaluated at $(R_p, \Omega_p)$ with its own $\mu_p$. So its tracking errors $e_R^p$, $e_\Omega^p$, which are [](#eq-error-so3) with $(R_p, \Omega_p)$ in place of $(R, \Omega)$, obey $J_0\,\dot e_\Omega^p = \mu_p$ exactly. The $\mathcal{L}_1$ literature and Kotaru call it the reference model. We keep "reference" for $R_d$.
+It lives on the manifold too, and it is driven by a torque $\tau_p$ of the form [](#eq8-pd), evaluated at $(R_p, \Omega_p)$ with its own feedback part $\tau_{\text{fb}}^p$. So its tracking errors $e_R^p$, $e_\Omega^p$, which are [](#eq-error-so3) with $(R_p, \Omega_p)$ in place of $(R, \Omega)$, obey $J_0\,\dot e_\Omega^p = \tau_{\text{fb}}^p$ exactly. The L1 literature and Kotaru call it the reference model. We keep "reference" for $R_d$.
 
 **The prediction error.** How far is the predictor from the vehicle? They are two attitudes, so the question was answered in [](#sec-error): use the error function, the error vector and the transport map again, with the predictor in the role of the actual attitude and the vehicle in the role of the desired one.
 
@@ -141,15 +149,15 @@ Subtracting matrices or body rates entry by entry would repeat the mistake of []
 
 $$
 \begin{aligned}
-\mu_p &= -k_R\,e_R^p - k_\Omega\,e_\Omega^p + U\hat\Delta - \Delta_f, \qquad U = J_0\,R_p\T R\,J_0^{-1}R\T R_p ,\\
-\mu &= J_0\,R\T R_p\,J_0^{-1}\big(-k_R\,e_R^p - k_\Omega\,e_\Omega^p - \Delta_f + \tilde k_R\,\tilde e_R + \tilde k_\Omega\,\tilde e_\Omega\big) + J_0\,R\T R_p\,\tilde e_\Omega^\wedge R_p\T R\,e_\Omega .
+\tau_{\text{fb}}^p &= -k_R\,e_R^p - k_\Omega\,e_\Omega^p + \Xi\,\hat\Delta - \Delta_f, \qquad \Xi = J_0\,R_p\T R\,J_0^{-1}R\T R_p ,\\
+\tau_{\text{fb}} &= J_0\,R\T R_p\,J_0^{-1}\big(-k_R\,e_R^p - k_\Omega\,e_\Omega^p - \Delta_f + \tilde k_R\,\tilde e_R + \tilde k_\Omega\,\tilde e_\Omega\big) + J_0\,R\T R_p\,\tilde e_\Omega^\wedge R_p\T R\,e_\Omega .
 \end{aligned} \label{eq8-l1-law}
 $$
 
-Here $\Delta_f$ is the filtered estimate, defined below, and $\tilde k_R, \tilde k_\Omega > 0$ are gains on the prediction error. The predictor tracks the reference and feels the raw estimate. The vehicle is steered toward the predictor and feels only the filtered one. The matrix $U$ is the identity when $R_p = R$ or when $J_0$ is a multiple of $I$. It is there because $J_0$ is expressed in two different frames. With these choices the prediction error obeys
+Here $\Delta_f$ is the filtered estimate, defined below, and $\tilde k_R, \tilde k_\Omega > 0$ are gains on the prediction error. The predictor tracks the reference and feels the raw estimate. The vehicle is steered toward the predictor and feels only the filtered one. The matrix $\Xi$ is the identity when $R_p = R$ or when $J_0$ is a multiple of $I$. It is there because $J_0$ is expressed in two different frames. With these choices the prediction error obeys
 
 $$
-J_0\,\dot{\tilde e}_\Omega = -\tilde k_R\,\tilde e_R - \tilde k_\Omega\,\tilde e_\Omega + U\tilde\Delta . \label{eq8-pred-dyn}
+J_0\,\dot{\tilde e}_\Omega = -\tilde k_R\,\tilde e_R - \tilde k_\Omega\,\tilde e_\Omega + \Xi\,\tilde\Delta . \label{eq8-pred-dyn}
 $$
 
 Compare with [](#eq8-lumped). It is the same spring and damper on $\SO(3)$, now between predictor and vehicle, pushed by the estimation error and by nothing else. The filter has dropped out.
@@ -157,63 +165,63 @@ Compare with [](#eq8-lumped). It is the same spring and damper on $\SO(3)$, now 
 **The adaptation law.** The estimate moves in the direction that [](#eq8-pred-dyn) says will shrink the prediction error:
 
 $$
-\dot{\hat\Delta} = \gamma\,\operatorname{Proj}\big(\hat\Delta,\ y\big), \qquad y = -U\T\big(\tilde e_\Omega + c\,J_0^{-1}\tilde e_R\big), \label{eq8-adapt}
+\dot{\hat\Delta} = k_\Delta\,\operatorname{Proj}\big(\hat\Delta,\ y\big), \qquad y = -\Xi\T\big(\tilde e_\Omega + c\,J_0^{-1}\tilde e_R\big), \label{eq8-adapt}
 $$
 
-with **adaptation gain** $\gamma > 0$. Without $\operatorname{Proj}$ this is an integrator of the prediction error with a very large gain, and an integrator can wind up without limit when the motors saturate or a sensor drops out. The projection keeps the estimate inside a ball of radius $\Delta_{\max}$:
+with **adaptation gain** $k_\Delta > 0$ and the constant $c$ of [](#eq8-V). Without $\operatorname{Proj}$ this is an integrator of the prediction error with a very large gain, and an integrator can wind up without limit when the motors saturate or a sensor drops out. The projection keeps the estimate inside a ball of radius $\Delta_{\max}$:
 
 $$
-\operatorname{Proj}(\hat\Delta, y) = \begin{cases} y - \dfrac{\nabla\!f\,(\nabla\!f\cdot y)}{\|\nabla\!f\|^2}\,f & \text{if } f > 0 \text{ and } y\cdot\nabla\!f > 0,\\[6pt] y & \text{otherwise,} \end{cases} \label{eq8-proj}
+\operatorname{Proj}(\hat\Delta, y) = \begin{cases} y - \dfrac{\operatorname{grad}f_\Delta\,(\operatorname{grad}f_\Delta\cdot y)}{\|\operatorname{grad}f_\Delta\|^2}\,f_\Delta & \text{if } f_\Delta > 0 \text{ and } y\cdot\operatorname{grad}f_\Delta > 0,\\[6pt] y & \text{otherwise,} \end{cases} \label{eq8-proj}
 $$
 
-where $f(\hat\Delta) = \big(1.1\,\|\hat\Delta\|^2 - \Delta_{\max}^2\big)/\big(0.1\,\Delta_{\max}^2\big)$ is zero at radius $0.95\,\Delta_{\max}$ and one at $\Delta_{\max}$.
+where $f_\Delta(\hat\Delta) = \big(1.1\,\|\hat\Delta\|^2 - \Delta_{\max}^2\big)/\big(0.1\,\Delta_{\max}^2\big)$ is zero at radius $0.95\,\Delta_{\max}$ and one at $\Delta_{\max}$, and $\operatorname{grad}f_\Delta$ is its gradient, a multiple of $\hat\Delta$.
 
 Inside radius $0.95\,\Delta_{\max}$ it does nothing. In the thin shell beyond, it scales down the outward part of $y$, to zero at the surface. It never makes the analysis worse: $\tilde\Delta\cdot\big(\operatorname{Proj}(\hat\Delta, y) - y\big) \le 0$ whenever the true uncertainty lies within $0.95\,\Delta_{\max}$. The ball is a statement of how much uncertainty you are prepared to cancel. Make it too small and the estimate is clipped: with $\Delta_{\max} = 1$ N·m against the 2.16 N·m torque of [](#ex8-camera), the simulated body settles 35° off. In a sampled implementation, follow each step of [](#eq8-adapt) by pulling the estimate back onto the ball, because a finite step can overshoot it.
 
-**The filter.** The calm hand is a first-order low-pass with **cutoff** $\kappa$:
+**The filter.** The calm hand is a first-order low-pass with **cutoff** $k_f$:
 
 $$
-\dot\Delta_f = \kappa\,\big(\hat\Delta - \Delta_f\big). \label{eq8-filter}
+\dot\Delta_f = k_f\,\big(\hat\Delta - \Delta_f\big). \label{eq8-filter}
 $$
 
 ::: {.theorem #thm8-l1 name="Kotaru, 2022, Theorem 3.1"}
 Let the vehicle and the predictor be driven by [](#eq8-l1-law) with the adaptation law [](#eq8-adapt), and let the lumped uncertainty and its time derivative be bounded. If
 $$
-\tilde\Psi(0) < 2, \qquad \|\tilde e_\Omega(0)\|^2 < \frac{2}{\lambda_{\min}(J_0)}\,\tilde k_R\,\big(2 - \tilde\Psi(0)\big),
+\tilde\Psi(0) < 2, \qquad \|\tilde e_\Omega(0)\|^2 < \frac{2}{J_{\min}}\,\tilde k_R\,\big(2 - \tilde\Psi(0)\big),
 $$
-then the prediction error $(\tilde e_R, \tilde e_\Omega)$ is exponentially input-to-state stable. The function $V = \tfrac12\tilde e_\Omega\cdot J_0\,\tilde e_\Omega + \tilde k_R\tilde\Psi + c\,\tilde e_R\cdot\tilde e_\Omega + \tfrac{1}{2\gamma}\|\tilde\Delta\|^2$ satisfies $\dot V + \beta V \le \beta\,\delta_V$ for constants $\beta, \delta_V > 0$, and $\delta_V$ is proportional to $1/\gamma$.
+then the prediction error $(\tilde e_R, \tilde e_\Omega)$ is exponentially input-to-state stable. The function $V = \tfrac12\tilde e_\Omega\cdot J_0\,\tilde e_\Omega + \tilde k_R\tilde\Psi + c\,\tilde e_R\cdot\tilde e_\Omega + \tfrac{1}{2k_\Delta}\|\tilde\Delta\|^2$, which is [](#eq8-V) for the prediction error plus a term for the estimate, satisfies $\dot V + \gamma V \le \gamma\,V_\infty$ for a rate $\gamma > 0$ and a level $V_\infty > 0$, and $V_\infty$ is proportional to $1/k_\Delta$.
 :::
 
 The proof, in Appendix A.1 of the thesis, repeats [](#thm8-bound) for the prediction error, with the projection property removing the terms in $\tilde\Delta$. Start the predictor at the vehicle's state and the initial conditions hold trivially.
 
-Be exact about what this says. The predictor and the vehicle come together exponentially, to within a distance that shrinks like $1/\gamma$. The theorem is about the prediction error. It does not bound the tracking error $e_R$ of the vehicle, and the filter does not appear in it. The tracking error has a second ingredient. By [](#eq8-l1-law) the predictor follows the reference while being pushed by $U\hat\Delta - \Delta_f$, the part of the estimate that the filter did not pass. A slow filter leaves more of it.
+Be exact about what this says. The predictor and the vehicle come together exponentially, to within a distance that shrinks like $1/k_\Delta$. The theorem is about the prediction error. It does not bound the tracking error $e_R$ of the vehicle, and the filter does not appear in it. The tracking error has a second ingredient. By [](#eq8-l1-law) the predictor follows the reference while being pushed by $\Xi\,\hat\Delta - \Delta_f$, the part of the estimate that the filter did not pass. A slow filter leaves more of it.
 
-So the two knobs do different jobs. The gain $\gamma$ decides how closely the vehicle follows the predictor. The cutoff $\kappa$ decides how well the predictor follows the reference, and it alone decides what reaches the motors, because $\hat\Delta$ enters the torque only through $\Delta_f$. That separation is the central idea of $\mathcal{L}_1$ control. A classical adaptive law has one knob for both, and turning it up to learn faster feeds high-frequency torque to the vehicle.
+So the two knobs do different jobs. The adaptation gain $k_\Delta$ decides how closely the vehicle follows the predictor. The cutoff $k_f$ decides how well the predictor follows the reference, and it alone decides what reaches the motors, because $\hat\Delta$ enters the torque only through $\Delta_f$. That separation is the central idea of L1 adaptive control. A classical adaptive law has one knob for both, and turning it up to learn faster feeds high-frequency torque to the vehicle.
 
 ## Does it work? {#sec8-l1-sim}
 
 ::: {.example #ex8-l1 name="The camera again, then gusts"}
-Take $\gamma = 4000$, $\kappa = 20$ rad/s, $\Delta_{\max} = 3$ N·m, $\tilde k_R = k_R$ and $\tilde k_\Omega = k_\Omega$, with the controller running at 1 kHz.
+Take $k_\Delta = 4000$, $k_f = 20$ rad/s, $\Delta_{\max} = 3$ N·m, $\tilde k_R = k_R$ and $\tilde k_\Omega = k_\Omega$, with the controller running at 1 kHz.
 
 *Hover.* With the camera of [](#ex8-camera), the error peaks at 2.8°, is below 0.1° after 0.49 s, and goes to zero. The filtered estimate converges to the true $\Delta$. With the 2.16 N·m torque that tumbled the plain controller, the error peaks at 15.6° and returns to zero.
 
 *A moving reference.* Let $R_d(t)$ cone at up to 0.9 rad/s. With the camera, the plain controller's error is 11.3° RMS and the adaptive one's is 0.008°. Add a gust torque of up to 0.38 N·m with components between 1 and 7 rad/s, as in the validation of Kotaru (2022). The plain controller wanders between 9.9° and 17°. The adaptive one stays below 1.13°, at 0.59° RMS ([](#fig8-l1), left). It no longer converges to zero, and it should not: a gust at 7 rad/s is not far below the cutoff, so the filter passes only part of it.
 
-*The theorem's quantity.* The prediction error stays below $\tilde\Psi = 10^{-8}$ throughout. Its rate $\|\tilde e_\Omega\|$ peaks at $3.1\times10^{-3}$, $7.8\times10^{-4}$, $2.0\times10^{-4}$ and $4.9\times10^{-5}$ rad/s for $\gamma = 250$, 1000, 4000 and 16000. Each factor of four in $\gamma$ divides it by four, as $\delta_V \propto 1/\gamma$ predicts.
+*The theorem's quantity.* The prediction error stays below $\tilde\Psi = 10^{-8}$ throughout. Its rate $\|\tilde e_\Omega\|$ peaks at $3.1\times10^{-3}$, $7.8\times10^{-4}$, $2.0\times10^{-4}$ and $4.9\times10^{-5}$ rad/s for $k_\Delta = 250$, 1000, 4000 and 16000. Each factor of four in $k_\Delta$ divides it by four, as $V_\infty \propto 1/k_\Delta$ predicts.
 :::
 
 ![Left: attitude error with the camera and a gust torque, for the plain controller [](#eq8-pd) and with adaptation. Right: one component of the lumped uncertainty $\Delta$ during the same flight with gyroscope noise. The raw estimate $\hat\Delta$ is fast and violent. Only the filtered $\Delta_f$ reaches the motors.](figures/ch08-l1.svg){#fig8-l1}
 
 The right panel of [](#fig8-l1) is the co-pilot at work. With gyroscope noise of 0.02 rad/s, the raw estimate swings through 2.1 N·m around a truth that moves by 0.23. The filtered estimate tracks the truth.
 
-Now turn the cutoff ([](#fig8-filter), left). At $\kappa = 1$ rad/s the hand is too calm: the error is 3.3° RMS, because the gusts are faster than the filter. At $\kappa = 300$ rad/s the error is 0.06°, and the rate of change of the commanded torque has grown from 12 to 104 N·m/s. The noise is going to the motors. Add a motor lag of 20 ms. At $\kappa = 30$ rad/s nothing changes. At $\kappa = 3000$ rad/s the loop oscillates: the error is 1.8° RMS instead of 0.38°, and the torque swings to 3.3 N·m, held back only by the projection ball.
+Now turn the cutoff ([](#fig8-filter), left). At $k_f = 1$ rad/s the hand is too calm: the error is 3.3° RMS, because the gusts are faster than the filter. At $k_f = 300$ rad/s the error is 0.06°, and the rate of change of the commanded torque has grown from 12 to 104 N·m/s. The noise is going to the motors. Add a motor lag of 20 ms. At $k_f = 30$ rad/s nothing changes. At $k_f = 3000$ rad/s the loop oscillates: the error is 1.8° RMS instead of 0.38°, and the torque swings to 3.3 N·m, held back only by the projection ball.
 
 ![The filter cutoff trades tracking against robustness. Left: RMS attitude error and RMS rate of change of the commanded torque, with gyroscope noise. Right: the largest input delay for which the hover loop still settles. It falls as the cutoff rises, and does not move when the adaptation gain changes by a factor of 16.](figures/ch08-filter.svg){#fig8-filter}
 
-The right panel is the claim of the co-pilot story, measured. Delay the torque command and find the largest delay the hover loop survives. The plain controller tolerates 46 ms. With adaptation the figure is 41 ms at $\kappa = 3$ rad/s, 23 ms at 30 and 6 ms at 300. At $\kappa = 30$ it is 23 ms for $\gamma = 1000$, 4000 and 16000 alike. The delay margin belongs to the filter. The adaptation gain is free.
+The right panel is the claim of the co-pilot story, measured. Delay the torque command and find the largest delay the hover loop survives. The plain controller tolerates 46 ms. With adaptation the figure is 41 ms at $k_f = 3$ rad/s, 23 ms at 30 and 6 ms at 300. At $k_f = 30$ rad/s it is 23 ms for $k_\Delta = 1000$, 4000 and 16000 alike. The delay margin belongs to the filter. The adaptation gain is free.
 
 ::: {.warning #warn8-cutoff name="The cutoff is a robustness setting, so set it like one"}
-It is tempting to raise $\kappa$ until the tracking plot looks good. Every increase spends delay margin, and the bill arrives on the day the motors are cold or the estimator is late. Choose $\kappa$ from the slowest actuator and the largest delay in the loop, and accept the tracking error that results. If that error is too large, the disturbance is too fast to cancel by feedback and needs a better model.
+It is tempting to raise $k_f$ until the tracking plot looks good. Every increase spends delay margin, and the bill arrives on the day the motors are cold or the estimator is late. Choose $k_f$ from the slowest actuator and the largest delay in the loop, and accept the tracking error that results. If that error is too large, the disturbance is too fast to cancel by feedback and needs a better model.
 :::
 
 Adaptation makes the error small. It does not make any error impossible. During the first tenth of a second the camera still tipped the vehicle by 2.8°. If 2.8° toward a wall is too much, a different kind of statement is needed.
@@ -236,7 +244,7 @@ If $\dot H(t) \ge -\alpha\,H(t)$ for all $t \ge 0$, with $\alpha > 0$, then $H(t
 $\ddt\big(H e^{\alpha t}\big) = (\dot H + \alpha H)\,e^{\alpha t} \ge 0$.
 :::
 
-A function $H$ of the state whose nonnegative set $\{H \ge 0\}$ is the safe set, and for which some input always achieves $\dot H \ge -\alpha H$, is a **barrier function** (Ames, Xu, Grizzle and Tabuada, 2017). The safe set is then **forward invariant**: solutions that start in it stay in it.
+A function $H$ of the state whose nonnegative set $\{H \ge 0\}$ is the **safe set**, and for which some input always achieves $\dot H \ge -\alpha H$, is a **barrier function** (Ames, Xu, Grizzle and Tabuada, 2017). The safe set is then **forward invariant**: solutions that start in it stay in it.
 
 Take the simplest system, a point in the plane with velocity input, $\dot x = u$. A wall with unit normal $n$ stands at distance $d$ from the origin, so $H(x) = d - n\cdot x$ and $\dot H = -n\cdot u$. A tracker proposes $u_d$. Among all velocities that satisfy the barrier condition, take the one nearest to $u_d$:
 
@@ -244,13 +252,13 @@ $$
 u = \arg\min_{u}\ \|u - u_d\|^2 \quad\text{subject to}\quad n\cdot u \le \alpha H . \label{eq8-safety-filter}
 $$
 
-This is a quadratic program with one linear constraint. Its solution is the projection onto a half-plane ([](#fig8-wall), left),
+This is a **quadratic program** (QP), a quadratic cost under linear constraints, here with one constraint. Used this way, after a tracker, it is a **safety filter**. Its solution is the projection onto a half-plane ([](#fig8-wall), left),
 
 $$
 u = u_d - \max\big(0,\ n\cdot u_d - \alpha H\big)\,n .
 $$
 
-If the tracker's wish is permitted, it passes unchanged. If not, only its component toward the wall is trimmed. The filter makes the smallest change to what the tracker wanted.
+If the tracker's wish is permitted, it passes unchanged. If not, only its component toward the wall is trimmed. The safety filter makes the smallest change to what the tracker wanted.
 
 ::: {.example #ex8-wall name="A target behind the wall"}
 The wall is at $x_1 = 1$, the point starts at the origin, and the tracker is $u_d = -(x - x_d)$ with the target $x_d = (2,\ 1.5)$ behind the wall. At $x = (0.9,\ 0)$ the tracker asks for $u_d = (1.1,\ 1.5)$ m/s. With $\alpha = 5$ s⁻¹ the allowed closing speed is $\alpha H = 0.5$ m/s, so the filter returns $u = (0.5,\ 1.5)$.
@@ -270,7 +278,7 @@ $$
 H(q) = q\cdot q_c - \cos\theta_{\max} . \label{eq8-cone}
 $$
 
-In the language of [](#def-error-s2) this is $H = (1 - \cos\theta_{\max}) - \Psi_q$ with $q_c$ as the second argument: a level set of the error function. Wu (2017) defines safe sets on any manifold this way, as $\Psi \le$ constant or $\Psi \ge$ constant.
+In the language of [](#def-error-s2) this is $H = (1 - \cos\theta_{\max}) - \Psi_q$ with $q_c$ as the second argument: a level set of the error function. Wu (2017) defines safe sets on any manifold this way, as $\Psi \le$ constant or $\Psi \ge$ constant. The second kind keeps a direction out of a cone, and [](#eq13-dto) uses it with the same $q_c$ and $\theta_{\max}$.
 
 The derivatives come from the kinematics $\dot q = \omega\times q$ alone:
 
@@ -284,7 +292,7 @@ $$
 \ddot H = -\|\omega\|^2\,(q\cdot q_c) \;+\; \big(I - q q\T\big)q_c\cdot\frac{F - m g\,e_3}{m\,l} . \label{eq8-cone-ddot}
 $$
 
-The first term is the centripetal acceleration, which always pulls $q$ off the axis it circles. The force enters through $(I - q q\T)q_c$, the direction in the tangent plane at $q$ that points toward the axis. The input appears only in the second derivative: the barrier has **relative degree two**.
+The first term is the centripetal acceleration, which always pulls $q$ off the axis it circles. The force enters through $(I - q q\T)q_c$, the direction in the tangent plane at $q$ that points toward the axis. The input appears only in the second derivative: the barrier function has relative degree two ([](#sec6-fl)).
 
 The remedy is to apply the fog rule twice. Define $H_1 = \dot H + \alpha_1 H$ and ask that $H_1$, in turn, obey the rule:
 
@@ -302,7 +310,7 @@ If $H \ge 0$ and $H_1 \ge 0$ at $t = 0$, and the input satisfies [](#eq8-rd2) fo
 
 The initial condition $H_1(0) \ge 0$ is new and it has teeth. It says the state must not start inside the cone while moving outward too fast to stop. The safe set in the state space is smaller than the cone. Wu (2017, Prop. 6.4 and Lemma 6.1) proves this result with the same $H_1$ and a reciprocal barrier $1/H_1$, which replaces the linear rate $\alpha_2 H_1$ by a cubic one. The linear form is the exponential barrier of Nguyen and Sreenath (2016). For a moving cone, [](#eq8-rd2) gains the terms $2\,\dot q\cdot\dot q_c + q\cdot\ddot q_c$ and nothing else changes.
 
-Condition [](#eq8-rd2) is linear in $F$. So is the rate of a Lyapunov function. For tracking a reference $q_d(t)$ on the sphere take $V = \tfrac12 m l^2\|e_\omega\|^2 + k_q\Psi_q + c\,m l^2\,e_q\cdot e_\omega$, with the errors of [](#eq3-e-omega). Put both in one program, and split the force as $F = F_{\text{ff}} + F_{\text{fb}}$, where $F_{\text{ff}}$ is the feedforward that would keep a perfect track:
+Condition [](#eq8-rd2) is linear in $F$. So is the rate of a Lyapunov function. For tracking a reference $q_d(t)$ on the sphere take $V = m l^2\big(\tfrac12\|e_\omega\|^2 + k_q\Psi_q + c\,e_q\cdot e_\omega\big)$. This is the function of [](#thm6-s2), with the gains $k_q$, $k_\omega$ of [](#eq6-law-s2) and the errors of [](#eq3-e-omega), scaled by $m l^2$ so that it is an energy. Put both in one program, and split the force as $F = F_{\text{ff}} + F_{\text{fb}}$, where $F_{\text{ff}}$ is the feedforward that would keep a perfect track:
 
 $$
 \begin{aligned}
@@ -312,7 +320,7 @@ $$
 \end{aligned} \label{eq8-qp}
 $$
 
-This is the **CBF-CLF-QP** of Wu and Sreenath (2015). The two constraints are not treated alike. The barrier constraint is hard. The Lyapunov constraint carries a **slack** $w$ that the program may raise at a cost $k_w$.
+This is the **CBF-CLF-QP** of Wu and Sreenath (2015). The two constraints are not treated alike. The barrier constraint is hard. The Lyapunov constraint carries a **slack variable** $w$ that the program may raise at a cost $k_w$.
 
 Why relax tracking and not safety? Because the two can contradict each other, and you must decide in advance who wins. If the reference leaves the cone, "$V$ decreases" and "$H$ stays positive" cannot both hold. With two hard constraints the program has no solution at exactly the moment it is needed. With a slack on tracking there is always a solution: stay safe, and get as close as safety allows. Wu (2017, Prop. 6.5) proves that this controller keeps the state safe, provided the state starts in the safe set of [](#thm8-rd2), the program is feasible, and the states where a constraint loses its input form a set of measure zero. The proof promises nothing about tracking while the reference is unsafe.
 
@@ -321,7 +329,7 @@ The pendulum of [](#ex7-s2-check) has $m = 0.5$ kg and $l = 0.8$ m. It hangs, an
 
 The tracker alone follows the reference out to 48°, with $H$ as low as $-0.197$. Under [](#eq8-qp) the state tracks until the reference nears the boundary, then slides along the boundary for 40% of the lap, 18.5° behind the reference at worst, and rejoins it once it is back inside ([](#fig8-cone)). The smallest value of $H$ in the simulation is $3\times10^{-7}$, and it is positive. The slack rises to 2.6 while the reference is outside and falls back when it returns. The force never exceeds 2.5 N.
 
-With a cone whose axis sways by 12°, the same program holds $H \ge -4\times10^{-6}$ at a 2 ms sample time. The small negative number is the sampling, which [](#sec8-limits) takes up.
+With a cone whose axis sways by 12°, the same program holds $H \ge -4\times10^{-6}$ at a sampling period of 2 ms. The small negative number is the sampling, which [](#sec8-limits) takes up.
 :::
 
 ![The pendulum direction $q$ on the sphere, seen from below. The solid circle is the edge of the cone, $H = 0$. The dashed circle is the reference. While the reference is outside the cone the state slides along the edge, and it rejoins the reference when the reference returns.](figures/ch08-cone-strip.png){#fig8-cone anim="figures/ch08-cone.gif"}
@@ -367,7 +375,7 @@ This $\sigma$ meets Wu's first two conditions and meets the third only for $-0.2
 
 ![A quadrotor and an obstacle, seen from the side. With the plain barrier only the thrust can respond, and below the center it pushes the wrong way. With the augmented barrier the torque tilts the thrust axis away early and the vehicle goes around. The dashed circle has radius $\sqrt{\beta}\,r_o$.](figures/ch08-obstacle-strip.png){#fig8-obstacle anim="figures/ch08-obstacle.gif"}
 
-When several quadrotors carry one cable-suspended load they must also keep clear of each other. Kotaru (2022, sec. 6.5) puts a filter of the kind [](#eq8-safety-filter) after the payload controller, on the commanded accelerations, with one barrier $H_{ij} = \|x_i - x_j\|^2 - r_{\min}^2$ for each pair and the constraint [](#eq8-rd2). He notes that the added safety comes at the expense of stability and must be tuned with care. In our simulation, two vehicles that swap places pass 0.10 m apart without the filter and never closer than 1.15 m with $r_{\min} = 0.8$ m. The filter treats each vehicle as a point that can accelerate in any direction. Whether the attitude loop delivers that acceleration is the question of this section again.
+When several quadrotors carry one payload on cables they must also keep clear of each other. Kotaru (2022, sec. 6.5) puts a filter of the kind [](#eq8-safety-filter) after the payload controller, on the commanded accelerations, with one barrier $H_{ij} = \|x_i - x_j\|^2 - r_{\min}^2$ for each pair and the constraint [](#eq8-rd2). He notes that the added safety comes at the expense of stability and must be tuned with care. In our simulation, two vehicles that swap places pass 0.10 m apart without the filter and never closer than 1.15 m with $r_{\min} = 0.8$ m. The filter treats each vehicle as a point that can accelerate in any direction. Whether the attitude loop delivers that acceleration is the question of this section again.
 
 ## Honest limits {#sec8-limits}
 
@@ -375,14 +383,14 @@ When several quadrotors carry one cable-suspended load they must also keep clear
 
 **Adaptive and safe.** It is natural to feed the estimate $\Delta_f$ of [](#sec8-l1) into the barrier's model. That helps, and no theorem in this chapter covers it. [](#thm8-l1) bounds the prediction error and not the estimate, and $\Delta_f$ lags the truth by design. What can be said is this: if the model of $\ddot H$ is wrong by at most some amount, the violation is at most that amount over $\alpha_1\alpha_2$. Size a margin from that bound and do not call the result a guarantee until the bound on the model error is itself established.
 
-**Input limits.** The program [](#eq8-qp) has a solution because nothing limits $F$. Arrive at 29° moving outward at 1.5 rad/s, and [](#eq8-rd2) demands 6.2 N from a bob that weighs 4.9 N. Cap the force at half of that and the program is infeasible: no admissible input keeps the promise. A barrier constructed without the actuator limits certifies a set that the actuators cannot hold. Wu (2017) calls a barrier that accounts for input saturation an open problem, and predictive methods ([](#ch-mpc)) are one answer to it.
+**Input limits.** The program [](#eq8-qp) has a solution because nothing limits $F$. Arrive at 29° moving outward at 1.5 rad/s, and [](#eq8-rd2) demands 6.2 N from a bob that weighs 4.9 N. Cap the force at half of that and the program is infeasible: no admissible input keeps the promise. A barrier constructed without the actuator limits certifies a set that the actuators cannot hold. Wu (2017) calls a barrier function that accounts for input saturation an open problem. The predictive control of [](#def13-mpc), which carries the bounds on the input inside its optimization, is one answer to it.
 
-**Sampling.** [](#thm8-comparison) is a statement about continuous time. A sampled controller holds its input between samples. In [](#ex8-cone) the consequence is not a violation: $H$ stays positive even at 100 ms. It is chatter. At a 2 ms sample time the largest jump in force between samples is 0.013 N. At 20 ms it is 17.8 N, seven times the peak force of the smooth solution, as the state bounces off the constraint once per sample.
+**Sampling.** [](#thm8-comparison) is a statement about continuous time. A sampled controller holds its input between samples. In [](#ex8-cone) the consequence is not a violation: $H$ stays positive even at 100 ms. It is chatter. At a sampling period of 2 ms the largest jump in force between samples is 0.013 N. At 20 ms it is 17.8 N, seven times the peak force of the smooth solution, as the state bounces off the constraint once per sample.
 
 **Measure zero.** The force enters [](#eq8-cone-ddot) through $(I - q q\T)q_c$, which vanishes at $q = \pm q_c$. The torque enters [](#eq8-aug) through a vector that vanishes when the thrust axis points along $x - x_o$. On those sets the barrier condition cannot be enforced. A reference aimed exactly at the center of the ball leaves the vehicle no reason to pass on one side or the other. Wu calls such barriers almost-global, and the word is the one from [](#thm-obstruction) for the same reason: on a compact manifold a smooth function must have critical points, and a controller built from its gradient has nothing to say there.
 
 ::: {.warning #warn8-filter name="A safety filter is only as good as its model"}
-"Provably safe" means: safe for the model, in continuous time, with unlimited inputs, from initial states with $H \ge 0$ and $H_1 \ge 0$, away from a set of measure zero. Each clause is a way to hit the wall with a proof in hand. Before flight, test the filter with the wrong mass, at the real sample rate, with the real thrust limits, starting fast and close.
+"Provably safe" means: safe for the model, in continuous time, with unlimited inputs, from initial states with $H \ge 0$ and $H_1 \ge 0$, away from a set of measure zero. Each clause is a way to hit the wall with a proof in hand. Before flight, test the safety filter with the wrong mass, at the real sampling period, with the real thrust limits, starting fast and close.
 :::
 
 ## Exercises {#sec8-exercises .unnumbered}
@@ -400,11 +408,11 @@ Add an integral term $-k_I\int (e_\Omega + c\,e_R)\,\dd t$ to [](#eq8-pd). Show 
 :::
 
 ::: {.exercise #exr8-pred}
-Derive [](#eq8-pred-dyn). Start from $\tilde e_\Omega = e_\Omega^p - R_p\T R\,e_\Omega$ and use $\ddt\big(R_p\T R\big) = -\tilde e_\Omega^\wedge R_p\T R$. Where is the last term of $\mu$ in [](#eq8-l1-law) used?
+Derive [](#eq8-pred-dyn). Start from $\tilde e_\Omega = e_\Omega^p - R_p\T R\,e_\Omega$ and use $\ddt\big(R_p\T R\big) = -\tilde e_\Omega^\wedge R_p\T R$. Where is the last term of $\tau_{\text{fb}}$ in [](#eq8-l1-law) used?
 :::
 
 ::: {.exercise #exr8-proj}
-Prove the projection property $\tilde\Delta\cdot\big(\operatorname{Proj}(\hat\Delta, y) - y\big) \le 0$ from the convexity of $f$ in [](#eq8-proj). Then find a pair $\hat\Delta$, $\Delta$ with $\|\Delta\| > \Delta_{\max}$ for which it fails.
+Prove the projection property $\tilde\Delta\cdot\big(\operatorname{Proj}(\hat\Delta, y) - y\big) \le 0$ from the convexity of $f_\Delta$ in [](#eq8-proj). Then find a pair $\hat\Delta$, $\Delta$ with $\|\Delta\| > \Delta_{\max}$ for which it fails.
 :::
 
 ::: {.exercise #exr8-cone}
@@ -421,11 +429,11 @@ Repeat the wind experiment of [](#sec8-limits) with the wind turned on only whil
 
 ## Notes and sources {#sec8-notes .unnumbered}
 
-The geometric tracking controller and its Lyapunov function are from Lee, Leok and McClamroch (2010). L1 adaptive control is due to Cao and Hovakimyan and is set out in Hovakimyan and Cao (2010). The geometric version on $\SO(3)$, with the predictor, the prediction errors [](#eq8-pred-error), the control laws [](#eq8-l1-law) and [](#thm8-l1), is from Kotaru, Edmonson and Sreenath (2020) and Kotaru (2022, ch. 3), which also report flight experiments. The projection operator [](#eq8-proj) is that of Lavretsky and Gibson (2011). Barrier functions in the form used here, and the quadratic program that combines them with a Lyapunov function, are from Ames, Xu, Grizzle and Tabuada (2017). Wu and Sreenath (2015) and Wu (2017, ch. 6) defined them on manifolds, with safe sets given by error functions, time-varying constraints, and the examples on $S^2$ and $\SO(3)$ that [](#sec8-cone) follows. The exponential form of [](#eq8-rd2) is from Nguyen and Sreenath (2016). The augmented barrier function for a quadrotor is from Wu and Sreenath (2016) and Wu (2017, ch. 7). The pairwise filter for vehicles that share a load is from Kotaru (2022, sec. 6.5). Mueller (2018) treats recovery from large attitude errors, where the fading restoring torque of [](#thought8-spring) matters most.
+The geometric tracking controller and its Lyapunov function are from Lee, Leok and McClamroch (2010). L1 adaptive control is due to Cao and Hovakimyan and is set out in Hovakimyan and Cao (2010). The geometric version on $\SO(3)$, with the predictor, the prediction errors [](#eq8-pred-error), the control laws [](#eq8-l1-law) and [](#thm8-l1), is from Kotaru, Edmonson and Sreenath (2020) and Kotaru (2022, ch. 3), which also report flight experiments. The projection operator [](#eq8-proj) is that of Lavretsky and Gibson (2011). Barrier functions in the form used here, and the quadratic program that combines them with a Lyapunov function, are from Ames, Xu, Grizzle and Tabuada (2017). Wu and Sreenath (2015) and Wu (2017, ch. 6) defined them on manifolds, with safe sets given by error functions, time-varying constraints, and the examples on $S^2$ and $\SO(3)$ that [](#sec8-cone) follows. The exponential form of [](#eq8-rd2) is from Nguyen and Sreenath (2016). The augmented barrier function for a quadrotor is from Wu and Sreenath (2016) and Wu (2017, ch. 7). The pairwise safety filter for vehicles that share a payload is from Kotaru (2022, sec. 6.5). Mueller (2018) treats recovery from large attitude errors, where the fading restoring torque of [](#thought8-spring) matters most.
 
 - A. D. Ames, X. Xu, J. W. Grizzle and P. Tabuada, ["Control barrier function based quadratic programs for safety critical systems"](https://arxiv.org/abs/1609.06408), *IEEE Transactions on Automatic Control* 62(8), 2017. arXiv:1609.06408.
 - N. Hovakimyan and C. Cao, *L1 Adaptive Control Theory: Guaranteed Robustness with Fast Adaptation*, SIAM, 2010.
-- P. Kotaru, [*Dynamics and Control for Collaborative Aerial Manipulation*](https://vkotaru.github.io/dissertation), PhD thesis, University of California, Berkeley, 2022.
+- P. Kotaru, [*Dynamics & Control for Collaborative Aerial Manipulation*](https://escholarship.org/uc/item/1qf6q0n5), PhD thesis, University of California, Berkeley, 2022.
 - P. Kotaru, R. Edmonson and K. Sreenath, ["Geometric L1 adaptive attitude control for a quadrotor unmanned aerial vehicle"](https://arxiv.org/abs/1910.07730), *ASME Journal of Dynamic Systems, Measurement, and Control*, 2020. arXiv:1910.07730.
 - E. Lavretsky and T. E. Gibson, ["Projection operator in adaptive systems"](https://arxiv.org/abs/1112.4232), arXiv:1112.4232, 2011.
 - T. Lee, M. Leok and N. H. McClamroch, ["Geometric tracking control of a quadrotor UAV on SE(3)"](https://doi.org/10.1109/CDC.2010.5717652), *IEEE Conference on Decision and Control*, 2010.

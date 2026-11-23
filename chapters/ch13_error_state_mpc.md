@@ -9,7 +9,7 @@ epigraph: "Plans are worthless, but planning is everything."
 epigraph_source: "Dwight D. Eisenhower, quoting an Army saying, 14 November 1957"
 ---
 
-Model predictive control is a simple loop. Solve an optimization problem over the next $N$ steps. Apply the first input. Measure, and solve again. The loop needs a solver, and every textbook solver expects its unknowns to be a vector in $\R^n$: it adds a step to the current guess and tries again.
+Model predictive control (MPC) is a simple loop. Solve an optimization problem over the next $N$ steps. Apply the first input. Measure, and solve again. The window of $N$ steps moves along with you: a **receding horizon**. The loop needs a solver, and every textbook solver expects its unknowns to be a vector in $\R^n$: it adds a step to the current guess and tries again.
 
 Now the state is an attitude. What do you hand the solver?
 
@@ -21,7 +21,7 @@ Hand it a unit quaternion. That is one constraint per step and two quaternions f
 
 Each choice describes the attitude with numbers and then moves the numbers. [](#fig13-opening) shows what goes wrong, and what to do instead. Do not move the description. Ask the optimizer for a small rotation, which is three free numbers with no constraint, and apply that rotation to the attitude.
 
-![The puzzle on a sphere. An optimizer at $q_0$ wants to move toward the mean of four readings. Added to $q_0$ as a vector, its step (terracotta) ends outside the sphere. Used as a rotation, the same step (indigo) ends at $q_1$, on the sphere, 2.5° from the mean.](figures/ch13-opening.svg){#fig13-opening}
+![The puzzle on a sphere. An optimizer at $q$ wants to move toward the mean of four readings. Added to $q$ as a vector, its step (terracotta) ends outside the sphere. Used as a rotation, the same step (indigo) ends on the sphere, 2.5° from the mean.](figures/ch13-opening.svg){#fig13-opening}
 
 ## A step that stays on the sphere {#sec13-newton}
 
@@ -45,7 +45,7 @@ $$
 
 Each term is the error vector $e_q = q_d \times q$ of [](#def-error-s2) with $q_i$ as the target, stretched so that its length is the angle and not its sine. The cost is a sum of squared angles, and its gradient is a sum of errors.
 
-For the four readings of [](#fig13-opening) the plain average has length 0.82. Start Newton's method at the first reading instead. The distance to the minimizer goes 29°, 0.41°, 0.00003°. The figure starts 58° away to make the step visible: 58°, 2.5°, 0.0011°, then $2\times10^{-10}$ degrees. Added to $q_0$ as a vector, that first step of 60° would land at a distance 1.45 from the center.
+For the four readings of [](#fig13-opening) the plain average has length 0.82. Start Newton's method at the first reading instead. The distance to the minimizer goes 29°, 0.41°, 0.00003°. The figure starts 58° away to make the step visible: 58°, 2.5°, 0.0011°, then $2\times10^{-10}$ degrees. Added to the starting direction as a vector, that first step of 60° would land at a distance 1.45 from the center.
 
 The same construction works on the rotation group.
 
@@ -145,12 +145,12 @@ The second equation is the rigid body in the body frame: $m(\dot V + \Omega\time
 With $\chi = \log(X_d^{-1}X)^\vee \in \R^6$, $\delta\zeta = \zeta - \zeta_d$ and $\delta u = u - u_d$, to first order
 $$
 \ddt\begin{bmatrix}\chi \\ \delta\zeta\end{bmatrix} =
-\begin{bmatrix} -\ad_{\zeta_d} & I_6 \\[2pt] 0 & M^{-1}H_d \end{bmatrix}
+\begin{bmatrix} -\ad_{\zeta_d} & I_6 \\[2pt] 0 & A_{22} \end{bmatrix}
 \begin{bmatrix}\chi \\ \delta\zeta\end{bmatrix} +
 \begin{bmatrix} 0 \\ M^{-1} \end{bmatrix} \delta u, \label{eq13-se3}
 $$
 $$
-H_d = \begin{bmatrix} -m\,\Omega_d^\wedge & m\,V_d^\wedge \\ 0 & (J\Omega_d)^\wedge - \Omega_d^\wedge J \end{bmatrix}.
+A_{22} = M^{-1}\begin{bmatrix} -m\,\Omega_d^\wedge & m\,V_d^\wedge \\ 0 & (J\Omega_d)^\wedge - \Omega_d^\wedge J \end{bmatrix}.
 $$
 The reference pose $X_d$ does not appear.
 :::
@@ -161,16 +161,16 @@ We have a linear model in the right variable. Now add the horizon.
 
 ## A quadratic program {#sec13-qp}
 
-Sample at period $h$. Hold the torque over each step and solve [](#eq13-so3) exactly over it, with $A$ frozen at the middle of the step. That gives a discrete model,
+Sample with the sampling period $h$. Hold the torque over each step and solve [](#eq13-so3) exactly over it, with $A$ frozen at the middle of the step. That gives a discrete model,
 
 $$
 s_{k+1} = A_k\,s_k + B_k\,\delta\tau_k, \qquad k = 0, \dots, N-1, \label{eq13-sampled}
 $$
 
-where $A_k$ and $B_k$ are the sampled counterparts of $A$ and $B$. The actuators have limits, $|\tau_i| \le \tau_{\max}$ on each axis. The limits are on the torque, not on the correction, so they move with the feedforward.
+where $A_k$ and $B_k$ are the sampled counterparts of $A$ and $B$. The actuators have limits, which give a bound $|\tau_i| \le \tau_{\max}$ on each axis. The bound is on the torque, not on the correction, so it moves with the feedforward $\tau_d$.
 
 ::: {.definition #def13-mpc name="Error-state MPC"}
-At each sampling instant, compute $s_0 = \big(\log(R_d\T R)^\vee,\ \Omega - \Omega_d\big)$ from the measured state and solve
+At each sampling instant, compute $s_0 = \big(\log(R_d\T R)^\vee,\ \Omega - \Omega_d\big)$ from the measured state and solve, with the weights $Q$, $R_u$, $P_f$ of [](#sec7-lqr),
 $$
 \begin{aligned}
 \min_{\delta\tau_0, \dots, \delta\tau_{N-1}}\quad & \tfrac12\, s_N\T P_f\, s_N + \tfrac{h}{2}\sum_{k=1}^{N-1} s_k\T Q\,s_k + \tfrac{h}{2}\sum_{k=0}^{N-1} \delta\tau_k\T R_u\,\delta\tau_k \\
@@ -180,17 +180,17 @@ $$
 Apply $\tau = \tau_{d,0} + \delta\tau_0$ for one period. Discard the rest and repeat.
 :::
 
-Eliminate the states with [](#eq13-sampled). Stack the corrections into one vector $U = (\delta\tau_0, \dots, \delta\tau_{N-1})$. Every $s_k$ is linear in $s_0$ and $U$, so [](#eq13-mpc) becomes
+Eliminate the states with [](#eq13-sampled). Stack the corrections into one vector $U = (\delta\tau_0, \dots, \delta\tau_{N-1})$. Every $s_k$ is linear in $s_0$ and $U$, so the cost is a quadratic form in the pair $(s_0, U)$. Call its blocks $P_{UU}$ and $P_{Us}$, after the matrix $P$ that gives the optimal cost in [](#sec7-lqr). The term without $U$ does not matter, and [](#eq13-mpc) becomes
 
 $$
-\min_U\ \tfrac12\, U\T H\, U + (F s_0)\cdot U \qquad \text{subject to} \qquad U_{\min} \le U \le U_{\max}. \label{eq13-qp}
+\min_U\ \tfrac12\, U\T P_{UU}\, U + (P_{Us}\, s_0)\cdot U \qquad \text{subject to} \qquad U_{\min} \le U \le U_{\max}. \label{eq13-qp}
 $$
 
-This is a **quadratic program**, a QP. $H$ is positive definite because $R_u$ is, so the problem is strictly convex: one minimum, no other stationary point, and solvers that find it reliably. $H$ and $F$ are built from $A_k$, $B_k$ and the weights. By [](#thought13-turn) they depend on time and not on the state.
+This is a quadratic program, a QP, like the safety filter [](#eq8-safety-filter) but with $3N$ unknowns. It is the program that [](#sec7-lie) announced. $P_{UU}$ is positive definite because $R_u$ is, so the problem is strictly convex: one minimum, no other stationary point, and solvers that find it reliably. $P_{UU}$ and $P_{Us}$ are built from $A_k$, $B_k$ and the weights. By [](#thought13-turn) they depend on time and not on the state.
 
 The bounds are a box, so a small solver is enough. Hold the entries of $U$ that sit on a bound and want to push through it. Take a Newton step in the others. Clip the result to the box, shorten the step if the cost went up, and repeat. This is the projected Newton method of Bertsekas (1982). On 40 test problems with a third of the bounds active, it agrees with SciPy's bounded least-squares solver to $10^{-13}$, and the optimality conditions hold to $10^{-14}$.
 
-**What it has to do with LQR.** Remove the bounds and the minimizer of [](#eq13-qp) is $U = -H^{-1}F s_0$, linear in the error. If $P_f$ is the Riccati solution of the sampled regulator, its first block is exactly $-K s_0$ with the LQR gain $K$, for any horizon, even $N = 1$. That is the principle of optimality: $P_f$ already accounts for everything after the horizon. With a cruder terminal weight, $P_f = hQ$, the first move differs from LQR by 76% in norm at $N = 5$, by 1.5% at $N = 25$ and by $5\times10^{-8}$ at $N = 100$. Error-state MPC is the regulator of [](#sec7-lqr) with a finite horizon and the ability to see a bound coming. Whether that ability matters is a question for an experiment.
+**What it has to do with LQR.** Remove the bounds and the minimizer of [](#eq13-qp) is $U = -P_{UU}^{-1}P_{Us}\,s_0$, linear in the error. If $P_f$ is the Riccati solution of the sampled regulator, its first block is exactly $-K s_0$ with the LQR gain $K$ of [](#eq7-riccati) in sampled form, for any horizon, even $N = 1$. That is the principle of optimality: $P_f$ already accounts for everything after the horizon. With a cruder terminal weight, $P_f = hQ$, the first move differs from LQR by 76% in norm at $N = 5$, by 1.5% at $N = 25$ and by $5\times10^{-8}$ at $N = 100$. Error-state MPC is the regulator of [](#sec7-lqr) with a finite horizon and the ability to see a bound coming. Whether that ability matters is a question for an experiment.
 
 ## A flip with too little torque {#sec13-flight}
 
@@ -220,7 +220,7 @@ All three respect the bound at every step ([](#tbl13-flip)). The clipped regulat
 
 :::
 
-![Receding horizon on the flip of [](#ex13-flip). Left: the thrust axis $R\,e_3$ (indigo) chases the reference (ink), and the plan for the next 25 steps (teal) is redrawn at every sample. Right: the pitch torque. The reference asks for more than the bound allows (shaded). The plan stays inside and makes up the difference before and after.](figures/ch13-horizon-strip.png){#fig13-horizon anim="figures/ch13-horizon.gif"}
+![Receding horizon on the flip of [](#ex13-flip). Left: the thrust axis $R\,e_3$ (indigo) chases the reference (dashed), and the plan for the next 25 steps (teal) is redrawn at every sample. Right: the pitch torque. The reference asks for more than the bound allows (shaded). The plan stays inside and makes up the difference before and after.](figures/ch13-horizon-strip.png){#fig13-horizon anim="figures/ch13-horizon.gif"}
 
 ![The flip of [](#ex13-flip). Top: attitude error of the three controllers. Bottom: pitch torque of the saturated LQR and of the error-state MPC against the feedforward and the bound.](figures/ch13-tracking.svg){#fig13-tracking}
 
@@ -228,7 +228,7 @@ Two honest notes on the table.
 
 The Euler-angle MPC does well. Its worst error is under twice that of the error-state MPC. The flip passes the chart singularity in a few hundredths of a second, too briefly for the model to do harm, as [](#sec7-worked) found for LQR. Ask it to linger and the result changes. Hold the nose-up attitude of [](#ex7-hold) at 85° of pitch, from a 20° error, with the same bound. The error-state MPC is within 1° after 0.54 s and never uses more than 0.41 N·m. The Euler-angle MPC tumbles to 177° of error, sits on the bound for 99% of the steps, and is still 76° off after 3 s. Its QP is convex and solved exactly. The model inside it is wrong.
 
-The solve time is small because the problem is small. The projected Newton solver needs 1.3 iterations on average and at most 3, warm-started from the previous plan shifted by one step. In NumPy on one laptop core the median is 0.2 ms and the worst case stays below a few milliseconds, against a period of 20 ms. Jang, Teng and Ghaffari (2023) report the same pattern at scale. With $N = 100$ on a surface vessel in simulation, their QP took about 50 ms on average. Two nonlinear MPC baselines took 460 to 950 ms. They also report what the linearization costs: overshoot and slower convergence from large initial errors, and slightly larger tracking error than nonlinear MPC. Their controller constrains inputs only.
+The solve time is small because the problem is small. The projected Newton solver needs 1.3 iterations on average and at most 3, warm-started from the previous plan shifted by one step. In NumPy on one laptop core the median is 0.2 ms and the worst case stays below a few milliseconds, against a sampling period of 20 ms. Jang, Teng and Ghaffari (2023) report the same pattern at scale. With $N = 100$ on a surface vessel in simulation, their QP took about 50 ms on average. Two nonlinear MPC baselines took 460 to 950 ms. They also report what the linearization costs: overshoot and slower convergence from large initial errors, and slightly larger tracking error than nonlinear MPC. Their controller constrains inputs only.
 
 ## What is convex, and what is not {#sec13-convex}
 
@@ -240,7 +240,7 @@ Give the body a pure attitude error, with $\delta\Omega = 0$ and the feedforward
 
 The model breaks through velocity. Add a velocity error of $2\ \text{s}^{-1}$ times the angle and the same prediction is off by 1.5% at 2°, 7.4% at 10°, 22% at 30° and 41% at 60°. The neglected terms are the ones dropped from [](#eq13-exact): the curvature of the group, through $\operatorname{dexp}^{-1}$, and the quadratic gyroscopic term.
 
-::: {.warning name="The logarithm jumps at half a turn"}
+::: {.warning #warn13-log name="The logarithm jumps at half a turn"}
 At an error of 179° about some axis, $\chi$ is a vector of length 3.12 along that axis. At 181° it is a vector of length 3.12 along the opposite one. The QP is handed opposite initial errors and returns opposite torques. A body near the cut locus of [](#sec7-local), in noise, can be told to go one way and then the other. Error-state MPC inherits every large-error behavior of the logarithm error, and [](#thm-obstruction) says no continuous fix exists. Keep the reference close enough that this cannot happen, or add logic that commits to a direction.
 :::
 
@@ -248,7 +248,7 @@ So error-state MPC needs a good reference, one that respects the dynamics, avoid
 
 ## From tracking to planning {#sec13-plan}
 
-Turn a satellite from one attitude to another in 2 s with as little torque as possible. A camera along the body axis $e_1$ must never point within 30° of the sun, which lies in the direction $q_c$. The shortest turn sweeps the camera through that cone, 8.5° from its axis.
+Turn a satellite from one attitude to another in 2 s with as little torque as possible. A camera along the body axis $e_1$ must never point within $\theta_{\max} = 30^\circ$ of the sun, which lies in the direction $q_c$. This is the cone of [](#eq8-cone) with the inequality reversed: there a direction had to stay inside, and here the camera axis $R\,e_1$ must stay outside. The shortest turn sweeps the camera through that cone, 8.5° from its axis.
 
 No reference exists yet. The unknowns are the trajectory itself: attitudes $R_k$, angular velocities $\Omega_k$ and torques $\tau_k$ at $N = 20$ steps of $h = 0.1$ s. This is **direct transcription**: discretize first, then optimize over states and inputs together, with the dynamics as constraints.
 
@@ -257,7 +257,7 @@ $$
 \min\quad & \Phi = \tfrac{h}{2}\sum_{k=0}^{N-1} \|\tau_k\|^2 \\
 \text{subject to}\quad & \log\!\big(R_{k+1}\T\, R_k \exp(h\,\Omega_k^\wedge)\big)^\vee = 0, \\
 & J(\Omega_{k+1} - \Omega_k) - h\,\big(J\Omega_k\times\Omega_k + \tau_k\big) = 0, \\
-& |\tau_{k,i}| \le \tau_{\max}, \qquad q_c\cdot R_k e_1 \le \cos 30^\circ ,
+& |\tau_{k,i}| \le \tau_{\max}, \qquad q_c\cdot R_k e_1 \le \cos\theta_{\max} ,
 \end{aligned} \label{eq13-dto}
 $$
 
@@ -269,18 +269,18 @@ Three choices make this an optimization problem on a manifold.
 
 *The steps are in the Lie algebra.* The solver's unknown at each iteration is $(\eta_k, \delta\Omega_k, \delta\tau_k)$, and it updates $R_k \leftarrow R_k\exp(\eta_k^\wedge)$ as in [](#eq13-newton). Vectors are updated by addition.
 
-*Derivatives are taken along those steps.* Perturb the attitudes in the first constraint and collect first-order terms. With $\rho_k$ the current value of that constraint,
+*Derivatives are taken along those steps.* Perturb the attitudes in the first constraint and collect first-order terms. With $r_k$ the current value of that constraint,
 
 $$
-\delta(\cdot) = \operatorname{dexp}_{\rho_k}^{-1}\Big(\exp(-h\,\Omega_k^\wedge)\,\eta_k + h\,\operatorname{dexp}_{h\Omega_k}\,\delta\Omega_k\Big) - \operatorname{dexp}_{-\rho_k}^{-1}\,\eta_{k+1} . \label{eq13-jac}
+\delta r_k = \operatorname{dexp}_{r_k}^{-1}\Big(\exp(-h\,\Omega_k^\wedge)\,\eta_k + h\,\operatorname{dexp}_{h\Omega_k}\,\delta\Omega_k\Big) - \operatorname{dexp}_{-r_k}^{-1}\,\eta_{k+1} . \label{eq13-jac}
 $$
 
-On a trajectory that satisfies the dynamics, $\rho_k = 0$ and this reads $\eta_{k+1} = \exp(-h\Omega_k^\wedge)\,\eta_k + h\,\operatorname{dexp}_{h\Omega_k}\delta\Omega_k$. Divide by $h$ and let $h \to 0$: it is $\dot\eta = -\Omega\times\eta + \delta\Omega$, the first row of [](#eq13-so3). The Jacobian of a transcription on a group is the error-state model, one step at a time.
+On a trajectory that satisfies the dynamics, $r_k = 0$ and this reads $\eta_{k+1} = \exp(-h\Omega_k^\wedge)\,\eta_k + h\,\operatorname{dexp}_{h\Omega_k}\delta\Omega_k$. Divide by $h$ and let $h \to 0$: it is $\dot\eta = -\Omega\times\eta + \delta\Omega$, the first row of [](#eq13-so3). The Jacobian of a transcription on a group is the error-state model, one step at a time.
 
-The keep-out cone shows what second-order information on a group looks like. With $v = R\T q_c$, expanding $q_c\cdot R\exp(\eta^\wedge)e_1$ as in [](#eq13-expansion) gives
+The keep-out cone shows what second-order information on a group looks like. The sun direction seen from the body is $R\T q_c$. Expanding $q_c\cdot R\exp(\eta^\wedge)e_1$ as in [](#eq13-expansion) gives
 
 $$
-\operatorname{grad} = e_1\times v, \qquad \operatorname{Hess} = \tfrac12\big(e_1 v\T + v\,e_1\T\big) - (v\cdot e_1)\,I . \label{eq13-cone}
+\operatorname{grad} = e_1\times R\T q_c, \qquad \operatorname{Hess} = \tfrac12\big(e_1\,q_c\T R + R\T q_c\,e_1\T\big) - (q_c\cdot R\,e_1)\,I . \label{eq13-cone}
 $$
 
 The Hessian is not zero, although the constraint is linear in the entries of $R$. The curvature of the group has moved into it.
@@ -295,36 +295,36 @@ Minimize $x$ subject to $x \ge 0$. The answer is $x = 0$, on the boundary, and t
 A ball rolls down a ramp toward a wall at $x = 0$. Replace the hard wall with a spring that pushes back with force $\mu/x$: weak far away, unbounded at the wall. The ball settles where the slope of the ramp, which is 1, balances the spring: $x = \mu$. It never touches the wall. Now soften the spring. As $\mu \to 0$ the resting point slides to the wall, smoothly, from the inside.
 :::
 
-In formulas, replace the constraint by a **barrier**: minimize $x - \mu\ln x$. Its minimizer is $x(\mu) = \mu$. The curve of minimizers as $\mu$ decreases is the **central path**, and following it to $\mu = 0$ is an **interior-point method**. The smooth problems on the way never ask which constraints are active.
+In formulas, replace the constraint by a **logarithmic barrier**: minimize $x - \mu\ln x$, where $\mu > 0$ is the **barrier parameter**. The barrier function of [](#sec8-barrier) shares the picture of a wall that cannot be crossed, and nothing else: that one constrains a motion, and this one is a term in a cost. The minimizer is $x(\mu) = \mu$. The curve of minimizers as $\mu$ decreases is the **central path**, and following it to $\mu = 0$ is an **interior-point method**. The smooth problems on the way never ask which constraints are active.
 
-The practical form is **primal-dual**. Call the spring force $z$, so that $z = \mu/x$, and solve for the position and the force together: $1 - z = 0$ and $x z = \mu$. Newton's method on this pair is much better behaved than on $1 - \mu/x = 0$, and $z$ becomes the Lagrange multiplier in the limit.
+The practical form is **primal-dual**. Call the spring force $\nu$, so that $\nu = \mu/x$, and solve for the position and the force together: $1 - \nu = 0$ and $x\,\nu = \mu$. Newton's method on this pair is much better behaved than on $1 - \mu/x = 0$, and $\nu$ becomes the Lagrange multiplier in the limit.
 
-For a general problem, collect the unknowns in a point $x$ (attitudes and vectors), write the equalities as $r(x) = 0$ and the inequalities as $c(x) \le 0$, and add slack variables $w > 0$ with $c(x) + w = 0$. With multipliers $y$ for the equalities and $z > 0$ for the inequalities, the conditions for a point of the central path are
-
-$$
-\operatorname{grad}\Phi + A_r\T y + A_c\T z = 0, \qquad r = 0, \qquad c + w = 0, \qquad w_i z_i = \mu, \label{eq13-kkt}
-$$
-
-where $A_r$ and $A_c$ are the Jacobians of $r$ and $c$ along the steps, as in [](#eq13-jac) and [](#eq13-cone). At $\mu = 0$ these are the Karush-Kuhn-Tucker (KKT) conditions of the original problem. Newton's method on [](#eq13-kkt), after eliminating the slack and inequality steps, solves
+For a general problem, collect the unknowns in a point $x$ (attitudes and vectors), write the equalities as $r(x) = 0$ and the inequalities as $c(x) \le 0$, and add slack variables $w > 0$ with $c(x) + w = 0$. With multipliers $\nu_r$ for the equalities and $\nu_c > 0$ for the inequalities, the conditions for a point of the central path are
 
 $$
-\begin{bmatrix} \mathcal{H} + A_c\T \operatorname{diag}(z/w)\,A_c & A_r\T \\ A_r & 0 \end{bmatrix}
-\begin{bmatrix} \delta x \\ \delta y \end{bmatrix} = \text{residuals}, \label{eq13-newton-kkt}
+\operatorname{grad}\Phi + A_r\T \nu_r + A_c\T \nu_c = 0, \qquad r = 0, \qquad c + w = 0, \qquad w_i\,\nu_{c,i} = \mu, \label{eq13-kkt}
 $$
 
-with $\mathcal{H}$ the Hessian of $\Phi + y\cdot r + z\cdot c$ along the steps.
+where $A_r$ and $A_c$ are the Jacobians of $r$ and $c$ along the steps, as in [](#eq13-jac) and [](#eq13-cone). At $\mu = 0$ these are the Karush-Kuhn-Tucker conditions, the **KKT conditions**, of the original problem. Newton's method on [](#eq13-kkt), after eliminating the slack and inequality steps, solves
 
-This is the structure of LieIPM (Teng et al., 2026). Only two things differ from an interior-point method in $\R^n$. The primal step $\delta x$ is applied by a retraction, $R_k \leftarrow R_k\exp(\eta_k^\wedge)$. And the entries of $A_r$, $A_c$ and $\mathcal{H}$ are the coefficients of expansions like [](#eq13-expansion). The multipliers and slacks are ordinary vectors and are updated as in any textbook. LieIPM discretizes the rigid body with a variational integrator and makes the rotation over one step a variable in its own right. Every constraint is then a product of group elements, and its first- and second-order expansions follow in closed form from the series for $\log(\exp(x^\wedge)\exp(y^\wedge))$, with Lie brackets as the second-order terms. The chapter on variational integrators returns to that discretization.
+$$
+\begin{bmatrix} \operatorname{Hess} + A_c\T \operatorname{diag}(\nu_c/w)\,A_c & A_r\T \\ A_r & 0 \end{bmatrix}
+\begin{bmatrix} \delta x \\ \delta\nu_r \end{bmatrix} = \text{residuals}, \label{eq13-newton-kkt}
+$$
+
+with $\operatorname{Hess}$ the Hessian of $\Phi + \nu_r\cdot r + \nu_c\cdot c$ along the steps, in the sense of [](#eq13-expansion).
+
+This is the structure of LieIPM (Teng et al., 2026). Only two things differ from an interior-point method in $\R^n$. The primal step $\delta x$ is applied by a retraction, $R_k \leftarrow R_k\exp(\eta_k^\wedge)$. And the entries of $A_r$, $A_c$ and the Hessian are the coefficients of expansions like [](#eq13-expansion). The multipliers and slacks are ordinary vectors and are updated as in any textbook. LieIPM discretizes the rigid body with a variational integrator and makes the rotation over one step a variable in its own right. Every constraint is then a product of group elements, and its first- and second-order expansions follow in closed form from the series for $\log(\exp(x^\wedge)\exp(y^\wedge))$, with Lie brackets as the second-order terms. The chapter on variational integrators returns to that discretization.
 
 Ordered by stage, the matrix of [](#eq13-newton-kkt) is banded ([](#fig13-ipm)): each constraint couples one step to the next and nothing else. For [](#eq13-dto) it is $294\times294$ with 3.4% of its entries nonzero and a half bandwidth of 17. The cost of a Newton step grows in proportion to the horizon.
 
 ::: {.example #ex13-cone name="Around the cone"}
-We implemented [](#eq13-kkt) and [](#eq13-newton-kkt) for the problem [](#eq13-dto), with $\tau_{\max} = 0.15$ N·m. To be precise about what the code is: a primal-dual interior point with slacks; the exponential retraction for attitudes; first derivatives in closed form; $\mathcal{H}$ from symmetrized differences of those derivatives; a step length that keeps $w$ and $z$ positive, then backtracking on the norm of the residual of [](#eq13-kkt); a shift added to $\mathcal{H}$ when the matrix has the wrong signs of eigenvalues; $\mu$ reduced when the residual falls below $10\mu$; dense linear algebra. It has no filter, no restoration phase and no sparse factorization.
+We implemented [](#eq13-kkt) and [](#eq13-newton-kkt) for the problem [](#eq13-dto), with $\tau_{\max} = 0.15$ N·m. To be precise about what the code is: a primal-dual interior-point method with slack variables; the exponential retraction for attitudes; first derivatives in closed form; the Hessian from symmetrized differences of those derivatives; a step length that keeps $w$ and $\nu_c$ positive, then backtracking on the norm of the residual of [](#eq13-kkt); a shift added to the Hessian when the matrix has the wrong signs of eigenvalues; $\mu$ reduced when the residual falls below $10\mu$; dense linear algebra. It has no line-search filter, no restoration phase and no sparse factorization.
 
 Start from the shortest turn, which violates the cone at 9 of its 19 interior steps. The solver converges in 20 iterations to a residual below $10^{-8}$ ([](#fig13-cone), [](#fig13-ipm)). Every attitude at every iteration is a rotation to $10^{-15}$. The camera axis dips under the cone and grazes it at one step. Nine torque bounds are active. The detour costs 3.4% more effort than the same turn with no cone. SciPy's SLSQP, given the problem in a different form (torques only, the dynamics rolled out), returns the same cost to $10^{-7}$.
 :::
 
-![The interior point at work on [](#ex13-cone). The first guess sweeps the camera axis $R_k e_1$ through the keep-out cone. Early iterates, with a large barrier parameter, stay well clear of it. As $\mu$ shrinks the path tightens until it grazes the cone.](figures/ch13-cone-strip.png){#fig13-cone anim="figures/ch13-cone.gif"}
+![The interior-point method at work on [](#ex13-cone). The first guess sweeps the camera axis $R_k e_1$ through the keep-out cone. Early iterates, with a large barrier parameter $\mu$, stay well clear of it. As $\mu$ shrinks the path tightens until it grazes the cone.](figures/ch13-cone-strip.png){#fig13-cone anim="figures/ch13-cone.gif"}
 
 ![Left: the KKT residual of [](#ex13-cone) and the barrier parameter at each iteration. Right: the nonzero entries of the matrix in [](#eq13-newton-kkt), with unknowns ordered by stage.](figures/ch13-ipm.svg){#fig13-ipm}
 
@@ -340,9 +340,9 @@ What the full method achieves is reported by Teng et al. (2026). They plan for a
 
 **Warm starts.** The QP solver starts each solve from the previous plan, shifted by a step, and usually finds it nearly optimal. An interior-point method gains less from a warm start: the old solution sits on the boundary, and the method wants to start inside.
 
-**Linearization.** Error-state MPC is exactly as local as [](#sec7-local) says, plus the jump of the logarithm at half a turn. With no bounds and a Riccati terminal weight it *is* the LQR of [](#ch-linearization).
+**Linearization.** Error-state MPC is exactly as local as [](#sec7-local) says, plus the jump of the logarithm at half a turn. With no bounds and a Riccati terminal weight it *is* the LQR of [](#def7-feedback), fed with the error state.
 
-**Guarantees.** Nothing here proves that a constraint will hold on the real system. The bound in [](#ex13-flip) held because the QP enforces it on the input directly. A state constraint enforced on a linearized prediction can be violated by the plant. A safety filter, as in [](#ch-robust), takes the opposite position: it makes no plan, and changes whatever input it is given by the smallest amount that keeps one inequality true at the next instant. The two are complements. MPC looks ahead with an approximate model. A filter looks at the present with a certificate.
+**Guarantees.** Nothing here proves that a constraint will hold on the real system. The bound in [](#ex13-flip) held because the QP enforces it on the input directly. A state constraint enforced on a linearized prediction can be violated by the plant. A safety filter ([](#eq8-safety-filter)) takes the opposite position: it makes no plan, and changes whatever input it is given by the smallest amount that keeps one inequality true at the next instant. The two are complements. MPC looks ahead with an approximate model. A filter looks at the present with a certificate.
 
 ## Exercises {#sec13-exercises .unnumbered}
 
@@ -355,11 +355,11 @@ Derive [](#eq13-mean) from [](#eq13-dexp). You will need $\chi\T\operatorname{de
 :::
 
 ::: {.exercise #exr13-se3}
-Derive $H_d$ in [](#eq13-se3) by varying the second equation of [](#eq13-ep). Then add linear drag, a force $-c_1 V$ and a torque $-c_2\,\Omega$ with positive constants $c_1, c_2$, and write the new $H_d$. Does the reference pose appear?
+Derive the block $A_{22}$ in [](#eq13-se3) by varying the second equation of [](#eq13-ep). Then add linear drag, a force $-c_1 V$ and a torque $-c_2\,\Omega$ with positive constants $c_1, c_2$, and write the new $A_{22}$. Does the reference pose appear?
 :::
 
 ::: {.exercise #exr13-lqr}
-Prove that the first block of $-H^{-1}F$ in [](#eq13-qp) equals the LQR gain when $P_f$ solves the discrete Riccati equation. Then, in the notebook, set $P_f = 0$ and find the shortest horizon for which the closed loop of [](#ex13-flip) still tracks.
+Prove that the first block of $-P_{UU}^{-1}P_{Us}$ in [](#eq13-qp) equals the LQR gain when $P_f$ solves the discrete Riccati equation. Then, in the notebook, set $P_f = 0$ and find the shortest horizon for which the closed loop of [](#ex13-flip) still tracks.
 :::
 
 ::: {.exercise #exr13-bound}
@@ -376,7 +376,7 @@ In the notebook, follow the central path of [](#ex13-cone) from the guess that b
 
 ## Notes and sources {#sec13-notes .unnumbered}
 
-Optimization on manifolds with retractions, and the convergence theory of Newton's method in that setting, are set out by Absil, Mahony and Sepulchre (2008) and Boumal (2023). The quadratic cost in the Lie algebra, its gradient and the linearized error dynamics are from Teng et al. (2022), and the convex error-state MPC on $\SE(3)$ is from Jang, Teng and Ghaffari (2023). Kotaru (2022, ch. 6) runs an MPC of the same kind on the variation-based linearization of a quadrotor with a cable-suspended load, with a Riccati terminal weight. The exact linearity of the logarithm of an invariant error, met in [](#sec13-convex) for a pure attitude error, is due to Barrau and Bonnabel (2017). The projected Newton method is that of Bertsekas (1982). Interior-point methods are treated by Nocedal and Wright (2006), and the line-search implementation that LieIPM follows is that of Wächter and Biegler (2006). LieIPM, its closed-form derivatives and its benchmarks are from Teng et al. (2026). Kotaru (2022, ch. 5) transcribes a quadrotor with a cable-suspended load by writing $R = R_0\exp(\eta^\wedge)$ and $q = \exp(\xi^\wedge)q_0$ with $\eta$ and $\xi$ as Euclidean decision variables, and handles the taut and slack cable with a complementarity constraint, which is beyond this chapter. Wu (2017) solves a QP at every instant to enforce safety constraints, the approach of [](#ch-robust). Siravuru (2019, ch. 5) derives a variational integrator for the Reaction Mass Biped.
+Optimization on manifolds with retractions, and the convergence theory of Newton's method in that setting, are set out by Absil, Mahony and Sepulchre (2008) and Boumal (2023). The quadratic cost in the Lie algebra, its gradient and the linearized error dynamics are from Teng et al. (2022), and the convex error-state MPC on $\SE(3)$ is from Jang, Teng and Ghaffari (2023). Kotaru (2022, ch. 6) runs an MPC of the same kind on the variation-based linearization of a quadrotor with a cable-suspended load, with a Riccati terminal weight. The exact linearity of the logarithm of an invariant error, met in [](#sec13-convex) for a pure attitude error, is due to Barrau and Bonnabel (2017). The projected Newton method is that of Bertsekas (1982). Interior-point methods are treated by Nocedal and Wright (2006), and the line-search implementation that LieIPM follows is that of Wächter and Biegler (2006). LieIPM, its closed-form derivatives and its benchmarks are from Teng et al. (2026). Kotaru (2022, ch. 5) transcribes a quadrotor with a cable-suspended load by writing each attitude as a fixed rotation times $\exp(\eta^\wedge)$ and each direction as $\exp(\xi^\wedge)$ applied to a fixed direction, with $\eta$ and $\xi$ as Euclidean decision variables, and handles the taut and slack cable with a complementarity constraint, which is beyond this chapter. Wu (2017) solves a QP at every instant to enforce safety constraints, the approach of [](#sec8-barrier). Siravuru (2019, ch. 5) derives a variational integrator for the Reaction Mass Biped.
 
 - P.-A. Absil, R. Mahony and R. Sepulchre, [*Optimization Algorithms on Matrix Manifolds*](https://press.princeton.edu/absil), Princeton University Press, 2008.
 - A. Barrau and S. Bonnabel, ["The invariant extended Kalman filter as a stable observer"](https://doi.org/10.1109/TAC.2016.2594085), *IEEE Transactions on Automatic Control* 62(4), 2017.

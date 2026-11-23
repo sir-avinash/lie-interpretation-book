@@ -37,7 +37,7 @@ $$
 \tau = \underbrace{-k_R\,e_R - k_\Omega\,e_\Omega}_{\text{PD}} \;+\; \underbrace{\Omega\times J\Omega - J\big(\Omega\times R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big)}_{\text{feedforward}} . \label{eq6-law}
 $$
 
-Here $k_R > 0$ and $k_\Omega > 0$ are scalar gains. This is the attitude law of Lee, Leok and McClamroch (2010). In closed loop,
+Here $k_R > 0$ and $k_\Omega > 0$ are scalar gains. The second group is the **feedforward**: it is computed from the model and the reference, not from the error. This is the attitude law of Lee, Leok and McClamroch (2010). In closed loop,
 
 $$
 J\,\dot e_\Omega = -k_R\,e_R - k_\Omega\,e_\Omega, \qquad \ddt\big(R_d\T R\big) = \big(R_d\T R\big)\,e_\Omega^\wedge . \label{eq6-closed}
@@ -49,7 +49,7 @@ Read [](#eq6-closed) and look for $R_d(t)$ on its own. It is not there. The pair
 This is the invariance of [](#sec3-invariant) at work. A statement proved for a fixed target is proved for every reference.
 :::
 
-In simulation the two histories agree to $3\times10^{-10}$, the tolerance of the integrator. Throughout the chapter we use one vehicle, the quadrotor of Lee, Leok and McClamroch (2010): $m = 4.34$ kg, $J = \operatorname{diag}(0.0820,\ 0.0845,\ 0.1377)$ kg·m², $k_R = 8.81$, $k_\Omega = 2.54$. Near the target $e_R \approx \eta$ ([](#sec3-first-order)), so each axis behaves like $J_i\ddot\eta_i + k_\Omega\dot\eta_i + k_R\eta_i = 0$. With these gains all three axes are overdamped, and the slowest pole is at $-3.98\ \text{s}^{-1}$.
+In simulation the two histories agree to $3\times10^{-10}$, the tolerance of the integrator. Throughout the chapter we use one vehicle, the quadrotor of Lee, Leok and McClamroch (2010): $m = 4.34$ kg, $J = \operatorname{diag}(0.0820,\ 0.0845,\ 0.1377)$ kg·m², $k_R = 8.81$ N·m, $k_\Omega = 2.54$ N·m·s. Near the target $e_R \approx \eta$ ([](#sec3-first-order)), so each axis behaves like $J_i\ddot\eta_i + k_\Omega\dot\eta_i + k_R\eta_i = 0$. With these gains all three axes are overdamped, and the slowest pole is at $-3.98\ \text{s}^{-1}$.
 
 Near the target, then, [](#eq6-closed) is the bead on the wire. What survives far from it?
 
@@ -108,14 +108,14 @@ W_2 = \tfrac12\begin{bmatrix} \tfrac{2k_R}{2 - \Psi_{\max}} & c J_{\max} \\ c J_
 W_3 = \begin{bmatrix} c\,k_R & -\tfrac12 c\,k_\Omega \\ -\tfrac12 c\,k_\Omega & k_\Omega - c J_{\max}\end{bmatrix}.
 \end{gathered} \label{eq6-W}
 $$
-Consequently $V(t) \le V(0)\,e^{-\gamma t}$ with $\gamma = \mu_{\min}(W_3)/\mu_{\max}(W_2)$, where $\mu_{\min}$ and $\mu_{\max}$ denote the smallest and largest eigenvalue, and
+Consequently $V(t) \le V(0)\,e^{-\gamma t}$ with $\gamma = \lambda_{\min}(W_3)/\lambda_{\max}(W_2)$, where $\lambda_{\min}$ and $\lambda_{\max}$ denote the smallest and largest eigenvalue of a symmetric matrix, and
 $$
-\|e_R(t)\|^2 + \|e_\Omega(t)\|^2 \le \frac{\mu_{\max}(W_2)}{\mu_{\min}(W_1)}\,\big(\|e_R(0)\|^2 + \|e_\Omega(0)\|^2\big)\,e^{-\gamma t}. \label{eq6-rate}
+\|e_R(t)\|^2 + \|e_\Omega(t)\|^2 \le \frac{\lambda_{\max}(W_2)}{\lambda_{\min}(W_1)}\,\big(\|e_R(0)\|^2 + \|e_\Omega(0)\|^2\big)\,e^{-\gamma t}. \label{eq6-rate}
 $$
 :::
 
 ::: {.proof}
-The fence follows from [](#eq6-V0-dot). The lower bound on $V$ uses fact 2 and $|e_R\cdot J e_\Omega| \le J_{\max}\|e_R\|\|e_\Omega\|$. The upper bound uses fact 3. The bound on $\dot V$ is [](#eq6-V-dot) with fact 1 and $|e_R\cdot e_\Omega| \le \|e_R\|\|e_\Omega\|$. $W_1$ is positive definite exactly when $c^2J_{\max}^2 < k_R J_{\min}$, and $W_3$ exactly when $c\,k_R(k_\Omega - cJ_{\max}) > \tfrac14c^2k_\Omega^2$. Those are the two entries of [](#eq6-c-bound). Then $\dot V \le -\mu_{\min}(W_3)\|z\|^2 \le -\gamma V$.
+The fence follows from [](#eq6-V0-dot). The lower bound on $V$ uses fact 2 and $|e_R\cdot J e_\Omega| \le J_{\max}\|e_R\|\|e_\Omega\|$. The upper bound uses fact 3. The bound on $\dot V$ is [](#eq6-V-dot) with fact 1 and $|e_R\cdot e_\Omega| \le \|e_R\|\|e_\Omega\|$. $W_1$ is positive definite exactly when $c^2J_{\max}^2 < k_R J_{\min}$, and $W_3$ exactly when $c\,k_R(k_\Omega - cJ_{\max}) > \tfrac14c^2k_\Omega^2$. Those are the two entries of [](#eq6-c-bound). Then $\dot V \le -\lambda_{\min}(W_3)\|z\|^2 \le -\gamma V$.
 :::
 
 Each inequality in this proof was tested at 4000 random attitudes, velocity errors, full inertia matrices and gains. None failed, and [](#eq6-c-bound) is sharp: one tenth of a percent above either limit, $W_1$ or $W_3$ loses definiteness.
@@ -151,10 +151,10 @@ Use the weighted error vector [](#eq3-weighted-eR) with $d_1 > d_2 > d_3 > 0$ in
 :::
 
 ::: {.proof}
-The error system is autonomous, and $V_0$ with the weighted $\Psi_R$ still obeys [](#eq6-V0-dot), because $\dot\Psi_R = e_R\cdot e_\Omega$ holds for any weight ([](#thm3-so3-compat)). $\SO(3)$ is compact, so every sublevel set of $V_0$ is compact. LaSalle's invariance principle then sends every solution to the largest invariant set with $e_\Omega = 0$, which is the set of equilibria. There are four, they are isolated, so each solution converges to one of them. Near an equilibrium $e_R \approx H\eta$ with $H$ the diagonal Hessian of [](#exr3-weights), and the linearization is $J\ddot\eta + k_\Omega\dot\eta + k_R H\eta = 0$. It has no eigenvalue on the imaginary axis, and as many unstable eigenvalues as $H$ has negative entries: 0, 1, 2 and 3. The states that converge to an unstable equilibrium form its stable manifold, of dimension 5, 4 and 3 in a six-dimensional state space. Each has measure zero.
+The error system is autonomous, and $V_0$ with the weighted $\Psi_R$ still obeys [](#eq6-V0-dot), because $\dot\Psi_R = e_R\cdot e_\Omega$ holds for any weight ([](#thm3-so3-compat)). $\SO(3)$ is compact, so every sublevel set of $V_0$ is compact. LaSalle's invariance principle then sends every solution to the largest invariant set with $e_\Omega = 0$, which is the set of equilibria. There are four, they are isolated, so each solution converges to one of them. Near an equilibrium $e_R \approx \operatorname{Hess}\Psi_R\,\eta$, with $\operatorname{Hess}\Psi_R$ the diagonal Hessian of [](#exr3-weights), and the linearization is $J\ddot\eta + k_\Omega\dot\eta + k_R \operatorname{Hess}\Psi_R\,\eta = 0$. It has no eigenvalue on the imaginary axis, and as many unstable eigenvalues as the Hessian has negative entries: 0, 1, 2 and 3. The states that converge to an unstable equilibrium form its stable manifold, of dimension 5, 4 and 3 in a six-dimensional state space. Each has measure zero.
 :::
 
-This is what **almost-global** means, and no more. Three things it does not say.
+This is what an almost-global result is ([](#sec-obstruction)), and no more. Three things it does not say.
 
 It does not say the exceptional set is three points. It is three thin sheets through the state space, made of starts with just the right velocity to climb to a saddle and stop.
 
@@ -211,15 +211,11 @@ $$
 
 To follow a position reference $x_d(t)$ we would like to apply the force
 
-<!-- terms:off -->
-
 $$
 F_d = -k_x\,e_x - k_v\,e_v + m g\,e_3 + m\ddot x_d, \qquad e_x = x - x_d, \quad e_v = v - \dot x_d, \label{eq6-Fd}
 $$
 
-<!-- terms:on -->
-
-a PD law with gravity and feedforward. The vehicle can only push along $R e_3$. So do the next best thing, in two parts. Apply the component of $F_d$ that the vehicle can produce now, and turn the vehicle until it can produce all of it:
+a PD law with gravity and feedforward: the desired force. The vehicle can only push along $R e_3$. So do the next best thing, in two parts. Apply the component of $F_d$ that the vehicle can produce now, and turn the vehicle until it can produce all of it:
 
 $$
 \begin{aligned}
@@ -228,21 +224,15 @@ R_d e_2 &= \frac{R_d e_3\times R_z(\psi_d)\,e_1}{\|R_d e_3\times R_z(\psi_d)\,e_
 \end{aligned} \label{eq6-Rd}
 $$
 
-The third column of the attitude target is the direction of the wanted force. The desired yaw $\psi_d$ fixes the rotation about it: the first body axis is kept as close to the heading $R_z(\psi_d)e_1$ as the tilt allows. The torque is [](#eq6-law), tracking this $R_d$. Position loop, then direction, then attitude ([](#fig6-cascade)).
+The third column of the attitude reference is the direction of the desired force. The desired yaw $\psi_d$ fixes the rotation about it: the first body axis is kept as close to the heading $R_z(\psi_d)e_1$ as the tilt allows. The torque is [](#eq6-law), tracking this $R_d$. Position loop, then direction, then attitude: a **cascade** ([](#fig6-cascade)).
 
 What does the position error see? Substitute:
 
-<!-- terms:off -->
-
 $$
-m\,\dot e_v = -k_x e_x - k_v e_v + \Delta, \qquad \Delta = f R e_3 - F_d, \qquad \|\Delta\| = \|F_d\|\,\sin\theta_{\text{tilt}} . \label{eq6-Delta}
+m\,\dot e_v = -k_x e_x - k_v e_v + e_F, \qquad e_F = f R e_3 - F_d, \qquad \|e_F\| = \|F_d\|\,\sin\theta_{\text{tilt}} . \label{eq6-Delta}
 $$
 
-<!-- terms:on -->
-
-The bead on the wire again, driven by a disturbance $\Delta$: the part of $F_d$ the vehicle is not yet pointing along. Its size is set by the tilt angle $\theta_{\text{tilt}}$ of [](#sec3-errors), between $R e_3$ and $R_d e_3$. Since the tilt never exceeds the total error angle, $\|\Delta\| \le \|F_d\|\,\|e_R\|$ whenever $\Psi_R < 1$.
-
-<!-- terms:off -->
+The bead on the wire again, driven by a disturbance, the **force error** $e_F$: the part of $F_d$ the vehicle is not yet pointing along. Its size is set by the tilt angle $\theta_{\text{tilt}}$ of [](#sec3-errors), between $R e_3$ and $R_d e_3$. Since the tilt never exceeds the total error angle, $\|e_F\| \le \|F_d\|\,\|e_R\|$ whenever $\Psi_R < 1$.
 
 ::: {.proposition #thm6-cascade name="The quadrotor cascade"}
 Apply [](#eq6-Rd) and [](#eq6-law), with $\Omega_d$ and $\dot\Omega_d$ the exact derivatives of $R_d$ along the closed loop. Suppose the reference acceleration is bounded and $F_d$ does not vanish along the solution. Then the attitude error obeys [](#eq6-closed), unaffected by the position loop. If moreover $V_0(0) < 2k_R$, the errors $e_R$, $e_\Omega$, $e_x$ and $e_v$ all converge to zero exponentially.
@@ -252,12 +242,10 @@ Apply [](#eq6-Rd) and [](#eq6-law), with $\Omega_d$ and $\dot\Omega_d$ the exact
 $R_d$ is differentiable where $F_d \ne 0$, so [](#eq6-closed) holds, and [](#thm6-exp) gives $\|e_R(t)\| \to 0$ exponentially, with $\Psi_R < 1$ after a finite time. In [](#eq6-Delta), $\|F_d\| \le k_x\|e_x\| + k_v\|e_v\| + \|m g\,e_3 + m\ddot x_d\|$, and $\sin\theta_{\text{tilt}}$ is at most one always and at most $\|e_R\|$ eventually. So the stable linear system for $(e_x, e_v)$ is driven by a term bounded by an exponentially decaying factor times an affine function of its own state. Gronwall's inequality keeps the state bounded and then makes it decay.
 :::
 
-<!-- terms:on -->
-
-The cascade is triangular: attitude drives position and nothing comes back. That is why no condition on the gains appears. Lee, Leok and McClamroch (2010) prove more with more work. They build one Lyapunov function for all four errors and obtain exponential stability with an explicit region of attraction, for $\Psi_R(0) < 1$ and a bounded initial position error, provided the attitude gains are large enough compared with the position gains. For $1 \le \Psi_R(0) < 2$ they prove a weaker property, exponential attractiveness: the attitude error first decays into $\Psi_R < 1$ while the position error stays bounded, and the first result takes over.
+The cascade is triangular: attitude drives position and nothing comes back. That is why no condition on the gains appears. Lee, Leok and McClamroch (2010) prove more with more work. They treat the position and attitude errors together, and state exponential stability of the complete dynamics when the initial attitude error is less than 90°, that is $\Psi_R(0) < 1$. When it is less than 180°, $\Psi_R(0) < 2$, they state a weaker property, almost-global exponential attractiveness: the attitude error first decays into the region of the first result, which then takes over. Both results come with conditions on the gains and on the other initial errors. Consult the paper for their exact form.
 
 ::: {.example #ex6-inverted name="Thrown upside down"}
-The reference is a circle of radius 1.5 m flown at 1 rad/s with a vertical wobble, heading along the tangent. Position gains are $k_x = 16m$ and $k_v = 5.6m$. Release the vehicle at rest, 0.88 m from the reference, rolled 178° ([](#fig6-cascade)). Then $\Psi_R(0) = 1.55$. For the first 0.20 s the wanted thrust $F_d\cdot R e_3$ is negative. Rotors cannot pull, so we clip it at zero and the vehicle falls while it turns. It is right side up after 0.30 s. It drops 0.94 m below the reference, the position error peaks at 1.55 m, and it is back within 5 cm after 1.94 s. The peak thrust is 144 N, more than three times the hover thrust of 42.6 N, and the peak torque is 18 N·m.
+The reference is a circle of radius 1.5 m flown at 1 rad/s with a vertical wobble, heading along the tangent. Position gains are $k_x = 16m$ and $k_v = 5.6m$. Release the vehicle at rest, 0.88 m from the reference, rolled 178° ([](#fig6-cascade)). Then $\Psi_R(0) = 1.55$. For the first 0.20 s the desired thrust $F_d\cdot R e_3$ is negative. Rotors cannot pull, so we clip it at zero and the vehicle falls while it turns. It is right side up after 0.30 s. It drops 0.94 m below the reference, the position error peaks at 1.55 m, and it is back within 5 cm after 1.94 s. The peak thrust is 144 N, more than three times the hover thrust of 42.6 N, and the peak torque is 18 N·m.
 :::
 
 ![The run of [](#ex6-inverted). The vehicle starts inverted beside the reference circle, cuts its thrust, rights itself while it falls, then climbs back and locks on. The short arrow is the thrust axis $R e_3$. The long one is the force $F_d$ that the position loop asks for.](figures/ch06-cascade-strip.png){#fig6-cascade anim="figures/ch06-cascade.gif"}
@@ -272,11 +260,7 @@ Check whether it is. The position loop has natural frequency 4 rad/s. The slowes
 Conversely, with exact feedforward and the attitude loop made three times *slower* than the position loop, the errors still go to zero. A triangular cascade does not care about time scales. An approximate one does. If you drop the feedforward, the stability you rely on is no longer [](#thm6-cascade). It is a singular-perturbation argument, which Wu (2017) makes for these systems: the attitude gains are scaled exactly as by our $\kappa$, and stability is proved for $\kappa$ above some threshold that the proof does not compute.
 :::
 
-<!-- terms:off -->
-
-**One more layer.** Hang a load from the quadrotor. In [](#eq4-load), torque turns the body, the body aims the thrust, the thrust swings the cable, and the cable pulls the load. The controller of Sreenath, Lee and Kumar (2013) climbs that ladder from the bottom. Let $F_L = -k_x e_x - k_v e_v + (m_Q + m_L)(\ddot x_d + g\,e_3)$ be the force we would like on the load-and-quadrotor pair, with $e_x = x_L - x_d$. The cable should point against it, allowing for the centripetal term of [](#eq4-load):
-
-<!-- terms:on -->
+**One more layer.** Hang a load from the quadrotor. In [](#eq4-load), torque turns the body, the body aims the thrust, the thrust swings the cable, and the cable pulls the load. The controller of Sreenath, Lee and Kumar (2013) climbs that ladder from the bottom. Let $F_L = -k_x e_x - k_v e_v + (m_Q + m_L)(\ddot x_d + g\,e_3)$ be the force we would like on the load-and-quadrotor pair, with $e_x = x_L - x_d$ and $e_v = v_L - \dot x_d$. The cable should point against it, allowing for the centripetal term of [](#eq4-load):
 
 $$
 \begin{aligned}
@@ -285,23 +269,23 @@ f R e_3 \;&\leftarrow\; \big(F_L\cdot q + m_Q l\,\|\dot q\|^2\big)\,q \;+\; m_Q 
 \end{aligned} \label{eq6-load}
 $$
 
-The arrow means "ask the quadrotor for this thrust vector", by the construction [](#eq6-Rd). The part along $q$ passes straight through the cable: substituted into [](#eq4-load) it gives $(m_Q + m_L)(\ddot x_L + g\,e_3) = (q\,q\T)F_L$, the wanted force projected on the cable. The part across $q$ is the sphere law [](#eq6-law-s2), turning the cable toward $q_d$: it produces $\dot\omega = -k_q e_q - k_\omega e_\omega$ exactly. Three loops, three pairs of gains, and each loop treats the one inside it as already converged.
+The arrow means "ask the quadrotor for this thrust vector", by the construction [](#eq6-Rd). The part along $q$ passes straight through the cable: substituted into [](#eq4-load) it gives $(m_Q + m_L)(\ddot x_L + g\,e_3) = (q\,q\T)F_L$, the desired force projected on the cable. The part across $q$ is the sphere law [](#eq6-law-s2), turning the cable toward $q_d$: it produces $\dot\omega = -k_q e_q - k_\omega e_\omega$ exactly. Three loops, three pairs of gains, and each loop treats the one inside it as already converged.
 
 Kotaru (2022) reports that on hardware the cable gains $k_q$, $k_\omega$ decide whether the loop is stable, and the inner loop is simply run fast. A simulation shows how little margin there is. Take $m_L = 0.5$ kg on a 1 m cable, a position loop at 2 rad/s and a cable loop at 5 rad/s, no feedforward, and move the load 1.6 m from a start with the cable swung 40°. With the bare vehicle's attitude gains, slowest pole 4.0 s⁻¹, the system diverges. With $\kappa = 2$ it converges: the load is within 5 cm after 5.3 s, the swing never exceeds 44°, and the tension stays above 4.2 N, so the cable stays taut ([](#warn4-slack)). Sreenath, Lee and Kumar (2013) state stability results for the three loops in turn: quadrotor attitude, cable direction and load position. Wu (2017) and Kotaru (2022) justify stacking them by the same time-scale argument.
 
 ## The same law as feedback linearization {#sec6-fl}
 
-Look again at how [](#eq6-law) was found. We took an error, differentiated until the input appeared, canceled everything else, and imposed linear dynamics. That is input-output feedback linearization, with outputs of relative degree two. Siravuru (2019, ch. 4) presents the geometric law this way, for the 3D pendulum of [](#eq4-pendulum), where gravity joins the terms to cancel:
+Look again at how [](#eq6-law) was found. We took an error, differentiated until the input appeared, canceled everything else, and imposed linear dynamics. That is input-output feedback linearization, with outputs of **relative degree** two: the input appears after two derivatives. Siravuru (2019, ch. 4) presents the geometric law this way, for the 3D pendulum of [](#eq4-pendulum), where gravity joins the terms to cancel:
 
 $$
-\tau = J\big({-K_p}\,e_R - K_d\,e_\Omega\big) + \Omega\times J\Omega - m g\,(R\T e_3)\times\rho - J\big(\Omega\times R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big),
+\tau = J\big({-k_p}\,e_R - k_d\,e_\Omega\big) + \Omega\times J\Omega - m g\,(R\T e_3)\times\rho - J\big(\Omega\times R\T R_d\,\Omega_d - R\T R_d\,\dot\Omega_d\big),
 $$
 
-so that $\dot e_\Omega = -K_p e_R - K_d e_\Omega$. This is [](#eq6-closed) with gains scaled by the inertia, and both theorems apply with $J$ replaced by $I$.
+so that $\dot e_\Omega = -k_p e_R - k_d e_\Omega$, with the scalar gains $k_p$, $k_d$ of [](#eq-quat-pd). This is [](#eq6-closed) with gains scaled by the inertia, and both theorems apply with $J$ replaced by $I$.
 
-One point deserves care. The output is $y = e_R$, and $\dot y = C_R\,e_\Omega$ by [](#eq3-eR-dot). Linearizing $y$ exactly, to $\ddot y + K_d\dot y + K_p y = 0$, needs $C_R^{-1}$. But $\det C_R = \tfrac12\cos\theta\,(1 + \cos\theta)$, which vanishes at 90° and at 180° of error. Exact output linearization of $e_R$ is a local method. The law above linearizes the velocity error instead and leaves $C_R$ in the loop, where the proof only needs $\|C_R\| \le 1$. The result is not a linear system in $e_R$. It is a system with a Lyapunov function, which is better.
+One point deserves care. The output is $e_R$, and $\dot e_R = C_R\,e_\Omega$ by [](#eq3-eR-dot). Linearizing the output exactly, to $\ddot e_R + k_d\dot e_R + k_p e_R = 0$, needs $C_R^{-1}$. But $\det C_R = \tfrac12\cos\theta\,(1 + \cos\theta)$, which vanishes at 90° and at 180° of error. Exact output linearization of $e_R$ is a local method. The law above linearizes the velocity error instead and leaves $C_R$ in the loop, where the proof only needs $\|C_R\| \le 1$. The result is not a linear system in $e_R$. It is a system with a Lyapunov function, which is better.
 
-The Euler-angle version is the textbook one: output $\Theta - \Theta_d$, and $\ddot\Theta = -K_p\Theta - K_d\dot\Theta$ imposed through $\Omega = E\,\dot\Theta$ of [](#eq-euler-jacobian). Siravuru compares the two over a grid of initial attitudes. We repeat the comparison on one plant with his parameters: $m = 1$ kg, $J = \operatorname{diag}(0.1625, 0.1625, 0.01)$ kg·m², $K_p = 100$, $K_d = 20$, target hanging at rest. The grid is every combination of yaw, pitch and roll in steps of 45°: 729 labels, which name only 208 distinct attitudes. The label (180°, 180°, 180°) is the target itself.
+The Euler-angle version is the textbook one: output $\Theta - \Theta_d$, and $\ddot\Theta = -k_p\Theta - k_d\dot\Theta$ imposed through $\Omega = E\,\dot\Theta$ of [](#eq-euler-jacobian). Siravuru compares the two over a grid of initial attitudes. We repeat the comparison on one plant with his parameters: $m = 1$ kg, $J = \operatorname{diag}(0.1625, 0.1625, 0.01)$ kg·m², $k_p = 100$ s⁻², $k_d = 20$ s⁻¹, target hanging at rest. The grid is every combination of yaw, pitch and roll in steps of 45°: 729 labels, which name only 208 distinct attitudes. The label (180°, 180°, 180°) is the target itself.
 
 ![The 208 initial attitudes of the grid, drawn in the ball of rotations. From the 16 marked in terracotta, at 90° of pitch, the Euler-angle law is undefined. From the 29 hollow ones, exact half turns, the geometric law applies no torque. Each half turn appears twice, at two opposite points of the boundary. From the rest both converge.](figures/ch06-grid.svg){#fig6-grid}
 
@@ -339,11 +323,11 @@ A number makes the point. Take a swing leg with $J = \operatorname{diag}(0.9, 1.
 
 **The error vector.** Everything slow in this chapter traces back to $\|e_R\| = \sin\theta$ ([](#warn-sine)). Replace $e_R$ by the logarithm error $\log(R_d\T R)^\vee$ of [](#sec3-errors) and keep the gains. Near the target nothing changes. From 150° our vehicle settles in 0.88 s where the trace error needs 1.25 s, and near the rim the time no longer grows ([](#fig6-settle)). Mueller (2018) compares four such laws that agree to first order, and adds tilt priority for multicopters, for which [](#eq6-Delta) is the argument: position cares about the tilt alone. The cost is at the cut locus. At 180° the logarithm law is discontinuous, its torque is at its largest (27.5 N·m at 179° for our gains, against a maximum of 8.8 for the trace error), and noise there can make it chatter. A hybrid switch with hysteresis repairs that (Mayhew, Sanfelice and Teel, 2011). Teng et al. (2022) build a quadratic Lyapunov function on the logarithm and show that it keeps its convergence rate out to large angles. None of these laws escapes [](#thm-obstruction). They move the bad set or make the law discontinuous on it.
 
-**Saturation.** Both theorems assume the torque [](#eq6-law) is delivered. [](#ex6-inverted) asked for three times the hover thrust. With the PD part clipped at 1 N·m per axis, the recovery from 150° takes 1.27 s, hardly changed from 1.25 s. Clipped at 0.2 N·m it takes 2.99 s. No theorem here says it must converge.
+**Saturation.** Both theorems assume the torque [](#eq6-law) is delivered. [](#ex6-inverted) asked for three times the hover thrust. With the PD part clipped at 1 N·m per axis, the recovery from 150° takes 1.27 s, hardly changed from 1.25 s. Clipped at 0.2 N·m it takes 2.99 s. No theorem here says it must converge. A controller that knows the bound in advance can plan around it ([](#ex13-flip)).
 
 **Gains.** [](#thm6-exp) holds for any positive $k_R$ and $k_\Omega$ and tells you nothing about which to pick. The LQR of [](#sec7-lqr) does: at a hover its gain has exactly the form of [](#eq6-law), a multiple of $e_R$ and a per-axis multiple of $e_\Omega$ ([](#ex7-hold)), and along a maneuver it varies with time. Use the linearization to choose gains and this chapter to know what happens far away ([](#sec7-local)).
 
-**The model.** Every cancellation here assumed that $J$, $m$ and the forces are known. They are not. Keeping the tracking error small under a wrong inertia or a gust, and keeping the vehicle out of places it must not go, is the subject of [](#ch-robust). When the reference itself must be chosen subject to constraints, the tool is [](#ch-mpc).
+**The model.** Every cancellation here assumed that $J$, $m$ and the forces are known. They are not. [](#sec8-uncertainty) shows what a wrong inertia or a gust does to the error dynamics [](#eq6-closed), and [](#sec8-l1) keeps the tracking error small in spite of them. Keeping the vehicle out of places it must not go is the subject of [](#sec8-barrier). When the reference itself must be chosen subject to constraints, the tool is the direct transcription of [](#sec13-plan).
 
 ## Exercises {#sec6-exercises .unnumbered}
 
@@ -381,7 +365,7 @@ For the load cascade [](#eq6-load), show that the across-cable part of the thrus
 
 ## Notes and sources {#sec6-notes .unnumbered}
 
-The attitude law [](#eq6-law), the Lyapunov function with a cross term, the construction [](#eq6-Rd) of the attitude target and the cascade analysis are due to Lee, Leok and McClamroch (2010). Their bounds use a cross term without the inertia. Ours, [](#eq6-c-bound) and [](#eq6-W), are derived for the form [](#eq6-V) and checked numerically. Error functions with four isolated critical points go back to Koditschek (1989), and Chaturvedi, Sanyal and McClamroch (2011) survey the almost-global stabilization of attitude built on them. Bullo and Lewis (2005) give the general theory of tracking with a compatible transport map. The sphere law and its Lyapunov function follow Wu (2017) and Sreenath, Lee and Kumar (2013), who also designed the load cascade. Kotaru (2022) describes its implementation and gain tuning on hardware. The singular-perturbation view of cascades with scaled attitude gains is from Wu (2017). The feedback-linearization reading, the grid comparison with Euler angles, the Reaction Mass Biped and the remarks on what large-angle guarantees are worth for legs are from Siravuru (2019, ch. 4 to 6). The comparison of attitude error vectors and the lingering near half a turn are from Mueller (2018), and the convergence of the logarithm error from Teng et al. (2022). The invariance principle, stable manifolds and Gronwall's inequality are in Khalil (2002).
+The attitude law [](#eq6-law), the Lyapunov function with a cross term, the construction [](#eq6-Rd) of the attitude reference and the cascade analysis are due to Lee, Leok and McClamroch (2010). Their bounds use a cross term without the inertia. Ours, [](#eq6-c-bound) and [](#eq6-W), are derived for the form [](#eq6-V) and checked numerically. Error functions with four isolated critical points go back to Koditschek (1989), and Chaturvedi, Sanyal and McClamroch (2011) survey the almost-global stabilization of attitude built on them. Bullo and Lewis (2005) give the general theory of tracking with a compatible transport map. The sphere law and its Lyapunov function follow Wu (2017) and Sreenath, Lee and Kumar (2013), who also designed the load cascade. Kotaru (2022) describes its implementation and gain tuning on hardware. The singular-perturbation view of cascades with scaled attitude gains is from Wu (2017). The feedback-linearization reading, the grid comparison with Euler angles, the Reaction Mass Biped and the remarks on what large-angle guarantees are worth for legs are from Siravuru (2019, ch. 4 to 6). The comparison of attitude error vectors and the lingering near half a turn are from Mueller (2018), and the convergence of the logarithm error from Teng et al. (2022). The invariance principle, stable manifolds and Gronwall's inequality are in Khalil (2002).
 
 - S. P. Bhat and D. S. Bernstein, ["A topological obstruction to continuous global stabilization of rotational motion and the unwinding phenomenon"](https://doi.org/10.1016/S0167-6911%2899%2900090-0), *Systems & Control Letters* 39(1), 2000.
 - F. Bullo and A. D. Lewis, [*Geometric Control of Mechanical Systems*](https://doi.org/10.1007/978-1-4899-7276-7), Springer, 2005.

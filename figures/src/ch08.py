@@ -11,32 +11,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "verify"))
 import ch08 as m  # noqa: E402
-from figkit import (INDIGO, INK, MUTED, PAPER, PEACH, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
-                    Scene, animate, ease, geodesic, halo, new_plot, phase, rot, save, small_circle, unit)
+from figkit import (DASH, INDIGO, INK, MUTED, PAPER, PEACH, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
+                    Scene, animate, ease, geodesic, halo, new_plot, phase, quadrotor, rot, save, small_circle, unit)
 
 OUT = ROOT / "figures"
 E1, E2, E3 = np.eye(3)
 SANS = dict(fontfamily="Source Sans 3")
-DASHED = (0, (3.5, 3))
-
-
-def circle3(center, normal, radius, n=60):
-    normal = unit(normal)
-    a = unit(np.cross(normal, [0.31, 0.52, 0.8]))
-    b = np.cross(normal, a)
-    t = np.linspace(0, 2 * np.pi, n)
-    return np.asarray(center) + radius * (np.outer(np.cos(t), a) + np.outer(np.sin(t), b))
-
-
-def draw_quad(s, x, R, arm=0.5, color=INK, lw=1.5, alpha=1.0, dashed=False, zorder=24):
-    """A quadrotor drawn from its real pose: two arms and four rotor disks."""
-    kw = dict(color=color, lw=lw, alpha=alpha, zorder=zorder)
-    if dashed:
-        kw["linestyle"] = DASHED
-    for d in (R[:, 0], R[:, 1]):
-        s.curve(np.array([x - arm * d, x + arm * d]), **kw)
-    for d in (R[:, 0], -R[:, 0], R[:, 1], -R[:, 1]):
-        s.curve(circle3(x + arm * d + 0.04 * arm * R[:, 2], R[:, 2], 0.36 * arm), **{**kw, "lw": 0.75 * lw})
+DASHED = DASH
 
 
 # ------------------------------------------------------------ opening picture
@@ -48,8 +29,8 @@ def puzzle():
     # --- left: the vehicle that will not level
     x0 = np.array([-1.55, 0.0, 0.0])
     s.shadow(x0 - 1.0 * E3, 0.75, strength=0.16)
-    draw_quad(s, x0, np.eye(3), arm=0.62, color=MUTED, lw=1.0, dashed=True, zorder=18)
-    draw_quad(s, x0, R, arm=0.62)
+    quadrotor(s, x0, np.eye(3), arm=0.62, color=MUTED, lw=1.2, dashed=True, zorder=18)     # the desired pose
+    quadrotor(s, x0, R, arm=0.62, zorder=24)
     cam = x0 + R @ (m.R_ADD * 0.62 / 0.25)
     s.curve(np.array([x0 + R @ np.array([m.R_ADD[0] * 0.62 / 0.25, 0, 0]), cam]), color=TERRACOTTA, lw=1.4, alpha=1.0, zorder=26)
     s.dot(cam, color=TERRACOTTA, size=8.5, zorder=27)
@@ -69,12 +50,12 @@ def puzzle():
             color=SAND, alpha=0.85, zorder=22)
     xq = w0 + np.array([-0.95, 0.0, 0.05])
     Rq = rot(E2, np.radians(9))
-    draw_quad(s, xq, Rq, arm=0.4, zorder=28)
+    quadrotor(s, xq, Rq, arm=0.4, zorder=28)
     path = np.array([w0 + np.array([x, 0.0, 0.05 + 0.1 * np.sin(1.3 * x)]) for x in np.linspace(-2.0, 0.0, 40)])
-    s.curve(path[:22], color=INDIGO, lw=1.4, alpha=1.0, linestyle=DASHED, zorder=17)
-    s.curve(path[27:], color=INDIGO, lw=1.4, alpha=1.0, linestyle=DASHED, zorder=30)
+    s.curve(path[:22], color=MUTED, lw=1.2, alpha=1.0, linestyle=DASHED, zorder=17)       # the reference: dashed, gray
+    s.curve(path[27:], color=MUTED, lw=1.2, alpha=1.0, linestyle=DASHED, zorder=30)
     beyond = np.array([w0 + np.array([x, 0.0, 0.05 + 0.1 * np.sin(1.3 * x)]) for x in np.linspace(0.0, 0.9, 20)])
-    s.curve(beyond[:-2], color=TERRACOTTA, lw=1.4, alpha=1.0, linestyle=DASHED, zorder=16)
+    s.curve(beyond[:-2], color=TERRACOTTA, lw=1.2, alpha=1.0, linestyle=DASHED, zorder=16)   # ... terracotta where it is unsafe
     s.arrow(beyond[-3], beyond[-1], color=TERRACOTTA, lw=1.4, head=0.1, zorder=16)
     s.label(w0 + np.array([0, 0.0, 0.95]), "wall", dx=-3, dy=9, size=10, **SANS)
     s.label(beyond[-1], r"$x_d(t)$", dx=14, dy=8, color=TERRACOTTA, size=11.5)
@@ -82,7 +63,7 @@ def puzzle():
     s.save(OUT / "ch08-puzzle.svg", pad=0.1)
 
 
-# ------------------------------------------------------ nominal against L1
+# ------------------------------- plain controller against L1 adaptive control
 def l1():
     h = 1e-3
     fig, (ax0, ax1) = new_plot(6.6, 2.9, ncols=2)
@@ -94,12 +75,12 @@ def l1():
     ax0.set_xlim(0, 10)
     ax0.set_yticks([0.01, 0.1, 1, 10])
     ax0.set_yticklabels(["0.01°", "0.1°", "1°", "10°"])
-    ax0.text(9.8, 24, "geometric PD", color=TERRACOTTA, ha="right", fontsize=10, **SANS)
-    ax0.text(9.8, 0.062, "with L1 adaptation", color=INDIGO, ha="right", fontsize=10, **SANS, path_effects=halo())
+    ax0.text(9.8, 24, "plain controller", color=TERRACOTTA, ha="right", fontsize=10, **SANS)
+    ax0.text(9.8, 0.062, "with L1 adaptive control", color=INDIGO, ha="right", fontsize=10, **SANS, path_effects=halo())
     ax0.set_title("attitude error, camera and gusts", fontsize=10, loc="left", color=INK, **SANS)
     ax0.set_xlabel("time (s)", fontsize=9.5, **SANS)
 
-    o = m.run_attitude("l1", m.ConingReference(h), m.dist_camera_gust, 5.0, noise=0.02, kappa=10.0)
+    o = m.run_attitude("l1", m.ConingReference(h), m.dist_camera_gust, 5.0, noise=0.02, k_f=10.0)
     sel = (o["t"] > 1.0) & (o["t"] < 5.0)
     ax1.plot(o["t"][sel], o["Dhat"][sel, 1], color=MUTED, lw=0.5, alpha=0.9)
     ax1.plot(o["t"][sel], o["Delta"][sel, 1], color=INK, lw=1.6)
@@ -120,12 +101,12 @@ def l1():
 def filter_tradeoff():
     import json
     vals = json.loads((ROOT / "verify" / "ch08_values.json").read_text())
-    kap = np.array([1, 3, 10, 30, 100, 300])
-    err = np.array([vals[f"cutoff_{k}_rms_deg"] for k in kap])
-    rate = np.array([vals[f"cutoff_{k}_torque_rate"] for k in kap])
+    cutoffs = np.array([1, 3, 10, 30, 100, 300])
+    err = np.array([vals[f"cutoff_{k}_rms_deg"] for k in cutoffs])
+    rate = np.array([vals[f"cutoff_{k}_torque_rate"] for k in cutoffs])
     fig, (ax0, ax1) = new_plot(6.6, 2.8, ncols=2)
     fig.subplots_adjust(left=0.085, right=0.985, bottom=0.2, top=0.86, wspace=0.3)
-    ax0.loglog(kap, err, "o-", color=INDIGO, lw=1.6, ms=4)
+    ax0.loglog(cutoffs, err, "o-", color=INDIGO, lw=1.6, ms=4)
     ax0.set_ylim(0.03, 30)
     ax0.set_yticks([0.1, 1, 10])
     ax0.set_yticklabels(["0.1°", "1°", "10°"])
@@ -133,7 +114,7 @@ def filter_tradeoff():
     ax0.text(1.0, vals["cutoff_pd_rms_deg"] * 1.25, "no adaptation", color=TERRACOTTA, fontsize=9.5, **SANS)
     ax0.text(18, 1.0, "RMS attitude error", color=INDIGO, fontsize=9.5, ha="left", **SANS)
     axr = ax0.twinx()
-    axr.loglog(kap, rate, "s-", color=TEAL, lw=1.6, ms=4)
+    axr.loglog(cutoffs, rate, "s-", color=TEAL, lw=1.6, ms=4)
     axr.set_ylim(3, 3000)
     for side in ("top", "left"):
         axr.spines[side].set_visible(False)
@@ -142,20 +123,20 @@ def filter_tradeoff():
     for lab in axr.get_yticklabels():
         lab.set_fontfamily("Source Sans 3")
     ax0.text(1.0, 0.062, "torque rate (N·m/s, right axis)", color=TEAL, fontsize=9.5, ha="left", va="center", **SANS)
-    ax0.set_xlabel("filter cutoff  κ  (rad/s)", fontsize=9.5, **SANS)
+    ax0.set_xlabel(r"filter cutoff  $k_f$  (rad/s)", fontsize=9.5, **SANS)
     ax0.set_title("too low is slow, too high is rough", fontsize=10, loc="left", color=INK, **SANS)
 
     ks = np.array([3, 30, 300])
     dm = np.array([vals[f"delay_margin_cutoff_{k}_ms"] for k in ks])
     ax1.semilogx(ks, dm, "o-", color=INDIGO, lw=1.6, ms=5)
-    ax1.plot([30, 30], [vals["delay_margin_gamma_1000_ms"], vals["delay_margin_gamma_16000_ms"]], "o", ms=9, mfc="none", mec=TEAL, mew=1.1)
+    ax1.plot([30, 30], [vals["delay_margin_k_Delta_1000_ms"], vals["delay_margin_k_Delta_16000_ms"]], "o", ms=9, mfc="none", mec=TEAL, mew=1.1)
     ax1.axhline(vals["delay_margin_pd_ms"], color=TERRACOTTA, lw=1.0, ls=DASHED)
     ax1.text(1.2, vals["delay_margin_pd_ms"] + 1.5, "no adaptation", color=TERRACOTTA, fontsize=9.5, **SANS)
-    ax1.annotate("same for adaptation gains\nγ = 1000, 4000, 16000", (30, dm[1]), xytext=(1.25, 10), fontsize=9.5, color=TEAL, ha="left",
+    ax1.annotate("same for adaptation gains\n" + r"$k_\Delta$ = 1000, 4000, 16000", (30, dm[1]), xytext=(1.25, 10), fontsize=9.5, color=TEAL, ha="left",
                  va="center", linespacing=1.15, arrowprops=dict(arrowstyle="-", color=TEAL, lw=0.7, shrinkB=5), **SANS)
     ax1.set_xlim(1, 500)
     ax1.set_ylim(0, 54)
-    ax1.set_xlabel("filter cutoff  κ  (rad/s)", fontsize=9.5, **SANS)
+    ax1.set_xlabel(r"filter cutoff  $k_f$  (rad/s)", fontsize=9.5, **SANS)
     ax1.set_title("input delay the loop survives (ms)", fontsize=10, loc="left", color=INK, **SANS)
     save(fig, OUT / "ch08-filter.svg")
 

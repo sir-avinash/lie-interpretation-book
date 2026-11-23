@@ -98,7 +98,7 @@ def angle_deg(R):
 m_Q = 4.34
 J = np.diag([0.0820, 0.0845, 0.1377])
 Jinv = np.linalg.inv(J)
-k_R, k_Om = 8.81, 2.54
+k_R, k_Omega = 8.81, 2.54
 k_x, k_v = 16 * m_Q, 5.6 * m_Q
 J_min, J_max = J[0, 0], J[2, 2]
 
@@ -110,8 +110,8 @@ J_min, J_max = J[0, 0], J[2, 2]
 # gives the closed loop $J\,\dot e_\Omega = -k_R\,e_R - k_\Omega\,e_\Omega$.
 
 # %%
-def att_torque(R, Om, Rd, Omd, Omd_dot, kR=k_R, kOm=k_Om):
-    return (-kR * e_R(R, Rd) - kOm * e_Omega(R, Om, Rd, Omd) + np.cross(Om, J @ Om)
+def att_torque(R, Om, Rd, Omd, Omd_dot, k_R=k_R, k_Omega=k_Omega):
+    return (-k_R * e_R(R, Rd) - k_Omega * e_Omega(R, Om, Rd, Omd) + np.cross(Om, J @ Om)
             - J @ (np.cross(Om, R.T @ Rd @ Omd) - R.T @ Rd @ Omd_dot))
 
 
@@ -151,35 +151,35 @@ print("largest gap between the error histories, tumbling reference against fixed
 #
 # ## 2. The proof, and what it needs
 #
-# $V = \tfrac12 e_\Omega\cdot J e_\Omega + k_R\Psi_R + c\,e_R\cdot J e_\Omega$, with the three matrices $W_1, W_2, W_3$ of the theorem.
+# $V = \tfrac12 e_\Omega\cdot J e_\Omega + k_R\Psi_R + c\,e_R\cdot J e_\Omega$, with the three matrices $W_1, W_2, W_3$ of the theorem and the guaranteed rate $\gamma = \lambda_{\min}(W_3)/\lambda_{\max}(W_2)$.
 
 # %%
-def c_limit(kR, kOm, Jmin, Jmax):
-    return min(np.sqrt(kR * Jmin) / Jmax, 4 * kR * kOm / (kOm**2 + 4 * kR * Jmax))
+def c_limit(k_R, k_Omega, J_min, J_max):
+    return min(np.sqrt(k_R * J_min) / J_max, 4 * k_R * k_Omega / (k_Omega**2 + 4 * k_R * J_max))
 
 
-def W_matrices(kR, kOm, Jmin, Jmax, c, Psi_max):
-    W1 = 0.5 * np.array([[kR, -c * Jmax], [-c * Jmax, Jmin]])
-    W2 = 0.5 * np.array([[2 * kR / (2 - Psi_max), c * Jmax], [c * Jmax, Jmax]])
-    W3 = np.array([[c * kR, -c * kOm / 2], [-c * kOm / 2, kOm - c * Jmax]])
+def W_matrices(k_R, k_Omega, J_min, J_max, c, Psi_max):
+    W1 = 0.5 * np.array([[k_R, -c * J_max], [-c * J_max, J_min]])
+    W2 = 0.5 * np.array([[2 * k_R / (2 - Psi_max), c * J_max], [c * J_max, J_max]])
+    W3 = np.array([[c * k_R, -c * k_Omega / 2], [-c * k_Omega / 2, k_Omega - c * J_max]])
     return W1, W2, W3
 
 
 worst = dict(lower=-np.inf, upper=-np.inf, rate=-np.inf)
 for _ in range(3000):
     Jd = np.sort(0.01 + rng.random(3))
-    U = expm_so3(3 * rng.normal(size=3))
-    Jr = U @ np.diag(Jd) @ U.T
-    kR, kOm = 0.1 + 20 * rng.random(), 0.05 + 5 * rng.random()
-    c = c_limit(kR, kOm, Jd[0], Jd[2]) * rng.uniform(0.01, 0.99)
+    R_J = expm_so3(3 * rng.normal(size=3))
+    Jr = R_J @ np.diag(Jd) @ R_J.T
+    k_R_i, k_Omega_i = 0.1 + 20 * rng.random(), 0.05 + 5 * rng.random()        # random gains for this sample
+    c = c_limit(k_R_i, k_Omega_i, Jd[0], Jd[2]) * rng.uniform(0.01, 0.99)
     Psi_max = 2 * rng.uniform(0.01, 0.999)
     R = expm_so3(np.arccos(1 - Psi_max * rng.random()) * unit(rng.normal(size=3)))
     eO = 3 * rng.random() * rng.normal(size=3)
     e_Rv, Psi, C = e_R(R, EYE), Psi_R(R, EYE), C_R(R, EYE)
     z = np.array([np.linalg.norm(e_Rv), np.linalg.norm(eO)])
-    W1, W2, W3 = W_matrices(kR, kOm, Jd[0], Jd[2], c, Psi_max)
-    V = 0.5 * eO @ Jr @ eO + kR * Psi + c * e_Rv @ Jr @ eO
-    V_dot = -kOm * eO @ eO + c * eO @ C.T @ Jr @ eO - c * kR * e_Rv @ e_Rv - c * kOm * e_Rv @ eO
+    W1, W2, W3 = W_matrices(k_R_i, k_Omega_i, Jd[0], Jd[2], c, Psi_max)
+    V = 0.5 * eO @ Jr @ eO + k_R_i * Psi + c * e_Rv @ Jr @ eO
+    V_dot = -k_Omega_i * eO @ eO + c * eO @ C.T @ Jr @ eO - c * k_R_i * e_Rv @ e_Rv - c * k_Omega_i * e_Rv @ eO
     worst["lower"] = max(worst["lower"], z @ W1 @ z - V)
     worst["upper"] = max(worst["upper"], V - z @ W2 @ z)
     worst["rate"] = max(worst["rate"], V_dot + z @ W3 @ z)
@@ -190,7 +190,7 @@ def error_run(Re0, eOm0, t_f, n=1201, law="trace"):
     def rhs(t, s):
         Re, eO = s[:9].reshape(3, 3), s[9:]
         e = e_R(Re, EYE) if law == "trace" else log_so3(Re)
-        return np.concatenate([(Re @ hat(eO)).ravel(), Jinv @ (-k_R * e - k_Om * eO)])
+        return np.concatenate([(Re @ hat(eO)).ravel(), Jinv @ (-k_R * e - k_Omega * eO)])
 
     ts = np.linspace(0, t_f, n)
     sol = solve_ivp(rhs, [0, t_f], np.concatenate([Re0.ravel(), eOm0]), t_eval=ts, rtol=1e-9, atol=1e-11)
@@ -199,8 +199,8 @@ def error_run(Re0, eOm0, t_f, n=1201, law="trace"):
 
 def best_rate(Psi_max):
     best = (0.0, 0.0)
-    for c in np.linspace(0.002, 0.998, 499) * c_limit(k_R, k_Om, J_min, J_max):
-        _, W2, W3 = W_matrices(k_R, k_Om, J_min, J_max, c, Psi_max)
+    for c in np.linspace(0.002, 0.998, 499) * c_limit(k_R, k_Omega, J_min, J_max):
+        _, W2, W3 = W_matrices(k_R, k_Omega, J_min, J_max, c, Psi_max)
         best = max(best, (np.linalg.eigvalsh(W3)[0] / np.linalg.eigvalsh(W2)[-1], c))
     return best
 
@@ -212,7 +212,7 @@ gamma, c = best_rate(Psi_max)
 V = np.array([0.5 * eO @ J @ eO + k_R * Psi_R(R, EYE) + c * e_R(R, EYE) @ J @ eO for R, eO in zip(Res, eOs)])
 measured = -np.polyfit(ts[ts > 1.5], np.log(V[ts > 1.5]), 1)[0]
 print(f"V0(0) = {V0[0]:.2f} < 2 k_R = {2 * k_R:.2f},  Psi_max = {Psi_max:.3f}")
-print(f"limits on c: {np.sqrt(k_R * J_min) / J_max:.2f} and {4 * k_R * k_Om / (k_Om**2 + 4 * k_R * J_max):.2f};  best c = {c:.2f}")
+print(f"limits on c: {np.sqrt(k_R * J_min) / J_max:.2f} and {4 * k_R * k_Omega / (k_Omega**2 + 4 * k_R * J_max):.2f};  best c = {c:.2f}")
 print(f"guaranteed rate {gamma:.3f} 1/s,  measured rate {measured:.1f} 1/s")
 
 fig, ax = plt.subplots(1, 2, figsize=(9, 3.2))
@@ -235,7 +235,7 @@ plt.show()
 
 # %%
 def half_turn_eigenvalues(a):
-    A = np.block([[np.zeros((3, 3)), EYE], [Jinv @ (k_R * np.outer(a, a)), -k_Om * Jinv]])
+    A = np.block([[np.zeros((3, 3)), EYE], [Jinv @ (k_R * np.outer(a, a)), -k_Omega * Jinv]])
     return np.linalg.eigvals(A)
 
 
@@ -276,7 +276,7 @@ plt.show()
 
 # %%
 m_p, l_p = 1.0, 1.0
-k_q, k_om = 16.0, 5.6
+k_q, k_omega = 16.0, 5.6
 CONE, W_REF = np.radians(35), 1.2
 
 
@@ -289,7 +289,7 @@ def ref_s2(t):
 
 
 def s2_force(q, om, qd, omd, omd_dot):
-    om_dot = tangent(q, omd_dot) - (q @ omd) * np.cross(om, q) - k_q * e_q(q, qd) - k_om * e_omega(q, om, omd)
+    om_dot = tangent(q, omd_dot) - (q @ omd) * np.cross(om, q) - k_q * e_q(q, qd) - k_omega * e_omega(q, om, omd)
     return m_p * GRAV * E3 + m_p * l_p * np.cross(om_dot, q)
 
 
@@ -319,7 +319,8 @@ plt.show()
 # %% [markdown]
 # ## 5. Cascades
 #
-# Quadrotor: $F_d = -k_x (x - x_d) - k_v (v - \dot x_d) + m g\,e_3 + m\ddot x_d$, $f = F_d\cdot R e_3$, and $R_d$ built from $F_d$ and the heading.
+# Quadrotor: $F_d = -k_x e_x - k_v e_v + m g\,e_3 + m\ddot x_d$ with $e_x = x - x_d$, $e_v = v - \dot x_d$, then $f = F_d\cdot R e_3$, and $R_d$ built from $F_d$ and the heading.
+# The position error obeys $m\,\dot e_v = -k_x e_x - k_v e_v + e_F$ with the force error $e_F = f R e_3 - F_d$.
 # `Rd_derivs` returns $\Omega_d$ and $\dot\Omega_d$ from $F_d$, $\dot F_d$, $\ddot F_d$, which the model supplies in closed form.
 
 # %%
@@ -366,7 +367,7 @@ def quad_ctrl(t, x, v, R, Om, feedforward=True, kappa=1.0):
     Rd, Omd, Omd_dot = Rd_derivs(Fd, F1, F2, hd, hd1, hd2)
     if not feedforward:
         Omd, Omd_dot = np.zeros(3), np.zeros(3)
-    return f, att_torque(R, Om, Rd, Omd, Omd_dot, kappa**2 * k_R, kappa * k_Om), Rd
+    return f, att_torque(R, Om, Rd, Omd, Omd_dot, kappa**2 * k_R, kappa * k_Omega), Rd
 
 
 def quad_run(x0, v0, R0, t_f, feedforward=True, kappa=1.0, n=1001, stop=5.0):
@@ -416,19 +417,19 @@ for ff, kappa in ((True, 1.0), (False, 1.0), (False, 2.0), (False, 4.0)):
 # %% [markdown]
 # ### One more layer: the cable-suspended load
 #
-# $F_L = -k_x (x_L - x_d) - k_v (v_L - \dot x_d) + (m_Q + m_L)(\ddot x_d + g\,e_3)$, the cable is asked to point along
+# $F_L = -k_x e_x - k_v e_v + (m_Q + m_L)(\ddot x_d + g\,e_3)$ with $e_x = x_L - x_d$, $e_v = v_L - \dot x_d$, the cable is asked to point along
 # $q_d = -(F_L + m_Q l\|\dot q\|^2 q)/\|\cdot\|$, and the thrust vector is
 # $(F_L\cdot q + m_Q l\|\dot q\|^2)\,q + m_Q l\; q\times(-k_q e_q - k_\omega e_\omega)$. No feedforward for the inner loops.
 
 # %%
 m_L, l_c = 0.5, 1.0
-kxL, kvL, kqL, komL = 4.0 * (m_Q + m_L), 2.8 * (m_Q + m_L), 25.0, 7.0
+k_x_L, k_v_L, k_q_L, k_omega_L = 4.0 * (m_Q + m_L), 2.8 * (m_Q + m_L), 25.0, 7.0
 
 
 def load_force(x, v, q, om, xd):
-    A = -kxL * (x - xd) - kvL * v + (m_Q + m_L) * GRAV * E3 + m_Q * l_c * (om @ om) * q
+    A = -k_x_L * (x - xd) - k_v_L * v + (m_Q + m_L) * GRAV * E3 + m_Q * l_c * (om @ om) * q
     qd = -unit(A)
-    return (A @ q) * q + m_Q * l_c * np.cross(q, -kqL * e_q(q, qd) - komL * om)
+    return (A @ q) * q + m_Q * l_c * np.cross(q, -k_q_L * e_q(q, qd) - k_omega_L * om)
 
 
 def load_run(kappa, t_f=12.0):
@@ -438,7 +439,7 @@ def load_run(kappa, t_f=12.0):
         x, v, q, om, R, Om = s[:3], s[3:6], s[6:9], s[9:12], s[12:21].reshape(3, 3), s[21:]
         F = load_force(x, v, q, om, xd)
         u = max(F @ (R @ E3), 0.0) * R @ E3
-        tau = att_torque(R, Om, Rd_from(F, E1), np.zeros(3), np.zeros(3), kappa**2 * k_R, kappa * k_Om)
+        tau = att_torque(R, Om, Rd_from(F, E1), np.zeros(3), np.zeros(3), kappa**2 * k_R, kappa * k_Omega)
         return np.concatenate([v, ((q @ u) - m_Q * l_c * (om @ om)) * q / (m_Q + m_L) - GRAV * E3, np.cross(om, q),
                                -np.cross(q, u) / (m_Q * l_c), (R @ hat(Om)).ravel(), Jinv @ (tau - np.cross(Om, J @ Om))])
 
@@ -467,12 +468,12 @@ plt.show()
 # ## 6. The same law as feedback linearization
 #
 # A 3D pendulum, $J\dot\Omega + \Omega\times J\Omega = m g\,(R^\top e_3)\times\rho + \tau$, stabilized at the hanging attitude two ways:
-# the geometric law ($\dot\Omega = -K_p e_R - K_d\Omega$) and the Euler-angle law ($\ddot\Theta = -K_p\Theta - K_d\dot\Theta$).
+# the geometric law ($\dot\Omega = -k_p e_R - k_d\Omega$) and the Euler-angle law ($\ddot\Theta = -k_p\Theta - k_d\dot\Theta$).
 
 # %%
 m_3, rho_3, J_3 = 1.0, np.array([0.0, 0.0, -0.5]), np.diag([0.1625, 0.1625, 0.01])
 J3inv = np.linalg.inv(J_3)
-K_P, K_D = 100.0, 20.0
+k_p, k_d = 100.0, 20.0
 
 
 def Rz(a):
@@ -506,7 +507,7 @@ def E_dot(th, ph, th1, ph1):
 
 
 def tau_geo(R, Om):
-    return J_3 @ (-K_P * e_R(R, EYE) - K_D * Om) + np.cross(Om, J_3 @ Om) - grav_3(R)
+    return J_3 @ (-k_p * e_R(R, EYE) - k_d * Om) + np.cross(Om, J_3 @ Om) - grav_3(R)
 
 
 def tau_euler(R, Om):
@@ -515,7 +516,7 @@ def tau_euler(R, Om):
         return np.full(3, np.nan)                               # E has no inverse
     Em = E_mat(Th[1], Th[2])
     Th1 = np.linalg.solve(Em, Om)
-    return J_3 @ (Em @ (-K_P * Th - K_D * Th1) + E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1) + np.cross(Om, J_3 @ Om) - grav_3(R)
+    return J_3 @ (Em @ (-k_p * Th - k_d * Th1) + E_dot(Th[1], Th[2], Th1[1], Th1[2]) @ Th1) + np.cross(Om, J_3 @ Om) - grav_3(R)
 
 
 def fl_run(R0, Om0, law, t_f=3.0):
@@ -561,13 +562,13 @@ for pitch in (60.0, 89.9, 89.99):
 # - **The sphere.** Change `ref_s2` to a reference that spins about an axis close to `q`, and compare convergence.
 # - **Feedforward.** `quad_run(..., feedforward=False, kappa=...)` reproduces the Pitfall. Bisect on `kappa`.
 # - **The grid.** Replace `e_R(R, EYE)` by `log_so3(R)` in `tau_geo`, or shift `grid` by one degree, and rerun the last cell.
-# - **The load.** Lower `kqL` in `load_force` until `load_run(2.0)` fails.
+# - **The load.** Lower `k_q_L` in `load_force` until `load_run(2.0)` fails.
 
 # %%
 def rate_for(c, Psi_max=1.0):
-    _, W2, W3 = W_matrices(k_R, k_Om, J_min, J_max, c, Psi_max)
+    _, W2, W3 = W_matrices(k_R, k_Omega, J_min, J_max, c, Psi_max)
     return np.linalg.eigvalsh(W3)[0] / np.linalg.eigvalsh(W2)[-1]
 
 
-cs = np.linspace(0.01, 0.99, 99) * c_limit(k_R, k_Om, J_min, J_max)
+cs = np.linspace(0.01, 0.99, 99) * c_limit(k_R, k_Omega, J_min, J_max)
 print(f"best guaranteed rate for Psi_max = 1: {max(rate_for(c) for c in cs):.3f} 1/s")
