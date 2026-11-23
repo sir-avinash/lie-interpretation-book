@@ -6,8 +6,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-from figkit import (INDIGO, INK, MUTED, PAPER, PEACH, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
-                    Scene, geodesic, great_circle, halo, hat, new_plot, rot, save, unit)
+from figkit import (DASH, ICE, INDIGO, INK, MUTED, PAPER, PEACH, PERIWINKLE, SAND, TEAL, TERRACOTTA,  # noqa: E402
+                    Scene, animate, ease, geodesic, great_circle, halo, hat, new_plot, phase, quadrotor, rot, save, unit)
 
 OUT = ROOT / "figures"
 E1, E2, E3 = np.eye(3)
@@ -450,11 +450,7 @@ def comb():
 
 
 if __name__ == "__main__":
-    tangent()
-    expmap()
-    noncommute()
-    quadload()
-    r = steps()
-    print(f"steps figure: Euler radius after four steps = {r:.4f}")
-    drift()
-    comb()
+    figures = dict(puzzle=puzzle, tangent=tangent, turntable=turntable, expmap=expmap, noncommute=noncommute,
+                   quadload=quadload, steps=steps, drift=drift, comb=comb)
+    for name in sys.argv[1:] or figures:
+        figures[name]()
