@@ -15,7 +15,7 @@ That was one angle. A drone has three, tangled together, and the patches stop wo
 
 ## The space a rotation lives in {#sec-rotation-space}
 
-Bolt a frame to a rigid body and another to the world. Stack the body's three axes, written in world coordinates, as the columns of a matrix $R$. The columns are unit length and mutually perpendicular, and they form a right-handed set. Those two facts are the whole definition.
+Bolt a frame to a rigid body, the **body frame**, and another to the world, the **world frame**. Stack the body's three axes, written in world coordinates, as the columns of a matrix $R$. The columns are unit length and mutually perpendicular, and they form a right-handed set. Those two facts are the whole definition.
 
 ::: {.definition #def-so3 name="Rotation group"}
 $$
@@ -23,13 +23,13 @@ $$
 $$
 :::
 
-Nine numbers, six constraints, three degrees of freedom. The set is closed under multiplication and inversion, so it is a group. It is also a smooth, curved, three-dimensional surface sitting inside $\R^9$, which makes it a **Lie group**. [](#ch-manifolds) takes that phrase apart. For now one picture is enough.
+Nine numbers, six constraints, three degrees of freedom. The set is closed under multiplication and inversion, so it is a group. It is also a smooth, curved, three-dimensional surface sitting inside $\R^9$, which makes it a Lie group. [](#def2-lie-group) takes that phrase apart. For now one picture is enough.
 
-Every rotation is a turn by some angle $\theta \in [0, \pi]$ about some unit axis $u$. Plot it as the point $\theta u$ in ordinary space. All rotations then fill a solid ball of radius $\pi$ ([](#fig-so3-ball)). The centre is "no rotation". Walking outward along a ray turns the body further about that axis.
+Every rotation is a turn by some angle $\theta \in [0, \pi]$ about some unit axis $a$. Plot it as the point $\theta a$ in ordinary space. All rotations then fill a solid ball of radius $\pi$ ([](#fig-so3-ball)). The center is "no rotation". Walking outward along a ray turns the body further about that axis.
 
-![The set of all rotations, drawn as a solid ball. A point $\theta u$ is the rotation by angle $\theta$ about axis $u$. Half a turn about $u$ and half a turn about $-u$ are the same rotation, so each boundary point is glued to its antipode. A body that keeps turning about $u$ exits the ball at $\pi u$ and re-enters at $-\pi u$.](figures/ch01-so3-ball.svg){#fig-so3-ball}
+![The set of all rotations, drawn as a solid ball. A point $\theta a$ is the rotation by angle $\theta$ about axis $a$. Half a turn about $a$ and half a turn about $-a$ are the same rotation, so each boundary point is glued to its antipode. A body that keeps turning about $a$ exits the ball at $\pi a$ and re-enters at $-\pi a$.](figures/ch01-so3-ball.svg){#fig-so3-ball}
 
-The catch is at the boundary. Half a turn about $u$ leaves the body exactly where half a turn about $-u$ does. So the point $\pi u$ and the point $-\pi u$ are the *same rotation*, and the ball's surface is glued to itself antipodally. No flat space has that shape. Hold on to this picture. Every failure in this chapter is a different way of ignoring the gluing.
+The catch is at the boundary. Half a turn about $a$ leaves the body exactly where half a turn about $-a$ does. So the point $\pi a$ and the point $-\pi a$ are the *same rotation*, and the ball's surface is glued to itself antipodally. No flat space has that shape. Hold on to this picture. Every failure in this chapter is a different way of ignoring the gluing.
 
 Now let the body move. Its angular velocity, measured in its own frame, is a vector $\Omega \in \R^3$. To write the motion of $R$ we need to turn that vector into a matrix.
 
@@ -42,7 +42,7 @@ $$
 The **vee map** is its inverse, $(x^\wedge)^\vee = x$. The skew-symmetric matrices form the vector space $\so(3)$.
 :::
 
-The kinematics of a rigid body are then one line:
+The kinematics of a rigid body are then one line. (Every symbol and convention of the book is collected in [](#app-notation).)
 
 $$
 \dot R = R\,\Omega^\wedge. \label{eq-kinematics}
@@ -52,16 +52,16 @@ Look at what is absent. No trigonometry, no denominators, no special cases. Equa
 
 ## Trap one: three angles {#sec-euler}
 
-Nine numbers for three degrees of freedom feels wasteful, so the first instinct is to use three. The aerospace favourite is yaw, pitch, roll:
+Nine numbers for three degrees of freedom feels wasteful, so the first instinct is to use three. The aerospace favorite is yaw, pitch, roll:
 
 $$
 R = R_z(\psi)\, R_y(\theta)\, R_x(\phi). \label{eq-zyx}
 $$
 
-Differentiate [](#eq-zyx) and match it against [](#eq-kinematics). The angle rates $\dot\eta = (\dot\psi, \dot\theta, \dot\phi)$ and the body rate are related by a matrix that depends on where you are:
+Differentiate [](#eq-zyx) and match it against [](#eq-kinematics). Collect the angles as $\Theta = (\psi, \theta, \phi)$. The angle rates $\dot\Theta = (\dot\psi, \dot\theta, \dot\phi)$ and the body rate are related by a matrix that depends on where you are:
 
 $$
-\Omega = E(\theta,\phi)\,\dot\eta, \qquad
+\Omega = E(\theta,\phi)\,\dot\Theta, \qquad
 E = \begin{bmatrix} -\sin\theta & 0 & 1 \\ \cos\theta\sin\phi & \cos\phi & 0 \\ \cos\theta\cos\phi & -\sin\phi & 0 \end{bmatrix},
 \qquad \det E = -\cos\theta . \label{eq-euler-jacobian}
 $$
@@ -74,12 +74,12 @@ Picture three nested rings ([](#fig-gimbals)). The outer ring swivels about a ve
 Now pitch the middle ring by 90°. The roll axle, which rides on the middle ring, swings up until it points along the yaw axle. You now have two rings that do the same thing and no ring that does the third thing. One direction of rotation has become impossible to command. Nothing is wrong with the body. The *rings* have run out of directions.
 :::
 
-![Three nested gimbals realise yaw, pitch and roll. (a) At a generic attitude the three axles span all directions. (b) At 90° of pitch the roll axle has rotated onto the yaw axle. The mechanism has lost a degree of freedom, and $\det E = -\cos\theta$ has reached zero.](figures/ch01-gimbals.svg){#fig-gimbals}
+![Three nested gimbals realize yaw, pitch and roll. (a) At a generic attitude the three axles span all directions. (b) At 90° of pitch the roll axle has rotated onto the yaw axle. The mechanism has lost a degree of freedom, and $\det E = -\cos\theta$ has reached zero.](figures/ch01-gimbals.svg){#fig-gimbals}
 
-This is **gimbal lock**, and it is not a historical curiosity. Apollo's inertial platform had three gimbals. During Apollo 11, after Houston warned that a manoeuvre had come close to lock, Michael Collins asked mission control to send him a fourth gimbal for Christmas.^[The exchange is in the Apollo 11 air-to-ground record at about 105 hours mission time, and is discussed in the *Apollo Lunar Surface Journal*.]
+This is **gimbal lock**, and it is not a historical curiosity. Apollo's inertial platform had three gimbals. During Apollo 11, after Houston warned that a maneuver had come close to lock, Michael Collins asked mission control to send him a fourth gimbal for Christmas.^[The exchange is in the Apollo 11 air-to-ground record at about 105 hours mission time, and is discussed in the *Apollo Lunar Surface Journal*.]
 
 ::: {.example #ex-euler-blowup name="A calm body, a panicking chart"}
-A quadrotor pitches up through a manoeuvre with body rate $\Omega = (0, 0.5, 0.5)$ rad/s. Its angular speed is $\|\Omega\| = 0.71$ rad/s, about 40° per second. Unhurried. Take roll $\phi = 45^\circ$ and let the pitch reach $89^\circ$. Solving [](#eq-euler-jacobian) for the yaw rate gives
+A quadrotor pitches up through a maneuver with body rate $\Omega = (0, 0.5, 0.5)$ rad/s. Its angular speed is $\|\Omega\| = 0.71$ rad/s, about 40° per second. Unhurried. Take roll $\phi = 45^\circ$ and let the pitch reach $89^\circ$. Solving [](#eq-euler-jacobian) for the yaw rate gives
 
 $$
 \dot\psi = \frac{\Omega_2 \sin\phi + \Omega_3\cos\phi}{\cos\theta} = \frac{0.707}{0.01745} = 40.5\ \text{rad/s},
@@ -95,19 +95,19 @@ You might try a different angle order. It moves the singularity and does not rem
 There is a second defect, quieter and just as damaging.
 
 ::: {.thought #thought-two-labs name="Two labs, one robot"}
-Two labs test the same robot with the same controller, $\tau = -K_p(\eta - \eta_d) - K_d\dot\eta$. Lab A's world frame has $z$ pointing up. Lab B mounted the motion-capture system sideways, so its world $x$ points up. The robot, the target and the physical error are identical. Do the two controllers command the same torque?
+Two labs test the same robot with the same controller, $\tau = -K_p(\Theta - \Theta_d) - K_d\dot\Theta$. Lab A's world frame has $z$ pointing up. Lab B mounted the motion-capture system sideways, so its world $x$ points up. The robot, the target and the physical error are identical. Do the two controllers command the same torque?
 
-They do not. Rotate the world frame by $Q$ and the attitudes become $QR$ and $QR_d$. The physical error, $R_d\T R$, is unchanged because $(QR_d)\T(QR) = R_d\T R$. But the Euler angles of $QR$ are not the Euler angles of $R$ plus a constant, so the difference $\eta - \eta_d$ changes. Lab B's robot behaves differently for no physical reason.
+They do not. Rotate the world frame by $Y$ and the attitudes become $YR$ and $YR_d$. The physical error, $R_d\T R$, is unchanged because $(YR_d)\T(YR) = R_d\T R$. But the Euler angles of $YR$ are not the Euler angles of $R$ plus a constant, so the difference $\Theta - \Theta_d$ changes. Lab B's robot behaves differently for no physical reason.
 :::
 
 A control law whose output does not depend on the choice of world frame is called **left-invariant**. Euler-angle feedback is not. We will insist on invariance from now on, because a controller that is sensitive to how you bolted down your cameras is not a law about the robot.
 
 ## Trap two: four numbers {#sec-quaternions}
 
-Quaternions are the standard fix. A unit quaternion $\quat = (q_0, q_v)$, with scalar part $q_0$, vector part $q_v \in \R^3$ and $q_0^2 + \|q_v\|^2 = 1$, is a point on the three-sphere $S^3$. The rotation by angle $\theta$ about axis $u$ is
+Quaternions are the standard fix. A unit quaternion $\quat = (q_0, q_v)$, with scalar part $q_0$, vector part $q_v \in \R^3$ and $q_0^2 + \|q_v\|^2 = 1$, is a point on the three-sphere $S^3$. The rotation by angle $\theta$ about axis $a$ is
 
 $$
-\quat = \left(\cos\tfrac{\theta}{2},\ \sin\tfrac{\theta}{2}\,u\right), \qquad
+\quat = \left(\cos\tfrac{\theta}{2},\ \sin\tfrac{\theta}{2}\,a\right), \qquad
 R(\quat) = I + 2 q_0\, q_v^\wedge + 2\,(q_v^\wedge)^2 . \label{eq-quat-to-R}
 $$
 
@@ -147,17 +147,17 @@ Apply [](#eq-quat-pd) with $k_p = 2$, $k_d = 0.6$. From $\quat$ the body turns 1
 
 ![Unwinding. Left: for rotations about one fixed axis, the quaternion lives on a circle that the attitude traverses at half speed, so $+\mathbf{1}$ and $-\mathbf{1}$ are the same attitude. The law [](#eq-quat-pd) only accepts $+\mathbf{1}$. Right: the two simulated responses of [](#ex-unwinding).](figures/ch01-unwinding.svg){#fig-unwinding}
 
-This is **unwinding**, named and analysed by Bhat and Bernstein (2000). The obvious patch is $\tau = -k_p \operatorname{sgn}(q_0)\, q_v - k_d\Omega$, which always takes the short way. It also makes the torque jump when $q_0$ crosses zero, at 180° of error. Sensor noise there flips the sign back and forth and the motors chatter. Fixing *that* needs memory: a hysteresis switch, which makes the controller hybrid (Mayhew, Sanfelice and Teel, 2011).
+This is **unwinding**, named and analyzed by Bhat and Bernstein (2000). The obvious patch is $\tau = -k_p \operatorname{sgn}(q_0)\, q_v - k_d\Omega$, which always takes the short way. It also makes the torque jump when $q_0$ crosses zero, at 180° of error. Sensor noise there flips the sign back and forth and the motors chatter. Fixing *that* needs memory: a hysteresis switch, which makes the controller hybrid (Mayhew, Sanfelice and Teel, 2011).
 
 So the patch works, at the price of a discontinuity. Is there a smarter continuous law that avoids both problems? The next section shows there is not, for any representation, and the reason has nothing to do with quaternions.
 
 ## The obstruction nobody can engineer around {#sec-obstruction}
 
-Go back to the heading on a circle. Suppose a continuous feedback law makes the goal heading asymptotically stable. Just clockwise of the goal, the flow must push anticlockwise. Just anticlockwise of it, the flow must push clockwise. Now walk around the circle from one side of the goal to the other. The flow starts out pointing one way and ends up pointing the other. It is continuous, so somewhere it passes through zero.
+Go back to the heading on a circle. Suppose a continuous feedback law makes the target heading asymptotically stable. Just clockwise of the target, the flow must push counterclockwise. Just counterclockwise of it, the flow must push clockwise. Now walk around the circle from one side of the target to the other. The flow starts out pointing one way and ends up pointing the other. It is continuous, so somewhere it passes through zero.
 
-That zero is a second equilibrium ([](#fig-obstruction), left). A trajectory that starts there never reaches the goal. You did not design it and you cannot remove it. The intermediate value theorem put it there.
+That zero is a second equilibrium ([](#fig-obstruction), left). A trajectory that starts there never reaches the target. You did not design it and you cannot remove it. The intermediate value theorem put it there.
 
-![Left: on a circle, any continuous flow with a stable goal must vanish somewhere else. Right: the same on the sphere. Under $\omega = -k\,e_q$ every point flows to $q_d$ along a great circle, except the antipode $-q_d$, which is an equilibrium.](figures/ch01-obstruction.svg){#fig-obstruction}
+![Left: on a circle, any continuous flow with a stable target must vanish somewhere else. Right: the same on the sphere. Under $\omega = -k\,e_q$ every point flows to $q_d$ along a great circle, except the antipode $-q_d$, which is an equilibrium.](figures/ch01-obstruction.svg){#fig-obstruction}
 
 The general statement replaces the circle with any compact configuration space.
 
@@ -167,9 +167,9 @@ Let the state space be a vector bundle over a compact manifold without boundary,
 
 The proof idea fits in three sentences. The set of states that converge to an asymptotically stable equilibrium can be shrunk continuously to that equilibrium by running the flow, so it is *contractible*. If the equilibrium were globally stable, that set would be the whole state space. But a space built over the glued ball of [](#fig-so3-ball), or over a sphere, has loops and shells that cannot be shrunk to a point.
 
-This changes what we should ask of a controller. Global asymptotic stability with continuous feedback is off the table for attitudes, for any representation and any cleverness. The best possible continuous result is **almost-global** stability: every initial condition converges except a thin set, of measure zero, that drains into the extra equilibria. Those equilibria are unstable, so noise knocks the state off them. A good geometric controller achieves exactly this, and says so honestly.^[On $\SO(3)$ a smooth function with nondegenerate critical points has at least four of them. Koditschek (1989) built attitude error functions with exactly four: the goal, and three half-turn attitudes that are unstable.]
+This changes what we should ask of a controller. Global asymptotic stability with continuous feedback is off the table for attitudes, for any representation and any cleverness. The best possible continuous result is **almost-global** stability: every initial condition converges except a thin set, of measure zero, that drains into the extra equilibria. Those equilibria are unstable, so noise knocks the state off them. A good geometric controller achieves exactly this, and says so honestly.^[On $\SO(3)$ a smooth function with nondegenerate critical points has at least four of them. Koditschek (1989) built attitude error functions with exactly four: the target, and three half-turn attitudes that are unstable.]
 
-Compare that with the quaternion law of [](#ex-unwinding). It also has an extra equilibrium, at $q_0 = -1$. But that point *is the goal attitude*. The law has placed its unavoidable bad point on top of the place you want to be. The theorem says an unstable equilibrium must exist somewhere. It does not say you must put it there.
+Compare that with the quaternion law of [](#ex-unwinding). It also has an extra equilibrium, at $q_0 = -1$. But that point *is the target attitude*. The law has placed its unavoidable bad point on top of the place you want to be. The theorem says an unstable equilibrium must exist somewhere. It does not say you must put it there.
 
 ## The way out: measure error on the manifold {#sec-error}
 
@@ -186,10 +186,10 @@ e_\Omega = \Omega - R\T R_d\,\Omega_d . \label{eq-error-so3}
 $$
 :::
 
-Each piece has a plain reading. If $R_d\T R$ is a turn by angle $\theta$ about axis $u$, then
+Each piece has a plain reading. If $R_d\T R$ is a turn by angle $\theta$ about axis $a$, then
 
 $$
-\Psi_R = 1 - \cos\theta, \qquad e_R = \sin\theta\; u. \label{eq-error-angle}
+\Psi_R = 1 - \cos\theta, \qquad e_R = \sin\theta\; a. \label{eq-error-angle}
 $$
 
 $\Psi_R$ is a height: zero at the target, rising to 2 at half a turn away. It plays the role that $\tfrac12\|x - x_d\|^2$ plays for positions. The vector $e_R$ is its slope. Nudge the attitude by a small body-frame rotation $\eta$, so that $\delta R = R\,\eta^\wedge$, and the height changes by
@@ -200,7 +200,7 @@ $$
 
 So $e_R$ points uphill and $-e_R$ is the torque direction that reduces the error fastest. That is a proportional term, derived instead of guessed.
 
-The velocity error needs one more idea. $\Omega$ is expressed in the body frame and $\Omega_d$ in the target frame. These are different frames, so subtracting the components directly compares unlike things. The matrix $R\T R_d$ re-expresses $\Omega_d$ in the body frame first. It is our first **transport map**, and [](#ch-variations) is largely about why it has to be there. With it, the two errors fit together exactly as position and velocity error do:
+The velocity error needs one more idea. $\Omega$ is expressed in the body frame and $\Omega_d$ in the target frame. These are different frames, so subtracting the components directly compares unlike things. The matrix $R\T R_d$ re-expresses $\Omega_d$ in the body frame first. It is our first transport map, and [](#sec3-transport) explains why it has to be there. With it, the two errors fit together exactly as position and velocity error do:
 
 $$
 \ddt \Psi_R = e_R \cdot e_\Omega . \label{eq-psi-dot}
@@ -214,7 +214,7 @@ R = R_y(\tfrac{\pi}{2}) = \begin{bmatrix} 0 & 0 & 1 \\ 0 & 1 & 0 \\ -1 & 0 & 0 \
 $$
 Nothing happens. The error is finite and points about the pitch axis, as it should.
 
-Now take half a turn about the first axis, $R = \operatorname{diag}(1, -1, -1)$. Then $\Psi_R = 2$, the maximum, and $R$ is symmetric so $e_R = 0$. This is the extra equilibrium that [](#thm-obstruction) promised. It sits at the farthest possible attitude from the goal, which is the right place for it.
+Now take half a turn about the first axis, $R = \operatorname{diag}(1, -1, -1)$. Then $\Psi_R = 2$, the maximum, and $R$ is symmetric so $e_R = 0$. This is the extra equilibrium that [](#thm-obstruction) promised. It sits at the farthest possible attitude from the target, which is the right place for it.
 :::
 
 The same construction works for a direction. A cable, a thrust axis or a pendulum rod is a unit vector $q \in S^2$, moving as $\dot q = \omega \times q$.
@@ -226,19 +226,19 @@ $$
 $$
 :::
 
-Again $\Psi_q = 1 - \cos\theta$ for the angle $\theta$ between the two directions, and $\|e_q\| = \sin\theta$. The vector $e_q$ lies in the tangent plane at $q$, and the feedback $\omega = -k\,e_q$ moves $q$ straight along the great circle toward $q_d$ ([](#fig-s2-error)). The one equilibrium besides the goal is the antipode $-q_d$, and it is unstable: in terms of the angle, the closed loop is $\dot\theta = -k\sin\theta$.
+Again $\Psi_q = 1 - \cos\theta$ for the angle $\theta$ between the two directions, and $\|e_q\| = \sin\theta$. The vector $e_q$ lies in the tangent plane at $q$, and the feedback $\omega = -k\,e_q$ moves $q$ straight along the great circle toward $q_d$ ([](#fig-s2-error)). The one equilibrium besides the target is the antipode $-q_d$, and it is unstable: in terms of the angle, the closed loop is $\dot\theta = -k\sin\theta$.
 
 ![Error on the sphere. Level sets of $\Psi_q$ are circles of latitude about $q_d$. The error vector $e_q = q_d \times q$ lies in the tangent plane at $q$, perpendicular to the great circle through $q$ and $q_d$. The feedback $\omega = -k\,e_q$ produces the velocity $\dot q$ along that great circle.](figures/ch01-s2-error.svg){#fig-s2-error}
 
 ::: {.warning #warn-sine name="The restoring torque fades near half a turn"}
-Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The proportional action $\|e_R\| = \sin\theta$ grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyses this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. [](#ch-variations) compares the alternatives, which reshape $\Psi_R$ so that the push does not fade, and shows what each one costs.
+Equation [](#eq-error-angle) has a consequence worth knowing before you fly. The restoring torque is proportional to $\|e_R\| = \sin\theta$. It grows up to 90° of error and then *shrinks*, reaching zero at 180°. A body flipped almost upside down feels almost no restoring torque, and may linger there. Mueller (2018) analyzes this for multicopters and shows the closed loop can stay near a large error for an arbitrarily long time. It is the price of a smooth error function. [](#sec3-errors) compares the alternatives, which reshape $\Psi_R$ so that the push does not fade, and [](#fig3-heights) and [](#fig3-linger) show what each one costs. [](#sec7-local) measures the same effect on a regulator built by linearization.
 :::
 
 ## Where this leaves us {#sec-roadmap}
 
 We now have the pattern for the whole book. Find the space the configuration lives on. Build errors, velocities and derivatives from the objects themselves. Choose coordinates only to compute, never to define.
 
-The pieces we have used so far were pulled out of a hat: the hat map, the vector $e_R$, the transport $R\T R_d$. The next two chapters derive them. [](#ch-manifolds) sets up the manifolds a robot needs, and [](#ch-variations) explains how to take derivatives and compare velocities on them. After that the same handful of tools gives equations of motion without angles, controllers with almost-global guarantees, linearizations that are valid everywhere, estimators whose error dynamics do not depend on the state, and optimizers that never leave the manifold.
+The pieces we have used so far were pulled out of a hat: the hat map, the vector $e_R$, the transport map $R\T R_d$. The next two chapters derive them. [](#ch-manifolds) sets up the manifolds a robot needs, and [](#ch-variations) explains how to take derivatives and compare velocities on them. After that the same handful of tools gives equations of motion without angles, controllers with almost-global guarantees, linearizations that are valid everywhere, estimators whose error dynamics do not depend on the state, and optimizers that never leave the manifold.
 
 ## Exercises {#sec-ch1-exercises .unnumbered}
 
@@ -247,7 +247,7 @@ Starting from [](#eq-zyx), compute $(R\T \dot R)^\vee$ and confirm [](#eq-euler-
 :::
 
 ::: {.exercise #exr-two-labs}
-Make the two-labs experiment concrete. Pick $R$, $R_d$ and a world-frame change $Q = R_x(0.9)$. Compute $\eta - \eta_d$ before and after the change, and confirm that $e_R$ is unchanged.
+Make the two-labs experiment concrete. Pick $R$, $R_d$ and a world-frame change $Y = R_x(0.9)$. Compute $\Theta - \Theta_d$ before and after the change, and confirm that $e_R$ is unchanged.
 :::
 
 ::: {.exercise #exr-unwinding}
@@ -259,7 +259,7 @@ Write out the circle argument of [](#sec-obstruction) as a proof. Where does it 
 :::
 
 ::: {.exercise #exr-error-identities}
-Prove [](#eq-error-angle) using Rodrigues' formula $R_d\T R = I + \sin\theta\, u^\wedge + (1 - \cos\theta)(u^\wedge)^2$. Deduce $\|e_R\|^2 = \Psi_R(2 - \Psi_R)$, then prove [](#eq-psi-dot).
+Prove [](#eq-error-angle) using Rodrigues' formula $R_d\T R = I + \sin\theta\, a^\wedge + (1 - \cos\theta)(a^\wedge)^2$ of [](#eq2-rodrigues). Deduce $\|e_R\|^2 = \Psi_R(2 - \Psi_R)$, then prove [](#eq-psi-dot).
 :::
 
 ::: {.exercise #exr-antipode}

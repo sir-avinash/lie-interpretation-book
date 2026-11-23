@@ -104,8 +104,8 @@ def run(q_init):
     s = sol.sol(t)
     tau = -kp * s[1:4] - kd * s[4:]
     effort = np.trapezoid(np.sum(tau**2, axis=0), t)
-    travelled = np.trapezoid(np.abs(s[6]), t)  # rotation is about e3 only
-    return t, s, effort, travelled
+    traveled = np.trapezoid(np.abs(s[6]), t)  # rotation is about e3 only
+    return t, s, effort, traveled
 
 
 a0 = np.radians(-10.0)

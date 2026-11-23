@@ -9,9 +9,9 @@ verify: verify/ch03.py
 
 A reference satellite spins steadily about the vertical at one radian per second. Yours copies it exactly: same axis, same rate. The only difference is that your body frame was bolted on a quarter turn away, so your attitude error is a constant 90°. What is your angular velocity error?
 
-Both gyros are honest. The reference gyro reads $\Omega_d = (0, 0, 1)$. Yours reads $\Omega = (0, 1, 0)$, because the vertical happens to be your second body axis ([](#fig3-frames)). Subtract and you get an error of 1.41 rad/s. Yet the two bodies turn together like two parts of one rigid object. Nothing between them is changing. The sensible answer is zero.
+Both gyroscopes are honest. The reference gyroscope reads $\Omega_d = (0, 0, 1)$. Yours reads $\Omega = (0, 1, 0)$, because the vertical happens to be your second body axis ([](#fig3-frames)). Subtract and you get an error of 1.41 rad/s. Yet the two bodies turn together like two parts of one rigid object. Nothing between them is changing. The sensible answer is zero.
 
-![Two frames that spin together about the vertical. They share one motion, but each gyro reports it along its own axes, so the readings differ. Subtracting the readings compares components taken in two different frames.](figures/ch03-frames.svg){#fig3-frames}
+![Two frames that spin together about the vertical. They share one motion, but each gyroscope reports it along its own axes, so the readings differ. Subtracting the readings compares components taken in two different frames.](figures/ch03-frames.svg){#fig3-frames}
 
 [](#ch-why) asked what "error" means for a configuration on a curved space. This is the same question for velocities, and it is the subtler one. A velocity is attached to the place where it was measured. On a flat space every place shares one set of axes, so you subtract without thinking. On a curved space you have to carry one velocity over to the other before you compare, and there is more than one way to carry it. To sort this out we need three things: a way to nudge a configuration, a way to measure how far off it is, and a way to move a velocity from one place to another.
 
@@ -19,20 +19,20 @@ Both gyros are honest. The reference gyro reads $\Omega_d = (0, 0, 1)$. Yours re
 
 Start where nothing can go wrong. A position $x \in \R^3$ is nudged by adding a small vector, $x_\epsilon = x + \epsilon\,\delta x$. Any $\delta x$ will do. The result is still a position.
 
-Try that with a rotation. Is $R + \epsilon M$ a rotation for an arbitrary matrix $M$? Test it against [](#def-so3):
+Try that with a rotation. Is $R + \epsilon A$ a rotation for an arbitrary matrix $A$? Test it against [](#def-so3):
 
 $$
-(R + \epsilon M)\T (R + \epsilon M) = I + \epsilon\,(R\T M + M\T R) + \epsilon^2 M\T M .
+(R + \epsilon A)\T (R + \epsilon A) = I + \epsilon\,(R\T A + A\T R) + \epsilon^2 A\T A .
 $$
 
-The first-order term must vanish, so $R\T M$ must be skew-symmetric. That is six conditions on nine numbers. Three free numbers remain, and the hat map of [](#def-hat) packs them into a vector: $M = R\,\eta^\wedge$. A nudge of a rotation is not an arbitrary matrix. It is a small rotation, and $\eta$ is its axis and angle in the body frame.
+The first-order term must vanish, so $R\T A$ must be skew-symmetric. That is six conditions on nine numbers. Three free numbers remain, and the hat map of [](#def-hat) packs them into a vector: $A = R\,\eta^\wedge$. A nudge of a rotation is not an arbitrary matrix. It is a small rotation, and $\eta$ is its axis and angle in the body frame.
 
 ::: {.thought #thought3-pointer name="Nudging a pointer"}
 Hold a pen at arm's length and call its direction $q$. Now disturb it slightly. You cannot push the tip along the pen: that would stretch it. Every allowed nudge moves the tip sideways, and every sideways nudge is a small rotation about some axis $\xi$, so $\delta q = \xi \times q$. Twirling the pen about its own length does not move the tip at all. So the part of $\xi$ along $q$ does nothing, and we may as well set it to zero: $\xi \cdot q = 0$.
 :::
 
 ::: {.definition #def3-variation name="Variation"}
-Embed a curve in a one-parameter family of curves that stay on the manifold, with $\epsilon = 0$ giving the curve itself. Its **variation** is the first-order gap to its neighbours, $\delta(\cdot) = \frac{\dd}{\dd\epsilon}\big|_{\epsilon = 0}$. On the three spaces of this book,
+Embed a curve in a one-parameter family of curves that stay on the manifold, with $\epsilon = 0$ giving the curve itself. Its **variation** is the first-order gap to its neighbors, $\delta(\cdot) = \frac{\dd}{\dd\epsilon}\big|_{\epsilon = 0}$. On the three spaces of this book,
 $$
 \begin{aligned}
 x_\epsilon &= x + \epsilon\,\delta x, & \delta x &\in \R^3, \\
@@ -50,9 +50,9 @@ The ribbon has two directions: along the curve, in $t$, and across it, in $\epsi
 
 ## Nudging a velocity {#sec3-velocity}
 
-For a position the answer is immediate. Derivatives in $t$ and in $\epsilon$ commute, so $\delta(\dot x) = \frac{\dd}{\dd t}(\delta x)$. The variation of the velocity is the velocity of the variation.
+For a position the answer is immediate. Derivatives in $t$ and in $\epsilon$ commute, so $\delta(\dot x) = \ddt(\delta x)$. The variation of the velocity is the velocity of the variation.
 
-The matrices $R_\epsilon(t)$ obey the same rule, $\delta(\dot R) = \frac{\dd}{\dd t}(\delta R)$. But $\dot R$ is not what a gyro measures. The body rate is $\Omega^\wedge = R\T \dot R$, and the frame $R$ moves when we step across the ribbon. Work out both sides:
+The matrices $R_\epsilon(t)$ obey the same rule, $\delta(\dot R) = \ddt(\delta R)$. But $\dot R$ is not what a gyroscope measures. The body rate is $\Omega^\wedge = R\T \dot R$, and the frame $R$ moves when we step across the ribbon. Work out both sides:
 
 $$
 \delta(\dot R) = \delta(R\,\Omega^\wedge) = R\,\eta^\wedge\Omega^\wedge + R\,\delta\Omega^\wedge,
@@ -69,7 +69,7 @@ $$
 $$
 :::
 
-The term $\dot\eta$ is what you would have guessed. The term $\Omega \times \eta$ is the opening puzzle in miniature. Freeze $\eta$, so the neighbour is the same body with its frame remounted by a small fixed rotation. The body still spins as before, but its gyro axes have turned, so the reading turns with them.
+The term $\dot\eta$ is what you would have guessed. The term $\Omega \times \eta$ is the opening puzzle in miniature. Freeze $\eta$, so the neighbor is the same body with its frame remounted by a small fixed rotation. The body still spins as before, but its gyroscope axes have turned, so the reading turns with them.
 
 ::: {.example #ex3-remount name="A slightly remounted gyro"}
 Take $\Omega = (0, 0, 1)$ rad/s and remount the frame by $\eta = (0.1, 0, 0)$, held constant. Equation [](#eq3-delta-Omega) predicts a change of $\Omega \times \eta = (0, 0.1, 0)$. The exact reading is $\exp(-\eta^\wedge)\,\Omega = (0,\ 0.0998,\ 0.9950)$. Grow $\eta$ to a quarter turn and the reading becomes $(0, 1, 0)$: the satellite of [](#fig3-frames).
@@ -81,7 +81,7 @@ $$
 \delta\!\left(\tfrac12\,\Omega\cdot J\Omega\right) = J\Omega \cdot \delta\Omega = J\Omega\cdot\dot\eta - (\Omega \times J\Omega)\cdot \eta .
 $$
 
-There is the $\Omega \times J\Omega$ of Euler's equations. It is not a fictitious force added by hand. It is the price of measuring velocity in a frame that the variation moves. [](#ch-dynamics) turns this line into equations of motion.
+There is the $\Omega \times J\Omega$ of Euler's equation. It is not a fictitious force added by hand. It is the price of measuring velocity in a frame that the variation moves. [](#sec4-so3) turns this line into [](#eq4-euler-free).
 
 Now the sphere. The rule for $\dot q$ is again safe, because $q$ is an ordinary vector of $\R^3$:
 
@@ -99,7 +99,7 @@ $$
 $$
 :::
 
-Two facts drive the proof, which is [](#exr3-s2-variation). Both $\omega$ and $\xi$ lie in the tangent plane, so $\omega \times \xi$ points along $q$. And differentiating $\xi \cdot q = 0$ in time gives $q \cdot \dot\xi = q \cdot (\omega \times \xi)$, so $\dot\xi$ is forced to leave the tangent plane. Notice that $\delta\omega$ itself is not tangent. Its component along $q$ is what keeps the neighbour's angular velocity perpendicular to the neighbour's $q$.
+Two facts drive the proof, which is [](#exr3-s2-variation). Both $\omega$ and $\xi$ lie in the tangent plane, so $\omega \times \xi$ points along $q$. And differentiating $\xi \cdot q = 0$ in time gives $q \cdot \dot\xi = q \cdot (\omega \times \xi)$, so $\dot\xi$ is forced to leave the tangent plane. Notice that $\delta\omega$ itself is not tangent. Its component along $q$ is what keeps the neighbor's angular velocity perpendicular to the neighbor's $q$.
 
 ::: {.warning #warn3-s2-convention name="Three formulas for one variation"}
 You will meet [](#eq3-delta-omega) in other clothes, and one of them is a trap.
@@ -108,7 +108,7 @@ Lee, Leok and McClamroch (2018) write $\delta\omega = -\omega \times \xi + (I - 
 
 Wu and Sreenath (2015) keep $\delta\omega$ as a variable of its own and impose $q \cdot \delta\omega = -(\xi \times q)\cdot\omega$. That constraint is exactly the component along $q$ above.
 
-The trap is $\delta\omega = \dot\xi - \omega \times \xi$. It is only the tangential part. It gives correct equations whenever $\delta\omega$ is dotted with something tangent, which covers every simple pendulum. It gives gyroscopic terms at half strength otherwise. The symbolic engine of [](#ch-symbolic) applies the full rule $\dot\xi - 2\,\omega\times\xi$.
+The trap is $\delta\omega = \dot\xi - \omega \times \xi$. It is only the tangential part. It gives correct equations whenever $\delta\omega$ is dotted with something tangent, which covers every simple pendulum. It gives gyroscopescopic terms at half strength otherwise. The symbolic library of [](#ch-symbolic) applies the full rule $\dot\xi - 2\,\omega\times\xi$ ([](#tbl5-leaves)).
 
 Do not borrow the sign from $\SO(3)$ either. There $\Omega$ and $\eta$ are body-frame vectors and the cross term enters with a plus. On the sphere $\omega$ and $\xi$ are world-frame axes, and the sign flips ([](#exr3-world-frame)).
 :::
@@ -120,7 +120,7 @@ We can now nudge configurations and velocities. Next we need a number that says 
 [](#ch-why) introduced the attitude error of [](#def-error-so3) as a height $\Psi_R$ and its slope $e_R$. With variations in hand, that recipe becomes a definition that works on any manifold.
 
 ::: {.definition #def3-error-vector name="Error function and error vector"}
-An **error function** $\Psi(q, q_d) \ge 0$ vanishes only at $q = q_d$. Its **error vector** $e$ is its slope under a variation of the first argument:
+An **error function** $\Psi \ge 0$ depends on the actual and the desired configuration and vanishes only when they agree. Its **error vector** $e$ is its slope under a variation of the actual configuration:
 $$
 \delta\Psi = e_R \cdot \eta \ \text{ on } \SO(3), \qquad \delta\Psi = e_q \cdot \xi \ \text{ on } S^2, \qquad \delta\Psi = e_x \cdot \delta x \ \text{ on } \R^3 .
 $$
@@ -128,60 +128,60 @@ $$
 
 On $\R^3$ the height $\tfrac12\|x - x_d\|^2$ has slope $x - x_d$. Nothing new. On the sphere, $\Psi_q = 1 - q\cdot q_d$ gives $\delta\Psi_q = -(\xi \times q)\cdot q_d = \xi \cdot (q_d \times q)$, so $e_q = q_d \times q$, as in [](#def-error-s2).
 
-On $\SO(3)$ let us do slightly more than [](#ch-why) did and weight the axes. Take $G = \operatorname{diag}(g_1, g_2, g_3)$ with positive entries and
+On $\SO(3)$ let us do slightly more than [](#ch-why) did and weight the axes. Take $D = \operatorname{diag}(d_1, d_2, d_3)$ with positive entries and
 
 $$
-\Psi_R = \tr\!\big(G\,(I - R_d\T R)\big). \label{eq3-weighted-psi}
+\Psi_R = \tr\!\big(D\,(I - R_d\T R)\big). \label{eq3-weighted-psi}
 $$
 
-Vary $R$: $\delta\Psi_R = -\tr(G R_d\T R\,\eta^\wedge)$. For any matrix $A$, $\tr(A\,\eta^\wedge) = -(A - A\T)^\vee\cdot\eta$. So
+Vary $R$: $\delta\Psi_R = -\tr(D R_d\T R\,\eta^\wedge)$. For any matrix $A$, $\tr(A\,\eta^\wedge) = -(A - A\T)^\vee\cdot\eta$. So
 
 $$
-e_R = \big(G R_d\T R - R\T R_d\, G\big)^\vee . \label{eq3-weighted-eR}
+e_R = \big(D R_d\T R - R\T R_d\, D\big)^\vee . \label{eq3-weighted-eR}
 $$
 
-With $G = \tfrac12 I$ these are the functions of [](#eq-error-so3). Near the target, $e_R \approx (\tr(G)\,I - G)\,\eta$, so the stiffness about body axis 1 is $g_2 + g_3$, and so on. The weights also decide where the unavoidable extra equilibria of [](#thm-obstruction) sit.
+With $D = \tfrac12 I$ these are the functions of [](#eq-error-so3). Near the target, $e_R \approx (\tr(D)\,I - D)\,\eta$, so the stiffness about body axis 1 is $d_2 + d_3$, and so on. The weights also decide where the unavoidable extra equilibria of [](#thm-obstruction) sit.
 
 ::: {.example #ex3-weights name="Where the slope vanishes"}
-Take $G = \operatorname{diag}(0.9, 0.6, 0.3)$. The slope [](#eq3-weighted-eR) vanishes when $G R_d\T R$ is symmetric. That happens at the target and at the three half turns about the body axes, and nowhere else. The heights there are $0$, $1.8$, $2.4$ and $3.0$: a minimum, two saddles and a maximum.
+Take $D = \operatorname{diag}(0.9, 0.6, 0.3)$. The slope [](#eq3-weighted-eR) vanishes when $D R_d\T R$ is symmetric. That happens at the target and at the three half turns about the body axes, and nowhere else. The heights there are $0$, $1.8$, $2.4$ and $3.0$: a minimum, two saddles and a maximum.
 
 With equal weights the three half turns are no longer special. Every half turn about every axis has $e_R = 0$ and $\Psi_R = 2$, a whole two-dimensional family of critical points. Unequal weights cut that family down to three isolated points, the fewest that topology allows.
 :::
 
-The trace is not the only height. Suppose the relative rotation $R_d\T R$ is a turn by $\theta$ about a unit axis $u$. Three choices are in common use, scaled here to have the same stiffness near the target:
+The trace is not the only height. Suppose the relative rotation $R_d\T R$ is a turn by $\theta$ about a unit axis $a$. Three choices are in common use, scaled here to have the same stiffness near the target:
 
 $$
 \begin{array}{lll}
-\text{trace:} & \Psi = 1 - \cos\theta, & e = \sin\theta\; u, \\[2pt]
-\text{logarithm:} & \Psi = \tfrac12\theta^2, & e = \theta\, u = \log(R_d\T R)^\vee, \\[2pt]
-\text{quaternion:} & \Psi = 4\,(1 - \cos\tfrac{\theta}{2}) = 4\,(1 - |q_0|), & e = 2\sin\tfrac{\theta}{2}\; u = 2\operatorname{sgn}(q_0)\, q_v .
+\text{trace:} & \Psi = 1 - \cos\theta, & e = \sin\theta\; a, \\[2pt]
+\text{logarithm:} & \Psi = \tfrac12\theta^2, & e = \theta\, a = \log(R_d\T R)^\vee, \\[2pt]
+\text{quaternion:} & \Psi = 4\,(1 - \cos\tfrac{\theta}{2}) = 4\,(1 - |q_0|), & e = 2\sin\tfrac{\theta}{2}\; a = 2\operatorname{sgn}(q_0)\, q_v .
 \end{array}
 $$
 
-Here $(q_0, q_v)$ is the unit quaternion of $R_d\T R$. [](#fig3-heights) plots all three around one full turn.
+Here $(q_0, q_v)$ is the unit quaternion of $R_d\T R$. We call them the **trace error**, the **logarithm error** and the quaternion error. [](#fig3-heights) plots all three around one full turn.
 
-![Three attitude error functions for a rotation by $\theta$ about a fixed axis. Left: the heights. Right: their slopes, which are the restoring actions a proportional controller applies. Only the trace error is smooth at 180°, and it pays by vanishing there. The other two never fade, and pay with a jump.](figures/ch03-heights.svg){#fig3-heights}
+![Three attitude error functions for a rotation by $\theta$ about a fixed axis. Left: the heights. Right: their slopes, which are the restoring torques a proportional controller applies. Only the trace error is smooth at 180°, and it pays by vanishing there. The other two never fade, and pay with a jump.](figures/ch03-heights.svg){#fig3-heights}
 
-The right-hand panel is [](#thm-obstruction) drawn as a graph. Go once round the axis. The restoring action is positive just after $0°$ and negative just before $360°$. If it is continuous it must cross zero in between: that is the trace error, whose fading torque [](#ch-why) warned about. If it never crosses zero it must jump: that is the other two, with a kink in the height at $180°$ where the shortest way home changes side.
+The right-hand panel is [](#thm-obstruction) drawn as a graph. Go once round the axis. The restoring torque is positive just after 0° and negative just before 360°. If it is continuous it must cross zero in between: that is the trace error, whose fading torque [](#warn-sine) warned about. If it never crosses zero it must jump: that is the other two, with a kink in the height at 180° where the shortest way home changes side.
 
 ::: {.example #ex3-linger name="The cost of the last degree"}
-Rotate about one axis with unit inertia: $\ddot\theta = -k_p\, e(\theta) - k_d\,\dot\theta$, with $k_p = 4$ and $k_d = 2\sqrt2$. Start at rest, $179°$ from the target. The logarithm law is inside $5°$ for good after 2.8 s and the quaternion law after 2.9 s. The trace law needs 6.1 s ([](#fig3-linger)).
+Rotate about one axis with unit inertia: $\ddot\theta = -k_p\, e(\theta) - k_d\,\dot\theta$, with $k_p = 4$ and $k_d = 2\sqrt2$. Start at rest, 179° from the target. The logarithm law is inside 5° for good after 2.8 s and the quaternion law after 2.9 s. The trace law needs 6.1 s ([](#fig3-linger)).
 
-Start at $179.9°$ instead. The first two laws do not notice. The trace law needs 8.4 s. Near half a turn it sees $\ddot\phi \approx k_p\phi - k_d\dot\phi$ for the small angle $\phi = \pi - \theta$, an unstable equilibrium with growth rate $\lambda = 1.04\ \text{s}^{-1}$. Every factor of ten closer to $180°$ costs $\ln 10/\lambda = 2.2$ s more. There is no upper bound.
+Start at 179.9° instead. The first two laws do not notice. The trace law needs 8.4 s. Near half a turn it sees $\ddot\beta \approx k_p\beta - k_d\dot\beta$ for the small angle $\beta = \pi - \theta$, an unstable equilibrium with growth rate $\lambda = 1.04\ \text{s}^{-1}$. Every factor of ten closer to 180° costs $\ln 10/\lambda = 2.2$ s more. There is no upper bound.
 :::
 
 ![Simulated recovery from rest near half a turn, same gains, three error vectors. The trace error lingers, and lingers 2.2 s longer for each factor of ten by which the start approaches 180°.](figures/ch03-linger.svg){#fig3-linger}
 
-Mueller (2018) makes this comparison for multicopters and adds an idea worth keeping. Split the relative rotation into a **tilt**, the shortest rotation that aligns the thrust axes, and a yaw about the thrust axis. The tilt angle $\rho_r$ is the angle between $R e_3$ and $R_d e_3$, so its height $1 - \cos\rho_r$ is exactly the sphere error $\Psi_q$ of the thrust direction. The angles obey $\cos\tfrac{\theta}{2} = \cos\tfrac{\rho_r}{2}\cos\tfrac{\rho_y}{2}$, so the tilt never exceeds the total. A multicopter translates by tilting, so the tilt matters more than the yaw. Mueller's controller adds to the logarithm law a second restoring action that acts on the tilt alone and is proportional to the tilt angle. Teng and co-authors (2022) reach the logarithm from another side: they define the cost as $\tfrac12\psi\T P\psi$ in $\psi = \log(R_d\T R)^\vee$, and the same definition works on any matrix Lie group.
+Mueller (2018) makes this comparison for multicopters and adds an idea worth keeping. Split the relative rotation into a **tilt**, the shortest rotation that aligns the thrust axes, and a yaw about the thrust axis. The tilt angle $\theta_{\text{tilt}}$ is the angle between $R e_3$ and $R_d e_3$, so its height $1 - \cos\theta_{\text{tilt}}$ is exactly the sphere error $\Psi_q$ of the thrust direction. The angles obey $\cos\tfrac{\theta}{2} = \cos\tfrac{\theta_{\text{tilt}}}{2}\cos\tfrac{\theta_{\text{yaw}}}{2}$, with $\theta_{\text{yaw}}$ the yaw angle, so the tilt never exceeds the total. A multicopter translates by tilting, so the tilt matters more than the yaw. Mueller's controller adds to the logarithm law a second restoring torque that acts on the tilt alone and is proportional to the tilt angle. Teng et al. (2022) reach the logarithm from another side: they define the cost as $\tfrac12\chi\T P\chi$ in $\chi = \log(R_d\T R)^\vee$, and the same definition works on any matrix Lie group.
 
-None of these is free. Smoothness, a restoring action that never fades, and a single critical point cannot all be had. Choose knowing which one you gave up.
+None of these is free. Smoothness, a restoring torque that never fades, and a single critical point cannot all be had. Choose knowing which one you gave up.
 
-A proportional term alone does not make a controller. We need a derivative term, and that brings back the two gyros.
+A proportional term alone does not make a controller. We need a derivative term, and that brings back the two gyroscopes.
 
 ## Carrying a velocity {#sec3-transport}
 
 ::: {.thought #thought3-globe name="Which way is north?"}
-One walker stands on the equator and another at 60° north on the same meridian. Each walks north at one metre per second. Do they have the same velocity? As arrows in space they do not: the two "norths" are 60° apart. To compare them you must bring one arrow to the other, and the natural way is to slide it along the surface without turning it.
+One walker stands on the equator and another at 60° north on the same meridian. Each walks north at one meter per second. Do they have the same velocity? As arrows in space they do not: the two "norths" are 60° apart. To compare them you must bring one arrow to the other, and the natural way is to slide it along the surface without turning it.
 
 Now test "without turning". Stand at the pole with an arrow pointing down the Greenwich meridian. Walk down that meridian to the equator, keeping the arrow straight ahead. Walk a quarter of the way round the equator. The arrow now points sideways, due south, and you do not turn it. Walk back up to the pole. You are home. Your arrow points along the 90° meridian ([](#fig3-globe)). It has turned a quarter turn, and you never turned it.
 :::
@@ -191,14 +191,14 @@ Now test "without turning". Stand at the pole with an arrow pointing down the Gr
 So "the same vector, somewhere else" has no meaning on a curved space until you say how it was carried. A rule that carries velocities from the reference to the body is a **transport map**. Since no rule is forced on us, we choose one that makes the control problem easy. The requirement is modest.
 
 ::: {.definition #def3-transport name="Compatible transport and velocity error"}
-Let $\Psi$ be an error function with error vector $e$. A transport map $\mathcal{T}$, taking velocities at $q_d$ to velocities at $q$, is **compatible** with $\Psi$ if, along every pair of motions,
+Let $\Psi$ be an error function with error vector $e$. A transport map $\mathcal{T}$, taking velocities at the desired configuration to velocities at the actual one, is **compatible** with $\Psi$ if, along every pair of motions,
 $$
-\ddt\Psi = e \cdot e_{\text{vel}}, \qquad e_{\text{vel}} = (\text{velocity at } q) - \mathcal{T}\,(\text{velocity at } q_d) . \label{eq3-compatible}
+\ddt\Psi = e \cdot e_{\text{vel}}, \qquad e_{\text{vel}} = (\text{actual velocity}) - \mathcal{T}\,(\text{desired velocity}) . \label{eq3-compatible}
 $$
-The vector $e_{\text{vel}}$ is the **velocity error**.
+The vector $e_{\text{vel}}$ is the **velocity error**. On $\SO(3)$ it is the $e_\Omega$ of [](#def-error-so3).
 :::
 
-Compatibility says that the height changes only through the velocity error, exactly as $\frac{\dd}{\dd t}\tfrac12\|x - x_d\|^2 = (x - x_d)\cdot(\dot x - \dot x_d)$ on a flat space. It is the property that makes $\Psi$ plus a kinetic term into a Lyapunov function.
+Compatibility says that the height changes only through the velocity error, exactly as $\ddt\tfrac12\|x - x_d\|^2 = (x - x_d)\cdot(\dot x - \dot x_d)$ on a flat space. It is the property that makes $\Psi$ plus a kinetic term into a Lyapunov function.
 
 **On $\SO(3)$.** Differentiate the relative rotation $R_d\T R$, using $\dot R = R\,\Omega^\wedge$ and $\dot R_d = R_d\,\Omega_d^\wedge$:
 
@@ -206,14 +206,14 @@ $$
 \ddt\big(R_d\T R\big) = \big(R_d\T R\big)\, e_\Omega^\wedge, \qquad e_\Omega = \Omega - R\T R_d\,\Omega_d . \label{eq3-error-kinematics}
 $$
 
-The relative rotation obeys the kinematics [](#eq-kinematics), with $e_\Omega$ as its body rate. The transport map is $\Omega_d \mapsto R\T R_d\,\Omega_d$. Read it from the right: $R_d\,\Omega_d$ is the reference's angular velocity in the world frame, and $R\T$ expresses it along the body's axes. It answers the question "what would my gyro read if I moved exactly as the reference does?" For the two satellites, $R\T R_d\,\Omega_d = (0, 1, 0) = \Omega$, and $e_\Omega = 0$.
+The relative rotation obeys the kinematics [](#eq-kinematics), with $e_\Omega$ as its body rate. The transport map is $\Omega_d \mapsto R\T R_d\,\Omega_d$. Read it from the right: $R_d\,\Omega_d$ is the reference's angular velocity in the world frame, and $R\T$ expresses it along the body's axes. It answers the question "what would my gyroscope read if I moved exactly as the reference does?" For the two satellites, $R\T R_d\,\Omega_d = (0, 1, 0) = \Omega$, and $e_\Omega = 0$.
 
 ::: {.proposition #thm3-so3-compat name="Attitude error dynamics"}
-For any weight $G$, the functions [](#eq3-weighted-psi) and [](#eq3-weighted-eR) satisfy $\dot\Psi_R = e_R \cdot e_\Omega$. For $G = \tfrac12 I$,
+For any weight $D$, the functions [](#eq3-weighted-psi) and [](#eq3-weighted-eR) satisfy $\dot\Psi_R = e_R \cdot e_\Omega$. For $D = \tfrac12 I$,
 $$
-\dot e_R = C\, e_\Omega, \qquad C = \tfrac12\big(\tr(R\T R_d)\, I - R\T R_d\big), \label{eq3-eR-dot}
+\dot e_R = C_R\, e_\Omega, \qquad C_R = \tfrac12\big(\tr(R\T R_d)\, I - R\T R_d\big), \label{eq3-eR-dot}
 $$
-with $C = I$ at zero error and $\|C\| \le 1$ everywhere.
+with $C_R = I$ at zero error and $\|C_R\| \le 1$ everywhere.
 :::
 
 ::: {.proof}
@@ -252,7 +252,7 @@ $$
 \dot e_q = (q\cdot q_d)\, e_\omega + (q\cdot\omega_d)\; q \times e_q - (q_d\cdot\omega)\, q . \label{eq3-eq-dot}
 $$
 
-The first term is the counterpart of [](#eq3-eR-dot), with $\cos\theta$ in the role of $C$. The second turns $e_q$ within the tangent plane when the reference spins about $q$. The third keeps $e_q$ tangent as $q$ moves.
+The first term is the counterpart of [](#eq3-eR-dot), with $\cos\theta$ in the role of $C_R$. The second turns $e_q$ within the tangent plane when the reference spins about $q$. The third keeps $e_q$ tangent as $q$ moves.
 
 On the sphere we had to choose a transport map. On $\SO(3)$ one seemed to fall out of the algebra. That is because $\SO(3)$ is a group, and a group comes with its own ways to move things around. It comes with two.
 
@@ -264,40 +264,40 @@ Let $X$ and $X_d$ be elements of a matrix Lie group: attitudes, or poses in $\SE
 $$
 E_\ell = X_d^{-1} X, \qquad E_r = X\, X_d^{-1} .
 $$
-The **left-invariant error** $E_\ell$ is unchanged when both are multiplied on the left, $(X, X_d) \mapsto (LX, LX_d)$. The **right-invariant error** $E_r$ is unchanged when both are multiplied on the right, $(X, X_d) \mapsto (XL, X_dL)$.
+The **left-invariant error** $E_\ell$ is unchanged when both are multiplied on the left, $(X, X_d) \mapsto (YX, YX_d)$. The **right-invariant error** $E_r$ is unchanged when both are multiplied on the right, $(X, X_d) \mapsto (XY, X_dY)$.
 :::
 
 ::: {.thought #thought3-remount name="Two labs, one technician"}
-Recall the two labs of [](#ch-why), whose motion-capture frames disagree. Changing the world frame multiplies every attitude on the left. The error $R_d\T R$ does not notice. That was the invariance we demanded of a controller.
+Recall the two labs of [](#thought-two-labs), whose motion-capture frames disagree. Changing the world frame multiplies every attitude on the left. The error $R_d\T R$ does not notice. That was the invariance we demanded of a controller.
 
 Now a technician unbolts the flight computer and remounts it rotated. Every attitude is multiplied on the right. The error $R\,R_d\T$ does not notice that. It is the rotation, seen from the world, that takes the reference onto the body, and the world does not care how the computer is mounted. The left-invariant error does notice: its angle is the same, but its axis is now expressed along the new body axes.
 :::
 
-Each error pairs with one kind of velocity. With body-frame velocities, $\dot X = X\,\xi^\wedge$ and $\dot X_d = X_d\,\xi_d^\wedge$, the left-invariant error obeys
+Each error pairs with one kind of velocity. With body-frame velocities, $\dot X = X\,\zeta^\wedge$ and $\dot X_d = X_d\,\zeta_d^\wedge$ as in [](#eq2-se3-kin), the left-invariant error obeys
 
 $$
-\dot E_\ell = E_\ell\,\big(\xi - \Ad_{E_\ell^{-1}}\,\xi_d\big)^\wedge . \label{eq3-left-error-dynamics}
+\dot E_\ell = E_\ell\,\big(\zeta - \Ad_{E_\ell^{-1}}\,\zeta_d\big)^\wedge . \label{eq3-left-error-dynamics}
 $$
 
 On $\SO(3)$ this is [](#eq3-error-kinematics), and it identifies the transport map $R\T R_d$ as the adjoint of the inverse error. Look at what is missing from the right-hand side. The state $X$ does not appear. The error evolves by a law that involves only the error and the two velocities. Wherever the robot is, however it is oriented, the same error with the same velocities changes in the same way.
 
 ::: {.example #ex3-dead-reckoning name="Dead reckoning with a wrong start"}
-An attitude estimator integrates a gyro, $\dot{\hat R} = \hat R\,\Omega^\wedge$, while the true attitude obeys $\dot R = R\,\Omega^\wedge$ with the same $\Omega(t)$. The estimate starts $5°$ wrong. The body then tumbles for ten seconds.
+An attitude estimator integrates a gyroscope, $\dot{\hat R} = \hat R\,\Omega^\wedge$, while the true attitude obeys $\dot R = R\,\Omega^\wedge$ with the same $\Omega(t)$. The estimate starts 5° wrong. The body then tumbles for ten seconds.
 
-The right-invariant error does not move: $\frac{\dd}{\dd t}(\hat R R\T) = \hat R\,\Omega^\wedge R\T - \hat R\,\Omega^\wedge R\T = 0$. The left-invariant error $R\T\hat R$ keeps its $5°$ angle while its axis turns with the body. Its rate, $E_\ell\,\Omega^\wedge - \Omega^\wedge E_\ell$, involves the gyro signal but not the attitude. Compare the difference of yaw, pitch and roll between estimate and truth. In the simulation its norm wanders between $4.6°$ and $64°$, although nothing about the actual discrepancy changes. The Euler-angle error has dynamics that depend on where the body happens to be. The invariant errors do not.
+The right-invariant error does not move: $\ddt(\hat R R\T) = \hat R\,\Omega^\wedge R\T - \hat R\,\Omega^\wedge R\T = 0$. The left-invariant error $R\T\hat R$ keeps its 5° angle while its axis turns with the body. Its rate, $E_\ell\,\Omega^\wedge - \Omega^\wedge E_\ell$, involves the gyroscope signal but not the attitude. Compare the difference of yaw, pitch and roll between estimate and truth. In the simulation its norm wanders between 4.6° and 64°, although nothing about the actual discrepancy changes. The Euler-angle error has dynamics that depend on where the body happens to be. The invariant errors do not.
 :::
 
-That is the idea behind invariant filtering. Barrau and Bonnabel (2017) show that for a whole class of systems, which includes inertial navigation, the invariant estimation error obeys an equation that does not involve the estimate, and that its logarithm obeys a linear equation exactly. Hartley and co-authors (2018) built a legged-robot state estimator on this.
+That is the idea behind invariant filtering. Barrau and Bonnabel (2017) show that for a whole class of systems, which includes inertial navigation, the invariant estimation error obeys an equation that does not involve the estimate, and that its logarithm obeys a linear equation exactly. Hartley et al. (2018) built a legged-robot state estimator on this.
 
-Controllers use the same fact. Write the left-invariant error as $E_\ell = \exp(\psi^\wedge)$. To first order in $\psi$,
+Controllers use the same fact. Write the left-invariant error as $E_\ell = \exp(\chi^\wedge)$. To first order in $\chi$,
 
 $$
-\dot\psi = -\ad_{\xi_d}\psi + (\xi - \xi_d), \label{eq3-lie-algebra-error}
+\dot\chi = -\ad_{\zeta_d}\chi + (\zeta - \zeta_d), \label{eq3-lie-algebra-error}
 $$
 
-where on $\SO(3)$ the operator $\ad_{\Omega_d}$ is the cross product with $\Omega_d$. This is a linear system whose coefficients depend on the reference velocity alone. Teng and co-authors (2022) and Jang, Teng and Ghaffari (2023) build quadratic costs and convex model predictive controllers on it. One linear model serves along the whole trajectory, where a model in coordinates would have to be recomputed at every attitude. The chapters on filtering on Lie groups and on error-state MPC return to both uses.
+where on $\SO(3)$ the operator $\ad_{\Omega_d}$ is the cross product with $\Omega_d$. This is a linear system whose coefficients depend on the reference velocity alone. Teng et al. (2022) and Jang, Teng and Ghaffari (2023) build quadratic costs and convex model predictive controllers on it. One linear model serves along the whole trajectory, where a model in coordinates would have to be recomputed at every attitude. [](#sec7-lie) derives the same equation from the linearization, and the chapters on filtering on Lie groups and on error-state MPC return to both uses.
 
-Equation [](#eq3-lie-algebra-error) is linear in $\psi$, and $\psi$ is a small rotation vector. So is the variation $\eta$. Are they the same thing?
+Equation [](#eq3-lie-algebra-error) is linear in $\chi$, and $\chi$ is a small rotation vector. So is the variation $\eta$. Are they the same thing?
 
 ## Errors are variations, to first order {#sec3-first-order}
 
@@ -307,7 +307,7 @@ $$
 e_R = \sin(\epsilon\|\eta\|)\,\frac{\eta}{\|\eta\|} = \epsilon\,\eta + O(\epsilon^3).
 $$
 
-For $\eta = (0.1, 0, 0.2)$ and $\epsilon = 1$, an error of $12.8°$, this gives $e_R = (0.0992, 0, 0.1983)$. The error vector falls short of the variation by $0.5\%$ at $10°$ and by $4.5\%$ at $30°$. The same holds on the sphere: $q = \exp(\epsilon\,\xi^\wedge)\,q_d$ gives $e_q = \sin(\epsilon\|\xi\|)\,\xi/\|\xi\|$.
+For $\eta = (0.1, 0, 0.2)$ and $\epsilon = 1$, an error of 12.8°, this gives $e_R = (0.0992, 0, 0.1983)$. The error vector falls short of the variation by 0.5% at 10° and by 4.5% at 30°. The same holds on the sphere: $q = \exp(\epsilon\,\xi^\wedge)\,q_d$ gives $e_q = \sin(\epsilon\|\xi\|)\,\xi/\|\xi\|$.
 
 The velocity needs a second look. Transport does part of the job that the cross term does in [](#eq3-delta-Omega). Expanding $e_\Omega = \Omega - \exp(-\epsilon\,\eta^\wedge)\,\Omega_d$ with $\Omega = \Omega_d + \epsilon\,\delta\Omega$ gives
 
@@ -330,7 +330,7 @@ The velocity error matches $\dot\eta$, not $\delta\Omega$. The two differ by $\O
 
 :::
 
-This is what makes linearization on a manifold practical. [](#ch-linearization) linearizes the dynamics in the variables $(\eta, \delta\Omega)$, which have no singularities and need no coordinates. A controller cannot measure $\eta$. It can compute $e_R$ and $e_\Omega$ from the state, and [](#eq3-first-order) converts one pair into the other. For a reference at rest, such as a hover, the two pairs coincide.
+This is what makes linearization on a manifold practical. [](#thm7-so3) linearizes the rigid body in the variables $(\eta, \delta\Omega)$, which have no singularities and need no coordinates. A controller cannot measure $\eta$. It can compute $e_R$ and $e_\Omega$ from the state, and [](#eq3-first-order) converts one pair into the other ([](#thm7-dictionary) and the feedback [](#eq7-feedback) use exactly this). For a reference at rest, such as a hover, the two pairs coincide.
 
 ::: {.table #tbl3-summary}
 
@@ -338,7 +338,7 @@ This is what makes linearization on a manifold practical. [](#ch-linearization) 
 | :-- | :-: | :-: | :-: |
 | Kinematics | $\dot x = v$ | $\dot q = \omega\times q$, $\ \omega\cdot q = 0$ | $\dot R = R\,\Omega^\wedge$ |
 | Variation | $\delta x$ | $\delta q = \xi\times q$, $\ \xi\cdot q = 0$ | $\delta R = R\,\eta^\wedge$ |
-| Velocity variation | $\delta v = \frac{\dd}{\dd t}\delta x$ | $\delta\omega = \dot\xi - 2\,\omega\times\xi$ | $\delta\Omega = \dot\eta + \Omega\times\eta$ |
+| Velocity variation | $\delta v = \ddt\delta x$ | $\delta\omega = \dot\xi - 2\,\omega\times\xi$ | $\delta\Omega = \dot\eta + \Omega\times\eta$ |
 | Error function | $\tfrac12\lVert x - x_d\rVert^2$ | $1 - q\cdot q_d$ | $\tfrac12\tr(I - R_d\T R)$ |
 | Error vector | $x - x_d$ | $q_d\times q$ | $\tfrac12(R_d\T R - R\T R_d)^\vee$ |
 | Transported reference | $v_d$ | $(I - qq\T)\,\omega_d$ | $R\T R_d\,\Omega_d$ |
@@ -356,7 +356,7 @@ Show that $R\exp(\epsilon\,\eta^\wedge)$ is a rotation for every $\epsilon$, and
 :::
 
 ::: {.exercise #exr3-world-frame}
-Use world-frame quantities instead: $\dot R = w^\wedge R$ and $\delta R = \zeta^\wedge R$. Show that $\delta w = \dot\zeta - w\times\zeta$. Compare the sign with [](#eq3-delta-Omega) and explain it using [](#ex3-remount).
+Use world-frame quantities instead: $\dot R = \omega^\wedge R$ and $\delta R = \sigma^\wedge R$, with $\omega = R\,\Omega$ as in [](#eq2-spatial). Show that $\delta\omega = \dot\sigma - \omega\times\sigma$. Compare the sign with [](#eq3-delta-Omega) and explain it using [](#ex3-remount).
 :::
 
 ::: {.exercise #exr3-s2-variation}
@@ -364,19 +364,19 @@ Prove [](#eq3-delta-omega) from $\omega = q\times\dot q$ and [](#eq3-delta-qdot)
 :::
 
 ::: {.exercise #exr3-weights}
-For $\Psi_R$ in [](#eq3-weighted-psi) with $g_1 > g_2 > g_3 > 0$, show that $e_R = 0$ exactly at the four attitudes of [](#ex3-weights). Expand $\Psi_R$ to second order in $\eta$ at each and show the Hessians are $\operatorname{diag}(d_2 + d_3,\ d_1 + d_3,\ d_1 + d_2)$, where $d_i$ are the diagonal entries of $G R_d\T R$. Classify the four points.
+For $\Psi_R$ in [](#eq3-weighted-psi) with $d_1 > d_2 > d_3 > 0$, show that $e_R = 0$ exactly at the four attitudes of [](#ex3-weights). Expand $\Psi_R$ to second order in $\eta$ at each and show the Hessians are $\operatorname{diag}(c_2 + c_3,\ c_1 + c_3,\ c_1 + c_2)$, where $c_i$ are the diagonal entries of $D R_d\T R$. Classify the four points.
 :::
 
 ::: {.exercise #exr3-linger}
-Reproduce [](#ex3-linger). Then give all three laws an initial angular velocity that carries them through $180°$, and add measurement noise. Which law chatters, and where?
+Reproduce [](#ex3-linger). Then give all three laws an initial angular velocity that carries them through 180°, and add measurement noise. Which law chatters, and where?
 :::
 
 ::: {.exercise #exr3-transport}
-On the sphere, let $Q$ be the rotation about $q_d\times q$ that takes $q_d$ to $q$, so that $\omega_d\mapsto Q\,\omega_d$ is parallel transport along the great circle. Show that it is compatible with $\Psi_q$. Describe all linear maps that are. Then find the transport map compatible with $\Psi = \tfrac12\theta^2$, where $\theta$ is the angle between $q$ and $q_d$.
+On the sphere, let $Y$ be the rotation about $q_d\times q$ that takes $q_d$ to $q$, so that $\omega_d\mapsto Y\,\omega_d$ is parallel transport along the great circle. Show that it is compatible with $\Psi_q$. Describe all linear maps that are. Then find the transport map compatible with $\Psi = \tfrac12\theta^2$, where $\theta$ is the angle between $q$ and $q_d$.
 :::
 
 ::: {.exercise #exr3-right-error}
-Derive the dynamics of the right-invariant error $E_r = R\,R_d\T$ in terms of the world-frame rates $w = R\,\Omega$ and $w_d = R_d\,\Omega_d$. Which velocity error appears? Redo the opening puzzle with $E_r$.
+Derive the dynamics of the right-invariant error $E_r = R\,R_d\T$ in terms of the world-frame angular velocities $\omega = R\,\Omega$ and $\omega_d = R_d\,\Omega_d$. Which velocity error appears? Redo the opening puzzle with $E_r$.
 :::
 
 ::: {.exercise #exr3-first-order}
@@ -385,12 +385,12 @@ Derive [](#eq3-first-order). Then take a reference that spins at constant $\Omeg
 
 ## Notes and sources {#sec3-notes .unnumbered}
 
-Variations on $\SO(3)$ and $S^2$ in the form used here, including [](#eq3-delta-Omega) and the expression for $\delta\omega$, are developed by Lee, Leok and McClamroch (2018). Error functions, compatible transport maps and the weighted trace function come from Bullo and Lewis (2005). Lee, Leok and McClamroch (2010) brought $e_R$ and $e_\Omega$ to quadrotors, and [](#eq3-eR-dot) appears there and in Siravuru (2019). The sphere errors [](#eq3-e-omega) and the general statement of compatibility follow Wu (2017). The first-order link between errors and variations is the basis of Wu and Sreenath (2015). The comparison of attitude errors, the lingering of the trace error and tilt prioritisation are from Mueller (2018). Left- and right-invariant errors and their autonomous dynamics are due to Barrau and Bonnabel (2017). Their use for legged robots is from Hartley et al. (2018). The Lie-algebraic tracking error [](#eq3-lie-algebra-error) is from Teng et al. (2022). Teng et al. (2026) use the same variations as search directions for trajectory optimisation on Lie groups.
+Variations on $\SO(3)$ and $S^2$ in the form used here, including [](#eq3-delta-Omega) and the expression for $\delta\omega$, are developed by Lee, Leok and McClamroch (2018). Error functions, compatible transport maps and the weighted trace function come from Bullo and Lewis (2005). Lee, Leok and McClamroch (2010) brought $e_R$ and $e_\Omega$ to quadrotors, and [](#eq3-eR-dot) appears there and in Siravuru (2019). The sphere errors [](#eq3-e-omega) and the general statement of compatibility follow Wu (2017). The first-order link between errors and variations is the basis of Wu and Sreenath (2015). The comparison of attitude errors, the lingering of the trace error and tilt prioritization are from Mueller (2018). Left- and right-invariant errors and their autonomous dynamics are due to Barrau and Bonnabel (2017). Their use for legged robots is from Hartley et al. (2018). The Lie-algebraic tracking error [](#eq3-lie-algebra-error) is from Teng et al. (2022). Teng et al. (2026) use the same variations as search directions for trajectory optimization on Lie groups.
 
 - A. Barrau and S. Bonnabel, ["The invariant extended Kalman filter as a stable observer"](https://doi.org/10.1109/TAC.2016.2594085), *IEEE Transactions on Automatic Control* 62(4), 2017.
 - F. Bullo and A. D. Lewis, [*Geometric Control of Mechanical Systems*](https://doi.org/10.1007/978-1-4899-7276-7), Springer, 2005.
-- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, ["Contact-aided invariant extended Kalman filtering for legged robot state estimation"](https://arxiv.org/abs/1805.10410), arXiv:1805.10410, 2018.
-- J. Jang, S. Teng and M. Ghaffari, ["Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles"](https://arxiv.org/abs/2305.09009), arXiv:2305.09009, 2023.
+- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, ["Contact-aided invariant extended Kalman filtering for legged robot state estimation"](https://doi.org/10.15607/RSS.2018.XIV.050), *Robotics: Science and Systems*, 2018. arXiv:1805.10410.
+- J. Jang, S. Teng and M. Ghaffari, ["Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles"](https://doi.org/10.1109/LRA.2023.3328450), *IEEE Robotics and Automation Letters* 8(12), 2023. arXiv:2305.09009.
 - T. Lee, M. Leok and N. H. McClamroch, ["Geometric tracking control of a quadrotor UAV on SE(3)"](https://doi.org/10.1109/CDC.2010.5717652), *IEEE Conference on Decision and Control*, 2010.
 - T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
 - M. W. Mueller, ["Multicopter attitude control for recovery from large disturbances"](https://arxiv.org/abs/1802.09143), arXiv:1802.09143, 2018.

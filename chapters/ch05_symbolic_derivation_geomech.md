@@ -22,7 +22,7 @@ The load is at $x_L$. The unit vector $q$ points from the quadrotor down the cab
 
 Try to decide before reading on. Staring does not help. You could re-derive the equations, as [](#ch-dynamics) does over several pages. Or you could fly. In hover the cable hangs still, $\dot q = 0$, and the term is zero. A model with the wrong sign matches every hover log you will ever record. The error only appears when the load swings. For a 1.5 kg quadrotor on a 1 m cable swinging at 2 rad/s, the wrong sign invents a force of 12 N along the cable. The load weighs 2.9 N.
 
-So one sign can pass every bench test and fail in the first aggressive manoeuvre. This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
+So one sign can pass every bench test and fail in the first aggressive maneuver. This chapter offers a third option. Let a program do the derivation, since a program does not drop signs. Then test its answer with a check that shares none of its reasoning.
 
 ## Seventeen lines {#sec5-seventeen}
 
@@ -77,7 +77,7 @@ Now look again at the recipe of [](#ch-dynamics). It never differentiates with r
 
 So the right object is not a function of numbers. It is a **tree** ([](#fig5-tree)). Interior nodes are operations: `Add`, `Mul`, `Dot`, `Cross`. Leaves are symbols, and every leaf carries a type that says where it lives.
 
-![The Lagrangian of the spherical pendulum as the library stores it, drawn from the stored object. Products are binary, so $\tfrac12 m l^2$ is a chain of three `Mul` nodes. The colour of a leaf is its type. That type is all the program knows about $q$, and it is enough.](figures/ch05-tree.svg){#fig5-tree}
+![The Lagrangian of the spherical pendulum as the library stores it, drawn from the stored object. Products are binary, so $\tfrac12 m l^2$ is a chain of three `Mul` nodes. The color of a leaf is its type. That type is all the program knows about $q$, and it is enough.](figures/ch05-tree.svg){#fig5-tree}
 
 The type is what lets a rewrite rule do geometry. The program does not know what a pendulum is. It knows that the variation of a leaf of type "point on $S^2$" is $\xi \times q$, that the variation of a leaf flagged constant is zero, and so on down [](#tbl5-leaves).
 
@@ -150,11 +150,11 @@ They can. Nothing on the card mentions energy, force or a sphere. That is what i
 
 Notice the form of [](#eq5-pendulum). Everything is on one side and the inertia term is negative, because $E_\xi$ is literally the coefficient of $\xi$ in $\delta S$. The library does not rearrange.
 
-The clerk's warning is the open problem. Exact is not the same as right. A rule in the library could be wrong. Or the equation you are holding came from somewhere else. What would convince a sceptic?
+The clerk's warning is the open problem. Exact is not the same as right. A rule in the library could be wrong. Or the equation you are holding came from somewhere else. What would convince a skeptic?
 
 ## Trust, but verify {#sec5-verify}
 
-A sceptic wants a second derivation that shares nothing with the first. There is one. The Euler–Lagrange equations can be evaluated numerically from $L$ alone, with no algebra at all.
+A skeptic wants a second derivation that shares nothing with the first. There is one. The Euler–Lagrange equations can be evaluated numerically from $L$ alone, with no algebra at all.
 
 That is what `check_eom` does. It draws a random state: a random point on each manifold, random velocities, random accelerations, random inputs, random values for every constant. It evaluates the number $L$ at nearby states and forms $\tfrac{\dd}{\dd t}\,\partial L/\partial v - \partial L/\partial q$ by central differences, in the constrained forms that hold on $S^2$ and $\SO(3)$. It adds the forcing read from $\delta W$. Then it evaluates the symbolic $E$ at the same state and compares. No product rule, no manifold rule, no integration by parts. The only thing the two computations share is $L$. The function returns the worst relative error over five random states.
 
@@ -228,7 +228,7 @@ variation vector, not a configuration variable; list the manifold point 'q' inst
 
 The first means you forgot `attr=["Constant"]` on $e_3$, so the program varied it. The second means you listed a velocity where a configuration was wanted. A forgotten flag does not always raise an error. Leave `"SymmetricMatrix"` off the inertia and you get a correct equation with $\tfrac12(J + J\T)$ throughout. The program will not assume what you did not declare.
 
-The check has two blind spots. It measures error relative to the size of the whole equation, so a wrong term that is tiny next to its neighbours can hide. Leave parameters symbolic and they are drawn of order one, which avoids this. And it compares the equation with the Lagrangian, not the Lagrangian with the robot. Type the wrong kinetic energy and you get the right equations for the wrong machine, verified to eight digits.
+The check has two blind spots. It measures error relative to the size of the whole equation, so a wrong term that is tiny next to its neighbors can hide. Leave parameters symbolic and they are drawn of order one, which avoids this. And it compares the equation with the Lagrangian, not the Lagrangian with the robot. Type the wrong kinetic energy and you get the right equations for the wrong machine, verified to eight digits.
 
 Verified equations are still only symbols. To see whether they describe a quadrotor, they have to move.
 
@@ -254,7 +254,7 @@ p = {"m_Q": 1.5, "m_L": 0.3, "l": 1.0, "g": 9.81,
      "J": np.diag([0.02, 0.025, 0.04]), "e3": np.array([0.0, 0.0, 1.0])}
 q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])     # cable swung out by 0.8 rad
 w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))    # circling about the vertical
-v_cm = np.array([0.45, 0.0, 0.0])                   # centre-of-mass velocity
+v_cm = np.array([0.45, 0.0, 0.0])                   # center-of-mass velocity
 v0 = v_cm + p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)
 x0 = layout.pack(x_L=np.zeros(3), q=q0, R=np.eye(3), omega_q=w0, x_L_dot=v0)
 
@@ -267,9 +267,9 @@ print(np.max(np.abs(E - E[0])) / abs(E[0]), free.max_drift())
 
 `module_source` writes [](#eq5-standard) out as a plain NumPy module, 311 lines for this system, with functions for $M$, $b$, $G$, the kinematics and the energy. It no longer needs the symbolic library. `simulate` integrates it with a fourth-order Runge–Kutta–Munthe-Kaas scheme. The idea is a familiar one: do not add increments to $q$ and $R$. Each step moves $q$ by a rotation and $R$ by a matrix exponential, so the state cannot leave the manifold. The $S^2$ rows are projected as the pitfall above demands.
 
-The run in the listing holds the thrust at the total weight, with zero torque. The cable starts 0.8 rad from vertical and circling, and the centre of mass coasts at 0.45 m/s ([](#fig5-quadload)).
+The run in the listing holds the thrust at the total weight, with zero torque. The cable starts 0.8 rad from vertical and circling, and the center of mass coasts at 0.45 m/s ([](#fig5-quadload)).
 
-![The simulated trajectory, five snapshots over 6 s. The thrust cancels the total weight, so the centre of mass moves on a straight line. The light load swings wide below, and the heavy quadrotor wobbles about the same line with one fifth of the radius.](figures/ch05-quadload.svg){#fig5-quadload}
+![The simulated trajectory, five snapshots over 6 s. The thrust cancels the total weight, so the center of mass moves on a straight line. The light load swings wide below, and the heavy quadrotor wobbles about the same line with one fifth of the radius.](figures/ch05-quadload.svg){#fig5-quadload}
 
 A trajectory figure proves little. Conserved quantities prove more.
 
@@ -280,7 +280,7 @@ A trajectory figure proves little. Conserved quantities prove more.
 
 *Work.* With thrust on, energy is not conserved. It varies over a range of 0.75 J. But a constant vertical force has a potential, so $E - f\,e_3\cdot x_Q$ should be constant. It is, to $7\times10^{-12}$ J.
 
-*Momentum.* The centre of mass stays on its straight line to $1.3\times10^{-10}$ m. The quadrotor circles it at 0.167 m, the load at 0.833 m. The ratio is $m_Q/m_L = 5$.
+*Momentum.* The center of mass stays on its straight line to $1.3\times10^{-10}$ m. The quadrotor circles it at 0.167 m, the load at 0.833 m. The ratio is $m_Q/m_L = 5$.
 :::
 
 Now settle the opening question. Equation [](#eq5-wu) is solved for the accelerations. The program's rows [](#eq5-quad-rows) and [](#eq5-cable) are coupled. Substitute one into the other and two lines of algebra give the thesis form. Numerically, the accelerations from the generated code and from [](#eq5-wu) agree to $2.5\times10^{-14}$ at 50 random states. The thesis is right. The sign is a minus.
@@ -289,7 +289,7 @@ A controller needs one more thing: the dynamics linearized about a trajectory. T
 
 ## More bodies {#sec5-scaling}
 
-Nothing in the pipeline cared that the quadrotor lives on a product, $\R^3\times S^2\times\SO(3)$. We listed three variables and got three equations. Larger products cost typing and little else. The second model of Wu's thesis has several quadrotors carrying one rigid body by cables. It is among the 30 systems in the library's catalogue. With three quadrotors it has 21 degrees of freedom and eight coupled equations. They derive in a fraction of a second and check at $9.0\times10^{-8}$.
+Nothing in the pipeline cared that the quadrotor lives on a product, $\R^3\times S^2\times\SO(3)$. We listed three variables and got three equations. Larger products cost typing and little else. The second model of Wu's thesis has several quadrotors carrying one rigid body by cables. It is among the 30 systems in the library's catalog. With three quadrotors it has 21 degrees of freedom and eight coupled equations. They derive in a fraction of a second and check at $9.0\times10^{-8}$.
 
 A harder request: a chain of $n$ spherical pendulums, where $n$ is a symbol. There are $n$ equations and you cannot type them. The `geomech.indexed` module lets you write the Lagrangian with sums.
 
@@ -352,7 +352,7 @@ And once more: the check certifies the equations against $L$. It cannot certify 
 ## Exercises {#sec5-exercises .unnumbered}
 
 ::: {.exercise #exr5-sign-physical}
-Settle the sign in [](#eq5-wu) by physics alone. Cut the thrust, $f = 0$, so that both bodies fall freely while whirling about their centre of mass. Which way must the cable pull the load? Compare with the first line of [](#eq5-wu) and with the tension the thesis gives, $T = \frac{m_L}{m_Q + m_L}\,(m_Q\, l\,\dot q\cdot\dot q - q\cdot fRe_3)$.
+Settle the sign in [](#eq5-wu) by physics alone. Cut the thrust, $f = 0$, so that both bodies fall freely while whirling about their center of mass. Which way must the cable pull the load? Compare with the first line of [](#eq5-wu) and with the tension the thesis gives, $T = \frac{m_L}{m_Q + m_L}\,(m_Q\, l\,\dot q\cdot\dot q - q\cdot fRe_3)$.
 :::
 
 ::: {.exercise #exr5-factor-two}

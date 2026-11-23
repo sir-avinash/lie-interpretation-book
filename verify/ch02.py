@@ -139,7 +139,7 @@ nv = np.linalg.norm(v)
 exp_q = np.cos(nv) * qs + np.sin(nv) * v / nv
 ck.close("S2 exp: cos|v| q + sin|v| v/|v| is a unit vector", np.linalg.norm(exp_q), 1.0, tol=1e-14)
 ck.close("S2 exp: equals rotating q by the vector q x v", exp_q, expm_so3(np.cross(qs, v)) @ qs, tol=1e-13)
-ck.close("S2 exp: arc length travelled is |v|", np.arccos(np.clip(exp_q @ qs, -1, 1)), nv if nv <= np.pi else 2 * np.pi - nv, tol=1e-9)
+ck.close("S2 exp: arc length traveled is |v|", np.arccos(np.clip(exp_q @ qs, -1, 1)), nv if nv <= np.pi else 2 * np.pi - nv, tol=1e-9)
 ck.close("SO(2) exp: exp(theta J) is the rotation by theta", expm(th0 * J2), [[np.cos(th0), -np.sin(th0)], [np.sin(th0), np.cos(th0)]], tol=1e-13)
 
 
@@ -182,7 +182,7 @@ qa, qb = unit(rng.normal(size=3)), unit(rng.normal(size=3))
 ax = np.cross(qa, qb)
 Rab = expm_so3(np.arcsin(np.linalg.norm(ax)) * unit(ax)) if qa @ qb > 0 else expm_so3((np.pi - np.arcsin(np.linalg.norm(ax))) * unit(ax))
 ck.close("SO(3) acts transitively: some R takes q_a to q_b", Rab @ qa, qb, tol=1e-12)
-ck.close("rotations about e3 leave e3 alone (the stabiliser is a circle)", Rz(1.234) @ E3, E3)
+ck.close("rotations about e3 leave e3 alone (the stabilizer is a circle)", Rz(1.234) @ E3, E3)
 ck.close("so R and R Rz(a) give the same direction R e3", R @ Rz(0.77) @ E3, R @ E3, tol=1e-14)
 ck.true("dimension count: 3 - 1 = 2", 3 - 1 == 2)
 

@@ -29,7 +29,7 @@ def on_sphere(scene, p):
 
 # ------------------------------------------------- variation on the sphere
 def swing_pair(T, eps):
-    """Free swing, a neighbour started `eps` away, and the linearized flow between them."""
+    """Free swing, a neighbor started `eps` away, and the linearized flow between them."""
     q0, w0 = V.s2_swing()
     axis = unit(np.cross(q0, [0.3, 1.0, 0.2]))
     free = lambda t, q, w: np.zeros(3)
@@ -73,7 +73,7 @@ def variation():
     s.label(qd, r"$q_d(t)$", dx=-22, dy=-6, color=INDIGO)
     s.label(qn, r"$q(t)$", dx=19, dy=9, color=TERRACOTTA)
     s.label(P[-8], "reference", dx=31, dy=-2, size=9.5, color=INDIGO, **SANS)
-    s.label(Pn[-8], "neighbour", dx=-32, dy=-6, size=9.5, color=TERRACOTTA, **SANS)
+    s.label(Pn[-8], "neighbor", dx=-32, dy=-6, size=9.5, color=TERRACOTTA, **SANS)
     s.label(c + 0.5 * a1 + 0.42 * a2, r"$T_{q_d}S^2$", dx=-4, dy=10, size=10.5)
     s.text2d(2.1, 0.35, "the tangent plane rides\nalong with the reference", fontsize=9.5, color=MUTED,
              linespacing=1.35, **SANS)
@@ -137,7 +137,7 @@ def linear_vs_nonlinear():
         ax0.plot(tt, y, color=col, lw=1.5, zorder=6, ls="-")
         ax0.annotate(f"{deg}°", (tt[-1], y[-1]), xytext=(5, off), textcoords="offset points", color=col, fontsize=9.5,
                      va="center", **SANS)
-    ax0.text(0.04, 1.47, r"grey band: linear prediction $\|\xi(t)\|$", fontsize=10.5, color=MUTED, path_effects=halo())
+    ax0.text(0.04, 1.47, r"gray band: linear prediction $\|\xi(t)\|$", fontsize=10.5, color=MUTED, path_effects=halo())
     ax0.text(0.04, 0.1, r"lines: simulated $\|e_q(t)\|$ / initial angle", fontsize=10.5, path_effects=halo())
     ax0.set_xlim(0, T * 1.1)
     ax0.set_ylim(0, 1.6)

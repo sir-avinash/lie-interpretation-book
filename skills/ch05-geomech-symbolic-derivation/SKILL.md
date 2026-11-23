@@ -5,7 +5,7 @@ description: Derive, verify and simulate coordinate-free equations of motion wit
 
 # Symbolic derivation on manifolds with geomech
 
-Procedure for Chapter 5. Tested with `geomech` 1.1.0. For the full API, the catalogue of ready-made systems and every error message, read the library's own skill (`skills/geomech/SKILL.md` and `reference.md` in https://github.com/vkotaru/geomech).
+Procedure for Chapter 5. Tested with `geomech` 1.1.0. For the full API, the catalog of ready-made systems and every error message, read the library's own skill (`skills/geomech/SKILL.md` and `reference.md` in https://github.com/vkotaru/geomech).
 
 ## When to use
 
@@ -73,7 +73,7 @@ traj = simulate(plant, x0, t_final, p, u=u) # constant array or a function
 | `TypeError: ... is a tangent or variation vector, not a configuration variable` | $\omega$ or $\Omega$ listed as a variable | list the point `q` or `R` |
 | `AlgebraicError: ... the Lagrangian depends on accelerations ...` | $L$ contains a second derivative | rewrite $L$ in velocities |
 | `ValueError: to_standard_form: input 'g' is constant ...` | a constant passed as an input | inputs are non-constant symbols |
-| `ValueError: x0: the S2 slot 'q' must have unit norm ...` | initial state off the manifold | normalise $q$, make $\omega \perp q$ |
+| `ValueError: x0: the S2 slot 'q' must have unit norm ...` | initial state off the manifold | normalize $q$, make $\omega \perp q$ |
 | equation contains $J$ and $J^\top$ separately | `SymmetricMatrix` missing | declare it |
 | extra terms that a paper does not have | terms along $q$ in an $S^2$ row, or an unsimplified but equal form | compare by value |
 | `check_eom` above `1e-5` | the equation does not match $L$ | run `assert_eom` to find the row. Do not edit the equation by hand. Report the error text |

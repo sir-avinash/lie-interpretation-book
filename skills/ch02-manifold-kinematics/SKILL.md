@@ -1,6 +1,6 @@
 ---
 name: ch02-manifold-kinematics
-description: Choose the configuration manifold of a robot (products of R^n, S^1, S^2, SO(3), SE(3)), write its kinematic equations, and implement a time step that stays on the manifold. Use when modelling a new system, when a simulator or estimator shows drifting unit vectors or non-orthogonal rotation matrices, or when reviewing code that adds velocities to configurations.
+description: Choose the configuration manifold of a robot (products of R^n, S^1, S^2, SO(3), SE(3)), write its kinematic equations, and implement a time step that stays on the manifold. Use when modeling a new system, when a simulator or estimator shows drifting unit vectors or non-orthogonal rotation matrices, or when reviewing code that adds velocities to configurations.
 ---
 
 # Configuration manifold, kinematics and integrator for a new robot
@@ -44,7 +44,7 @@ Rules for the choice:
 
 Reference counts: quadrotor SE(3), 6. Quadrotor with cable-suspended load R^3 x S^2 x SO(3), 8, with 4 inputs. `n` quadrotors with a rigid payload SE(3) x (S^2 x SO(3))^n, `6 + 5n`.
 
-### 3. Write down the modelling claims
+### 3. Write down the modeling claims
 
 Each factor asserts a constraint. Record them next to the model: "cable taut" for S^2, "foot pinned" for a fixed base, "link rigid" for a fixed length. For each claim, name the signal that detects its violation (cable tension, contact force) and the model that replaces it.
 
@@ -105,7 +105,7 @@ Sample `Omega` and `omega` at the midpoint of the step when they are available t
 ## Failure modes
 
 - **Euler step on a curved factor.** `q + h * q_dot` multiplies `norm(q)^2` by `1 + h^2 * norm(omega)^2` each step. `R + h * R @ hat(Omega)` has determinant `1 + h^2 * norm(Omega)^2`. Replace with step 6.
-- **Normalising as the only fix.** Projection restores the constraint and hides the integration error. If you must project a rotation, use the orthogonal polar factor (`U @ Vt` from the SVD), not Gram-Schmidt.
+- **Normalizing as the only fix.** Projection restores the constraint and hides the integration error. If you must project a rotation, use the orthogonal polar factor (`U @ Vt` from the SVD), not Gram-Schmidt.
 - **Wrong side.** Body-frame `Omega` multiplies on the right, `R @ exp_so3(h * Omega)`. World-frame `omega` multiplies on the left, `exp_so3(h * omega) @ R`.
 - **Adding rotation vectors.** `exp(a) exp(b) != exp(a + b)`. The difference starts at `cross(a, b) / 2`.
 - **Logarithm near half a turn.** `log_so3` divides by `sin(theta)` and is two-valued at `theta = pi`. Do not build a controller or a cost on `log` without handling this.

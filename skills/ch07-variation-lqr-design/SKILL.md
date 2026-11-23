@@ -9,7 +9,7 @@ description: Design a variation-based LQR for a system whose state lives on SO(3
 
 - The plant state contains an attitude `R` in SO(3) or a direction `q` in S^2, and you need a linear model about an equilibrium or a trajectory.
 - The reference passes near a chart singularity, or the set-point is one (nose-up hover, inverted pendulum).
-- Do not use it to claim large-error or almost-global behaviour. The result is first order.
+- Do not use it to claim large-error or almost-global behavior. The result is first order.
 
 ## Conventions
 
@@ -34,8 +34,8 @@ Kinematic rows: `eta' = -W_d x eta + dW` and `xi' = w_d x xi + (I - q_d q_d^T) d
      `A = [[hat(w_d), I - q_d q_d^T], [hat(F_d - m g e3) hat(q_d) / (m l), 0]]`, `B = [0; hat(q_d) / (m l)]`.
 
 3. **Check the linearization by finite differences (mandatory).**
-   - Simulate the nonlinear plant from the reference state and from two neighbours at `+eps` and `-eps`: `R_d exp(eps hat(eta0))`, `W_d + eps dW0`, `exp(eps hat(xi0)) q_d`, and `w` re-projected onto the tangent plane of the perturbed `q`. Perturb the input by `eps du(t)`.
-   - Read the centred difference as `eta = vee(R_d^T dR)`, `xi = q_d x dq`, plain differences for velocities.
+   - Simulate the nonlinear plant from the reference state and from two neighbors at `+eps` and `-eps`: `R_d exp(eps hat(eta0))`, `W_d + eps dW0`, `exp(eps hat(xi0)) q_d`, and `w` re-projected onto the tangent plane of the perturbed `q`. Perturb the input by `eps du(t)`.
+   - Read the centered difference as `eta = vee(R_d^T dR)`, `xi = q_d x dq`, plain differences for velocities.
    - Integrate `s' = A(t) s + B(t) du(t)` from the same initial `s`. Require agreement that improves by 100 when `eps` shrinks by 10.
    - On S^2, compare two derivations only on the constraint subspace. 3x3 blocks that multiply `xi` or `dw` are not unique off it (geomech prints `q q^T hat(w)` where the hand derivation gives `hat(w)`).
 

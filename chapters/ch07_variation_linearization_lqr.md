@@ -7,7 +7,7 @@ notebook: notebooks/ch07_variation_lqr_sim.ipynb
 verify: verify/ch07.py
 ---
 
-A tail-sitter drone takes off like a rocket, nose pointing at the sky, then tips over and flies like an aeroplane. You want a linear quadratic regulator for the nose-up hover. LQR needs a model $\dot x = Ax + Bu$. So what is $x$?
+A tail-sitter drone takes off like a rocket, nose pointing at the sky, then tips over and flies like an airplane. You want a linear quadratic regulator for the nose-up hover. LQR needs a model $\dot x = Ax + Bu$. So what is $x$?
 
 Try yaw, pitch and roll. Nose-up is 90° of pitch, where the matrix $E$ of [](#eq-euler-jacobian) has no inverse. There is no $A$. Back the set-point off to 85° and $A$ exists, with entries of size $1/\cos 85^\circ = 11.5$. At 89.5° they are 115.
 
@@ -17,7 +17,7 @@ Both attempts ask how the *numbers that label* an attitude change. The useful qu
 
 ## A small deviation of a direction {#sec7-variation}
 
-Start one dimension down. A pendulum rod, a cable or a thrust axis is a direction $q \in S^2$, and it moves as $\dot q = \omega \times q$ with $\omega \cdot q = 0$. Let $q_d(t)$ be a reference motion and $q(t)$ a neighbour ([](#fig7-variation)).
+Start one dimension down. A pendulum rod, a cable or a thrust axis is a direction $q \in S^2$, and it moves as $\dot q = \omega \times q$ with $\omega \cdot q = 0$. Let $q_d(t)$ be a reference motion and $q(t)$ a neighbor ([](#fig7-variation)).
 
 The difference $q - q_d$ is a poor state. It has three components for two degrees of freedom, and $q_d$ plus a small multiple of it is off the sphere. [](#ch-variations) gave the right object. A nearby direction is the reference turned by a small rotation, $q = \exp(\epsilon\,\xi^\wedge)\,q_d$, and to first order
 
@@ -27,7 +27,7 @@ $$
 
 The vector $\xi$ is the axis and angle of that small rotation. Its part along $q_d$ would spin $q_d$ about itself and move nothing, so we set it to zero. What remains lies in the tangent plane at $q_d$: two numbers, as there should be.
 
-![A free swing of a spherical pendulum (indigo) and a neighbour released 20° away (terracotta), both simulated. At each instant the neighbour is the reference turned about $\xi$. Both $\xi$ and the displacement $\delta q = \xi \times q_d$ lie in the tangent plane at $q_d(t)$, at right angles to each other.](figures/ch07-variation.svg){#fig7-variation}
+![A free swing of a spherical pendulum (indigo) and a neighbor released 20° away (terracotta), both simulated. At each instant the neighbor is the reference turned about $\xi$. Both $\xi$ and the displacement $\delta q = \xi \times q_d$ lie in the tangent plane at $q_d(t)$, at right angles to each other.](figures/ch07-variation.svg){#fig7-variation}
 
 The velocity deviation is simpler to define and stranger to live with: $\delta\omega = \omega - \omega_d$, to first order.
 
@@ -37,7 +37,7 @@ Hold two pencils by their ends so that they point in different directions, and t
 Carry $\omega$ over to $q_d$ and compare ([](#fig7-planes)). It sticks out of the plane there. The difference $\delta\omega$ therefore has a component along $q_d$, and that component is not free. It is fixed by how far apart the pencils are and how fast the reference is turning.
 :::
 
-![Why $\delta\omega$ is constrained. The reference spins with $\omega_d$, tangent at $q_d$. The neighbour spins with $\omega$, tangent at $q$. Redrawn at $q_d$ (dashed), $\omega$ leaves the tangent plane, so $\delta\omega = \omega - \omega_d$ has a component along $q_d$ (teal).](figures/ch07-two-planes.svg){#fig7-planes}
+![Why $\delta\omega$ is constrained. The reference spins with $\omega_d$, tangent at $q_d$. The neighbor spins with $\omega$, tangent at $q$. Redrawn at $q_d$ (dashed), $\omega$ leaves the tangent plane, so $\delta\omega = \omega - \omega_d$ has a component along $q_d$ (teal).](figures/ch07-two-planes.svg){#fig7-planes}
 
 To find that component, vary $q \cdot \omega = 0$ with [](#eq7-var-s2):
 
@@ -86,18 +86,18 @@ Wu and Sreenath (2015) and the symbolic engine of [](#ch-symbolic) print the upp
 :::
 
 ::: {.example #ex7-s2-check name="Checking the linearization"}
-Take $m = 0.5$ kg, $l = 0.8$ m and a reference released 140° from the hanging position and pushed by a time-varying force. Perturb the initial state and the force by $\pm\epsilon$ and simulate the nonlinear pendulum. The centred difference of the two neighbours, read through [](#eq7-var-s2), is a finite-difference $s(t)$. Integrate [](#eq7-s2-lin) from the same start. With $\epsilon = 10^{-4}$ the two differ by $3.6\times10^{-8}$ over 1.5 s, and by a hundred times more with $\epsilon = 10^{-3}$, as a second-order error should. The symbolic derivation matches the lower blocks of $A$ and $B$ entry by entry.
+Take $m = 0.5$ kg, $l = 0.8$ m and a reference released 140° from the hanging position and pushed by a time-varying force. Perturb the initial state and the force by $\pm\epsilon$ and simulate the nonlinear pendulum. The centered difference of the two neighbors, read through [](#eq7-var-s2), is a finite-difference $s(t)$. Integrate [](#eq7-s2-lin) from the same start. With $\epsilon = 10^{-4}$ the two differ by $3.6\times10^{-8}$ over 1.5 s, and by a hundred times more with $\epsilon = 10^{-3}$, as a second-order error should. The symbolic derivation matches the lower blocks of $A$ and $B$ entry by entry.
 :::
 
 So far $s$ has been an infinitesimal. For control we need to know what it says about a real error.
 
 Near the reference the linear state *is* the geometric error of [](#def-error-s2). Put $q = \exp(\xi^\wedge) q_d$ into $e_q = q_d \times q$ and expand: $e_q = \xi + O(\|\xi\|^3)$. So integrating [](#eq7-s2-lin) predicts $e_q(t)$.
 
-[](#fig7-linear) tests the prediction on a free swing. Release a neighbour 1° away and after 1.2 s the linear model is off by 1.6% of the error. At 10° it is off by 16%, at 30° by 48%. The mismatch grows in proportion to the initial angle. That is what "first order" means, and it is the only promise a linearization makes.
+[](#fig7-linear) tests the prediction on a free swing. Release a neighbor 1° away and after 1.2 s the linear model is off by 1.6% of the error. At 10° it is off by 16%, at 30° by 48%. The mismatch grows in proportion to the initial angle. That is what "first order" means, and it is the only promise a linearization makes.
 
 ![What the linear state predicts. Left: the error $\|e_q(t)\|$ between two simulated swings, divided by the initial angle, against the linear prediction from [](#eq7-s2-lin). Right: the relative error of the prediction at 1.2 s grows in proportion to the initial angle.](figures/ch07-linear-vs-nonlinear.svg){#fig7-linear}
 
-The experiment also has a trap in it. The neighbour's $\omega$ must be perpendicular to the neighbour's $q$, so its initial $\delta\omega$ has to satisfy [](#eq7-var-omega). Start the linear model from $(\xi, 0)$ instead and the prediction is wrong by 3.5% however small the perturbation. The constraints are part of the model.
+The experiment also has a trap in it. The neighbor's $\omega$ must be perpendicular to the neighbor's $q$, so its initial $\delta\omega$ has to satisfy [](#eq7-var-omega). Start the linear model from $(\xi, 0)$ instead and the prediction is wrong by 3.5% however small the perturbation. The constraints are part of the model.
 
 ## A state that is not free {#sec7-constrained}
 
@@ -141,20 +141,20 @@ with closed-loop poles at $-3.17$ and $-8.77\ \text{s}^{-1}$, each double. Relea
 :::
 
 ::: {.warning name="Do not solve a Riccati equation on the unreduced state"}
-The six-state pair $(A, B)$ of the upright pendulum has two uncontrollable modes at zero. No stabilising solution of the algebraic Riccati equation exists, and a standard solver raises an error. Reduce to $\ker C$ first. The nine-entry attitude model of the opening failed for the same reason, with six such modes instead of two.
+The six-state pair $(A, B)$ of the upright pendulum has two uncontrollable modes at zero. No stabilizing solution of the algebraic Riccati equation exists, and a standard solver raises an error. Reduce to $\ker C$ first. The nine-entry attitude model of the opening failed for the same reason, with six such modes instead of two.
 :::
 
 The sphere charges two constraints for a singularity-free model. The rotation group charges none.
 
 ## The rigid body {#sec7-so3}
 
-Take a rigid body with inertia $J$ about a fixed pivot, centre of mass at $\rho$ in the body frame, and body torque $\tau$. With $\rho = 0$ this is the attitude of a multirotor. [](#ch-dynamics) gives
+Take a rigid body with inertia $J$ about a fixed pivot, center of mass at $\rho$ in the body frame, and body torque $\tau$. With $\rho = 0$ this is the attitude of a multirotor. [](#ch-dynamics) gives
 
 $$
 \dot R = R\,\Omega^\wedge, \qquad J\dot\Omega = J\Omega \times \Omega + m g\,(R\T e_3) \times \rho + \tau . \label{eq7-body}
 $$
 
-A neighbouring attitude is the reference turned by a small body-frame rotation, $R = R_d \exp(\epsilon\,\eta^\wedge)$. From [](#ch-variations),
+A neighboring attitude is the reference turned by a small body-frame rotation, $R = R_d \exp(\epsilon\,\eta^\wedge)$. From [](#ch-variations),
 
 $$
 \delta R = R_d\,\eta^\wedge, \qquad \delta\Omega = \dot\eta + \Omega_d \times \eta . \label{eq7-var-so3}
@@ -261,7 +261,7 @@ Start the body 15° off. The geometric loop ends the flip 0.007° from the refer
 
 ![Riccati gain along the flip of [](#ex7-flip). Top: the pitch angle of the reference passes within 5° of the chart singularity twice. Bottom: the norm of the LQR gain, designed in the variation coordinates and in Euler angles.](figures/ch07-gain-history.svg){#fig7-gain}
 
-One more number, for honesty. The Euler-angle LQR also tracks this flip, ending 0.005° off. The reference is within 10° of the pole for less than 0.05 s per pass, too briefly for the swollen gain to do harm. A chart singularity hurts where you linger, as in [](#ex7-hold), and it forbids a reference that passes through it. It does not ruin every manoeuvre that goes near.
+One more number, for honesty. The Euler-angle LQR also tracks this flip, ending 0.005° off. The reference is within 10° of the pole for less than 0.05 s per pass, too briefly for the swollen gain to do harm. A chart singularity hurts where you linger, as in [](#ex7-hold), and it forbids a reference that passes through it. It does not ruin every maneuver that goes near.
 
 ::: {.warning name="Feed the gain the state it was designed for"}
 LQR has a built-in test: for small errors the closed-loop cost must equal $\tfrac12 s_0\T P(t_0)\,s_0$. Inject an attitude error mid-flip, at $t_0 = 0.45$ s, where $\Omega_d$ is 5.5 rad/s. With [](#eq7-feedback) the ratio of measured to predicted cost is 1.0000 for a 1° error, 1.006 for 15° and 1.064 for 45°. Replace the velocity entry by $e_\Omega$ alone, as the feedback is sometimes written, and the ratio is 2.00: twice the optimal cost, however small the error. That loop is stable. It is not the regulator you designed. By [](#eq7-dictionary), $e_\Omega$ is $\dot\eta$, and the gain was computed for $\delta\Omega$. At a hover the two agree and the slip is invisible.
@@ -271,7 +271,7 @@ A ratio of 1.064 at 45° says the linear model is still good a long way out. How
 
 ## How local is local? {#sec7-local}
 
-LQR theory guarantees a neighbourhood and says nothing about its size. So measure it ([](#fig7-large)).
+LQR theory guarantees a neighborhood and says nothing about its size. So measure it ([](#fig7-large)).
 
 Take the upright pendulum of [](#ex7-upright) first. The gain was computed at $q_d = e_3$, where a horizontal force is perpendicular to the rod. Tilt the rod by $\theta$ and the same force has a lever arm shorter by $\cos\theta$. The feedback torque is $l\,k_p \sin\theta\cos\theta$. Gravity's is $m g l \sin\theta$. Released from rest, the pendulum comes back only if
 
@@ -289,7 +289,7 @@ Swap $e_R$ for the rotation vector $\log(R_d\T R)^\vee$, whose length is $\theta
 
 Mueller (2018) makes this point for multicopters. He compares four attitude controllers that are identical to first order, and shows that they recover differently from large disturbances and that the $e_R$ form can linger near half a turn for an arbitrarily long time. Linearization cannot see any of this.
 
-So be clear about what has been built. A variation-based LQR is valid at every reference, with no singular attitude, and optimal to first order around each one. It promises nothing far away. No almost-global claim follows, and by [](#thm-obstruction) no continuous law can make a global one. The large-error behaviour above belongs to these two examples and to the choice of error, not to LQR.
+So be clear about what has been built. A variation-based LQR is valid at every reference, with no singular attitude, and optimal to first order around each one. It promises nothing far away. No almost-global claim follows, and by [](#thm-obstruction) no continuous law can make a global one. The large-error behavior above belongs to these two examples and to the choice of error, not to LQR.
 
 ## The same linear system from the Lie algebra {#sec7-lie}
 
@@ -301,7 +301,7 @@ $$
 
 On $\SO(3)$ the operator $\ad_\Omega$ is $\Omega^\wedge$, and [](#eq7-lie) is the first row of [](#eq7-so3-lin) with $\psi$ in place of $\eta$. The two are the same vector to first order. On $\SE(3)$ the operator is a $6\times 6$ matrix built from the reference twist, and it couples position and attitude errors correctly.
 
-This form matters beyond LQR. Given the reference, [](#eq7-lie) is linear in the unknowns $(\psi, \zeta)$, and so is the linearized momentum equation. Discretise over a horizon, add a quadratic cost in $\psi$ and linear bounds on the inputs, and the tracking problem is a quadratic program: convex, with fast reliable solvers. The same problem posed in $R$ and $\Omega$ is not convex. Teng and co-authors (2022) show that the logarithmic error keeps its convergence rate out to large angles: the right-hand panel of [](#fig7-large) again. Jang, Teng and Ghaffari (2023) build the convex predictive controller on $\SE(3)$ for marine vehicles. The chapter on error-state MPC and on-manifold solvers takes it from there.
+This form matters beyond LQR. Given the reference, [](#eq7-lie) is linear in the unknowns $(\psi, \zeta)$, and so is the linearized momentum equation. Discretize over a horizon, add a quadratic cost in $\psi$ and linear bounds on the inputs, and the tracking problem is a quadratic program: convex, with fast reliable solvers. The same problem posed in $R$ and $\Omega$ is not convex. Teng and co-authors (2022) show that the logarithmic error keeps its convergence rate out to large angles: the right-hand panel of [](#fig7-large) again. Jang, Teng and Ghaffari (2023) build the convex predictive controller on $\SE(3)$ for marine vehicles. The chapter on error-state MPC and on-manifold solvers takes it from there.
 
 ## Exercises {#sec7-exercises .unnumbered}
 

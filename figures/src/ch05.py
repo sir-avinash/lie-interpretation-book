@@ -351,7 +351,7 @@ def quadload():
         s.dot(xl, color=INDIGO, size=6, zorder=34)
         s.arrow(xq, xq + 0.36 * E3, color=TEAL, lw=1.3, head=0.08, zorder=31)
         s.label(xq + 0.36 * E3, f"{traj.t[idx]:.1f} s", dx=0, dy=9, size=9.5, fontfamily=SANS, color=INK)
-    s.label(com[-1], "centre of mass", dx=44, dy=0, size=9.5, fontfamily=SANS, color=MUTED)
+    s.label(com[-1], "center of mass", dx=44, dy=0, size=9.5, fontfamily=SANS, color=MUTED)
     s.label(xQs[0], "quadrotor $x_Q$", dx=-50, dy=-12, size=9.5, fontfamily=SANS, color=TERRACOTTA)
     s.label(xLs[0], "load $x_L$", dx=-32, dy=15, size=9.5, fontfamily=SANS, color=INDIGO)
     s.label(xQs[-1] + 0.2 * E3, "thrust $f R e_3$", dx=42, dy=6, size=9.5, fontfamily=SANS, color=TEAL)

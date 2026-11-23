@@ -88,9 +88,9 @@ def s2_swing():
 
 
 def s2_neighbour(q0, w0, axis, e):
-    """Rotate q0 by e about `axis` and keep omega tangent. Returns the neighbour and its unit variation.
+    """Rotate q0 by e about `axis` and keep omega tangent. Returns the neighbor and its unit variation.
 
-    The neighbour's omega is w0 minus its component along the new q, so
+    The neighbor's omega is w0 minus its component along the new q, so
     delta omega = -(w0 . (axis x q0)) q0: exactly what the second constraint demands.
     """
     qe = expm_so3(e * axis) @ q0
@@ -143,7 +143,7 @@ def s2_settle(K, th0, mode="sin", Tmax=20.0, tol_deg=1.0):
 
 
 # =====================================================================
-# Rigid body on SO(3) with an offset centre of mass (3D pendulum):
+# Rigid body on SO(3) with an offset center of mass (3D pendulum):
 #     R' = R hat(W),   J W' = J W x W + m g (R^T e3) x rho + tau
 # rho = 0 is the attitude dynamics of a multirotor.
 # =====================================================================
@@ -544,7 +544,7 @@ def main():
             failed = False
         except Exception:
             failed = True
-    ck.true("Riccati equation on the unreduced 6-state pendulum has no stabilising solution (scipy raises)", failed)
+    ck.true("Riccati equation on the unreduced 6-state pendulum has no stabilizing solution (scipy raises)", failed)
 
     # time-varying test: M0 = B, M1 = dB/dt - A B, along the swing
     def M01(t, sign=-1.0):
@@ -722,7 +722,7 @@ def main():
     for e in (1e-2, 1e-3):
         qe = expm_so3(e * xi) @ qd
         we = wd + e * dw
-        we = we - (we @ qe) * qe                            # exactly tangent at the neighbour
+        we = we - (we @ qe) * qe                            # exactly tangent at the neighbor
         e_w = we - (I3 - np.outer(qe, qe)) @ wd
         e_q = np.cross(qd, qe)
         r2.append((np.abs(e_w - e * dw_t).max(), np.abs(e_w + qd * (e_q @ np.cross(wd, qd)) - e * dw).max()))
@@ -736,7 +736,7 @@ def main():
     axis = np.cross(q0, [0.3, 1.0, 0.2])
     axis /= np.linalg.norm(axis)
     s0 = s2_neighbour(q0, w0, axis, 0.0)[2]
-    ck.close("the neighbour's initial variation satisfies both constraints", s2_C(q0, w0) @ s0, 0, tol=1e-12)
+    ck.close("the neighbor's initial variation satisfies both constraints", s2_C(q0, w0) @ s0, 0, tol=1e-12)
     lin = s2_linear_flow(ref, s0, Tsw)
     rel = {}
     for deg in (0.1, 1.0, 10.0, 30.0):

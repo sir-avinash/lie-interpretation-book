@@ -88,7 +88,7 @@ def variation():
             s.label(q + 0.45 * EPS * dq, r"$\delta q = \xi \times q$", dx=39, dy=0, size=12)
     s.label(q_ref(0.62), "reference curve", dx=14, dy=-16, color=INDIGO, size=10, **SANS)
     s.label(q_eps(0.3, EPS), r"nearby curve $q_\epsilon(t)$", dx=0, dy=13, color=TERRACOTTA, size=10.5, **SANS)
-    s.text2d(-1.95, 0.55, "a variation is the\nfirst-order gap between\na curve and its neighbours",
+    s.text2d(-1.95, 0.55, "a variation is the\nfirst-order gap between\na curve and its neighbors",
              fontsize=9.5, color=MUTED, linespacing=1.3, **SANS)
     s.text2d(1.95, -0.1, r"$\xi$ is the axis of the" + "\nsmall rotation that\ncarries $q$ to $q_\\epsilon$",
              fontsize=9.5, color=TEAL, linespacing=1.3, **SANS)

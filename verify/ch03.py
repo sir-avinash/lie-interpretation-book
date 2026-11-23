@@ -188,7 +188,7 @@ ck.close("tangential part of delta omega = xi_dot - omega x xi", P @ dom, xidot0
 ck.close("omega x xi is parallel to q", np.cross(np.cross(om0, xi0), q0), np.zeros(3), tol=1e-8)
 ck.close("q . xi_dot = q . (omega x xi)", q0 @ xidot0, q0 @ np.cross(om0, xi0), tol=1e-8)
 ck.close("normal part: q . delta omega = -q . (omega x xi)", q0 @ dom, -q0 @ np.cross(om0, xi0), tol=1e-6)
-ck.close("linearised constraint: (xi x q) . omega + q . delta omega = 0", np.cross(xi0, q0) @ om0 + q0 @ dom, 0.0, tol=1e-6)
+ck.close("linearized constraint: (xi x q) . omega + q . delta omega = 0", np.cross(xi0, q0) @ om0 + q0 @ dom, 0.0, tol=1e-6)
 ck.true("delta omega is not tangent (normal part is not small)", abs(q0 @ dom) > 0.05, f"{q0 @ dom:.3f}")
 
 

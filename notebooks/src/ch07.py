@@ -98,7 +98,7 @@ def s2_sim(q0, w0, Ffun, T, **kw):
 # %% [markdown]
 # ### Check against perturbed nonlinear trajectories
 #
-# Simulate the reference and two neighbours started $\pm\epsilon$ away. Their centred difference, read through $\xi = q_d\times\delta q$, is a finite-difference $s(t)$. It must match the solution of the linear system, with an error that shrinks like $\epsilon^2$.
+# Simulate the reference and two neighbors started $\pm\epsilon$ away. Their centered difference, read through $\xi = q_d\times\delta q$, is a finite-difference $s(t)$. It must match the solution of the linear system, with an error that shrinks like $\epsilon^2$.
 
 # %%
 rng = np.random.default_rng(7)
@@ -113,14 +113,14 @@ ref = s2_sim(q0, w0, lambda t, q, w: Fd(t), T)
 xi0, dw0 = np.cross(q0, rng.normal(size=3)), rng.normal(size=3)
 
 
-def neighbour(e):
+def neighbor(e):
     qe = expm_so3(e * xi0) @ q0
     we = w0 + e * dw0
     return s2_sim(qe, we - (we @ qe) * qe, lambda t, q, w: Fd(t) + e * dF(t), T)
 
 
 for e in (1e-3, 1e-4):
-    sp, sm = neighbour(e), neighbour(-e)
+    sp, sm = neighbor(e), neighbor(-e)
 
     def s_fd(t):
         x, d = ref.sol(t), (sp.sol(t) - sm.sol(t)) / (2 * e)
@@ -172,7 +172,7 @@ print("kinematic row off ker C     :", f"{np.abs(Ag[:3] - s2_A(qd, wd, Fr)[:3]).
 # %% [markdown]
 # ## 2. A constrained state, and LQR for the upright pendulum
 #
-# At $q_d = e_3$ the naive rank test gives 4 for a 6-component state. The two missing directions are not states of a pendulum. Reduce to the constraint subspace and the pair is controllable. The Riccati equation on the unreduced pair has no stabilising solution.
+# At $q_d = e_3$ the naive rank test gives 4 for a 6-component state. The two missing directions are not states of a pendulum. Reduce to the constraint subspace and the pair is controllable. The Riccati equation on the unreduced pair has no stabilizing solution.
 
 # %%
 A, B = s2_A(E3, Z3, Z3), s2_B(E3)

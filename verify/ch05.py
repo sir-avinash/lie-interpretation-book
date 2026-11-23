@@ -371,7 +371,7 @@ p = {"m_Q": 1.5, "m_L": 0.3, "l": 1.0, "g": 9.81,
      "J": np.diag([0.02, 0.025, 0.04]), "e3": np.array([0.0, 0.0, 1.0])}
 q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])     # cable swung out by 0.8 rad
 w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))    # circling about the vertical
-v_cm = np.array([0.45, 0.0, 0.0])                   # centre-of-mass velocity
+v_cm = np.array([0.45, 0.0, 0.0])                   # center-of-mass velocity
 v0 = v_cm + p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)
 x0 = layout.pack(x_L=np.zeros(3), q=q0, R=np.eye(3), omega_q=w0, x_L_dot=v0)
 
@@ -406,7 +406,7 @@ ck.close("forced run: E - f e3.x_Q is conserved", Ef - work, Ef[0] * np.ones_lik
 ck.record("forced_energy_range_J", float(np.ptp(Ef)))
 ck.record("forced_modified_energy_drift_J", float(np.max(np.abs(Ef - work - Ef[0]))))
 com = (p["m_Q"] * xQn + p["m_L"] * traj["x_L"]) / (p["m_Q"] + p["m_L"])
-ck.close("forced run: centre of mass coasts on a straight line at v_cm", com, com[0] + np.outer(traj.t, v_cm), tol=1e-9)
+ck.close("forced run: center of mass coasts on a straight line at v_cm", com, com[0] + np.outer(traj.t, v_cm), tol=1e-9)
 ck.true("forced run: constraint drift below 1e-12", traj.max_drift() < 1e-12, f"{traj.max_drift():.1e}")
 ck.record("forced_com_line_error_m", float(np.max(np.abs(com - com[0] - np.outer(traj.t, v_cm)))))
 ck.record("forced_quad_wobble_m", float(np.max(np.linalg.norm(xQn - com, axis=1))))
@@ -545,7 +545,7 @@ ck.true("four-link chain: energy drift below 1e-6 over 2 s", drift4 < 1e-6, f"{d
 ck.record("chain4_energy_drift", drift4)
 ck.record("chain4_constraint_drift", tr4.max_drift())
 
-# Several quadrotors carrying a rigid body (Wu 2017, section 3.2.2), from the library's catalogue.
+# Several quadrotors carrying a rigid body (Wu 2017, section 3.2.2), from the library's catalog.
 import geomech.systems
 
 rigid = geomech.systems.get("multi_quadrotor_rigid_load", n_quads=3)
@@ -557,6 +557,6 @@ ck.true("three quadrotors with a rigid load: 21 degrees of freedom", rigid.dof =
 ck.true("three quadrotors with a rigid load: check_eom < 1e-5", err_r < 1e-5, f"{err_r:.1e}, {t_rigid:.1f} s")
 ck.record("multi_quad_rigid_check_eom", err_r)
 ck.record("multi_quad_rigid_equations", len(eom_r))
-ck.record("catalogue_size", len(geomech.systems.list_systems()))
+ck.record("catalog_size", len(geomech.systems.list_systems()))
 
 ck.finish()

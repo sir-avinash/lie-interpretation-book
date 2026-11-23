@@ -97,7 +97,7 @@ Follows Chapter 4. Notation: `R` in SO(3) maps body to world, `Rdot = R hat(Omeg
 - **Varying with `q + eps dq` or `R + eps dR`.** The varied curve leaves the manifold and the derived equation contains a spurious constraint force.
 - **Dropping `Omega x eta` from `delta Omega`.** The gyroscopic term `Omega x J Omega` disappears.
 - **Mixing frames in the virtual work.** A world-frame force must be rotated: the moment is `r x R^T F`, not `r x F`.
-- **Wrong inertia.** For a body on a pivot `J` is about the pivot, not about the centre of mass.
+- **Wrong inertia.** For a body on a pivot `J` is about the pivot, not about the center of mass.
 - **A cable that pushes.** The taut-cable equations stay smooth when the tension formula goes negative. Monitor its sign and switch models at zero.
 - **Reading manifold preservation as accuracy.** An exponential update keeps `R` a rotation. It does not conserve energy. Check the energy drift separately.
 - **Sign conventions when comparing.** Compare accelerations, not printed equations: geomech's `E` and mass blocks carry a minus sign.

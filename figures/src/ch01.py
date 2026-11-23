@@ -121,9 +121,9 @@ def unwinding():
     for th0, col, lab in [(np.radians(-10), INDIGO, r"start at $\mathfrak{q}$"),
                           (np.radians(350), TERRACOTTA, r"start at $-\mathfrak{q}$")]:
         sol = solve_ivp(f, [0, 6], [th0, 0.0], t_eval=tt, rtol=1e-9, atol=1e-11)
-        travelled = np.degrees(np.abs(sol.y[0] - th0))
-        ax1.plot(tt, travelled, color=col, lw=1.8)
-        ax1.text(3.0, travelled[-1] + (22 if th0 > 0 else 18), lab, color=col, fontsize=10.5, path_effects=halo())
+        traveled = np.degrees(np.abs(sol.y[0] - th0))
+        ax1.plot(tt, traveled, color=col, lw=1.8)
+        ax1.text(3.0, traveled[-1] + (22 if th0 > 0 else 18), lab, color=col, fontsize=10.5, path_effects=halo())
     ax1.set_xlim(0, 6)
     ax1.set_ylim(0, 400)
     ax1.set_yticks([0, 90, 180, 270, 360])

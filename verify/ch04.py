@@ -446,7 +446,7 @@ ck.true("book: first reversal of Omega_2 between 0.5 s and 1.5 s", 0.5 < flips[0
 lam = spin * np.sqrt((J_b[1] - J_b[0]) * (J_b[2] - J_b[1]) / (J_b[0] * J_b[2]))
 ck.record("book_growth_rate_per_s", float(lam))
 ck.record("book_efold_time_s", float(1 / lam))
-# measured growth of the wobble while it is still small. In the linearisation about e2,
+# measured growth of the wobble while it is still small. In the linearization about e2,
 # d/dt (Om1, Om3) = [[0, a], [b, 0]] (Om1, Om3); the combination b Om1 + lam Om3 grows exactly like exp(lam t).
 a_lin, b_lin = (J_b[1] - J_b[2]) * spin / J_b[0], (J_b[0] - J_b[1]) * spin / J_b[2]
 ck.close("growth rate squared is a b", lam**2, a_lin * b_lin)
@@ -462,10 +462,10 @@ for ax, name in ((0, "smallest"), (2, "largest")):
     off = np.max(np.linalg.norm(np.delete(Oms_, ax, axis=1), axis=1)) / spin
     ck.true(f"spin about the {name} axis stays within a few percent", off < 0.05, f"max off-axis rate {off:.3f} of spin")
     ck.record(f"book_offaxis_{name}", float(off))
-# linearised rates: purely imaginary about e1, e3
+# linearized rates: purely imaginary about e1, e3
 # about axis i the wobble obeys  w_dd = -k_i w,  k_i = Om^2 (J_i - J_j)(J_i - J_k) / (J_j J_k): stable iff k_i > 0
 k_axis = [(J_b[i] - J_b[(i + 1) % 3]) * (J_b[i] - J_b[(i + 2) % 3]) for i in range(3)]
-ck.true("linearisation: restoring for the smallest and largest axes, repelling for the middle one",
+ck.true("linearization: restoring for the smallest and largest axes, repelling for the middle one",
         k_axis[0] > 0 and k_axis[2] > 0 and k_axis[1] < 0)
 
 
@@ -526,7 +526,7 @@ q = unit([0.3, 0.2, -0.9])
 om = tangent(q, [1.0, 2.0, 0.0])
 vLd, omd, _ = load_accels(q, om, random_rotation(rng), rng.normal(size=3), 0.0, np.zeros(3))
 ck.close("quadrotor + load: with f = 0 the cable rate omega is constant", omd, np.zeros(3))
-ck.close("quadrotor + load: with f = 0 the mass centre is in free fall",
+ck.close("quadrotor + load: with f = 0 the mass center is in free fall",
          (mL * vLd + mQ * (vLd - ll * (np.cross(omd, q) + np.cross(om, np.cross(om, q))))) / (mQ + mL), -G * E3)
 
 

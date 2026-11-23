@@ -115,7 +115,7 @@ p = {"m_Q": 1.5, "m_L": 0.3, "l": 1.0, "g": 9.81,
      "J": np.diag([0.02, 0.025, 0.04]), "e3": np.array([0.0, 0.0, 1.0])}
 q0 = np.array([np.sin(0.8), 0.0, -np.cos(0.8)])     # cable swung out by 0.8 rad
 w0 = np.cross(q0, np.cross([0.0, 0.0, 1.6], q0))    # circling about the vertical
-v_cm = np.array([0.45, 0.0, 0.0])                   # centre-of-mass velocity
+v_cm = np.array([0.45, 0.0, 0.0])                   # center-of-mass velocity
 v0 = v_cm + p["m_Q"] * p["l"] / (p["m_Q"] + p["m_L"]) * np.cross(w0, q0)
 x0 = layout.pack(x_L=np.zeros(3), q=q0, R=np.eye(3), omega_q=w0, x_L_dot=v0)
 
@@ -134,7 +134,7 @@ work = hover[0] * (xQ_t[:, 2] - xQ_t[0, 2])
 fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 3.4))
 ax0.plot(traj["x_L"][:, 0], traj["x_L"][:, 2], label="load")
 ax0.plot(xQ_t[:, 0], xQ_t[:, 2], label="quadrotor")
-ax0.plot(com[:, 0], com[:, 2], "k--", lw=0.8, label="centre of mass")
+ax0.plot(com[:, 0], com[:, 2], "k--", lw=0.8, label="center of mass")
 ax0.set_xlabel("x (m)")
 ax0.set_ylabel("z (m)")
 ax0.set_aspect("equal")
@@ -314,7 +314,7 @@ print("check_eom error:", check_eom(L, dW, variables, eom, inputs=[tau]))
 # **Exercise 5.5.** Plant your own error. `eom` is a dictionary `{name: (variation, E)}`. Replace one `E` by an
 # expression of your own and run `check_eom`. Start from the listing in part 2.
 #
-# **Exercise 5.6.** The library's catalogue has the elastic cable ready made. Compare its Lagrangian with yours.
+# **Exercise 5.6.** The library's catalog has the elastic cable ready made. Compare its Lagrangian with yours.
 
 # %%
 import geomech.systems

@@ -24,7 +24,7 @@ Follows Chapter 1. Notation: `R` in SO(3) maps body to world, `Rdot = R hat(Omeg
 
 4. **Four numbers: test for unwinding.** If the law is `tau = -kp qv - kd Omega`, simulate from one physical attitude with both quaternion signs. If the angle turned differs, the law unwinds. If the law uses `sign(q0)`, it is discontinuous at 180 degrees of error: test with measurement noise at 179 degrees and look for chatter. The remedy within quaternions is a hysteresis switch, which makes the controller hybrid.
 
-5. **Set expectations.** No continuous time-invariant feedback is globally asymptotically stabilising on SO(3) or S^2. Reject any claim of global stability from a continuous law. The achievable target is almost-global: one or more extra equilibria, all unstable, placed far from the goal.
+5. **Set expectations.** No continuous time-invariant feedback is globally asymptotically stabilizing on SO(3) or S^2. Reject any claim of global stability from a continuous law. The achievable target is almost-global: one or more extra equilibria, all unstable, placed far from the goal.
 
 6. **Replace the error terms.**
 

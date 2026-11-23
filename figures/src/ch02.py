@@ -19,8 +19,8 @@ def box(s, center, R, dims, face_colors, zorder=40, lw=0.9):
     """Shaded convex box. Draws only the faces that look at the camera.
 
     `dims` are the full edge lengths along the body axes (columns of R).
-    `face_colors` maps (axis, sign) to a fill colour. Returns the visible faces
-    as {(axis, sign): (face centre, in-plane half vectors)} for decoration.
+    `face_colors` maps (axis, sign) to a fill color. Returns the visible faces
+    as {(axis, sign): (face center, in-plane half vectors)} for decoration.
     """
     c = np.asarray(center, float)
     half = 0.5 * np.asarray(dims, float)

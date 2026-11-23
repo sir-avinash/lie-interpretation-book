@@ -151,8 +151,8 @@ rel = x_then_z.T @ z_then_x
 print(f"the two results differ by {np.degrees(angle(rel)):.1f} degrees about", log_so3(rel) / angle(rel))
 
 # %% [markdown]
-# Small rotations: the leftover of $\exp(\varepsilon a)\exp(\varepsilon b)\exp(-\varepsilon a)\exp(-\varepsilon b)$
-# is $\varepsilon^2\, a \times b$ to leading order.
+# Small rotations: the leftover of $\exp(\epsilon a)\exp(\epsilon b)\exp(-\epsilon a)\exp(-\epsilon b)$
+# is $\epsilon^2\, a \times b$ to leading order.
 
 # %%
 a, b = E1, E2

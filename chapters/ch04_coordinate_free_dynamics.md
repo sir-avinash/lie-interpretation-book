@@ -17,7 +17,7 @@ $$
 J\dot\Omega + \Omega\times J\Omega = m g\,(R\T e_3)\times\rho, \qquad \dot R = R\,\Omega^\wedge ,
 $$
 
-where $\rho$ is the body-frame vector from the pivot to the centre of mass. One line. The mass matrix is $J$, a constant.
+where $\rho$ is the body-frame vector from the pivot to the center of mass. One line. The mass matrix is $J$, a constant.
 
 Where both work they give the same motion. But take a body with $J = \operatorname{diag}(0.20, 0.25, 0.10)$ kg·m² and look at how hard each mass matrix is to invert ([](#fig4-euler-cond)). The condition number of $J$ is 2.5 at every attitude. The condition number of $E\T J E$ is 2.5 when the body is level, 25 at 60° of pitch, 974 at 85°, and $2.4\times10^4$ at 89°. At 90° the matrix is singular and cannot be inverted at all.
 
@@ -81,7 +81,7 @@ $$
 
 Each $q_\epsilon(t)$ is $q(t)$ turned by the angle $\epsilon\|\xi\|$ about $\xi$, so its length is still one ([](#fig4-variation)). A component of $\xi$ along $q$ turns $q$ about itself and does nothing, so we take $\xi\cdot q = 0$. The fixed endpoints become $\xi(0) = \xi(t_f) = 0$.
 
-![Hamilton's principle on the sphere. The path $q(t)$ is a computed pendulum swing. Each neighbouring curve is $q(t)$ rotated about $\xi(t)$, so it stays on the sphere. The arrows are the variation $\delta q = \xi\times q$, tangent to the sphere and zero at both ends.](figures/ch04-variation-s2.svg){#fig4-variation}
+![Hamilton's principle on the sphere. The path $q(t)$ is a computed pendulum swing. Each neighboring curve is $q(t)$ rotated about $\xi(t)$, so it stays on the sphere. The arrows are the variation $\delta q = \xi\times q$, tangent to the sphere and zero at both ends.](figures/ch04-variation-s2.svg){#fig4-variation}
 
 Now the three moves. Varying and integrating by parts work exactly as before and give
 
@@ -196,13 +196,13 @@ $$
 The coefficient of $\delta x$ is the force. The coefficient of $\eta$ is the moment arm crossed with the force, both in the body frame. The rule "$r\times F$" has been derived, frames included.
 
 ::: {.proposition #thm4-rigid-body name="Rigid body with a force and a torque"}
-For a body of mass $m$ and inertia $J$ about its centre of mass $x$, with $L = \tfrac12 m\|\dot x\|^2 + \tfrac12\Omega\cdot J\Omega - m g\,e_3\cdot x$ and the virtual work [](#eq4-virtual-work) plus $\tau\cdot\eta$,
+For a body of mass $m$ and inertia $J$ about its center of mass $x$, with $L = \tfrac12 m\|\dot x\|^2 + \tfrac12\Omega\cdot J\Omega - m g\,e_3\cdot x$ and the virtual work [](#eq4-virtual-work) plus $\tau\cdot\eta$,
 $$
 m\ddot x = F - m g\,e_3, \qquad J\dot\Omega + \Omega\times J\Omega = \tau + r\times R\T F, \qquad \dot R = R\,\Omega^\wedge . \label{eq4-rigid-body}
 $$
 :::
 
-The 3D pendulum of the opening is now a short exercise. Take $J$ about the pivot. Gravity acts at the centre of mass $R\rho$, with potential $m g\,e_3\cdot R\rho$, whose variation is $m g\,\eta\cdot(\rho\times R\T e_3)$. Therefore
+The 3D pendulum of the opening is now a short exercise. Take $J$ about the pivot. Gravity acts at the center of mass $R\rho$, with potential $m g\,e_3\cdot R\rho$, whose variation is $m g\,\eta\cdot(\rho\times R\T e_3)$. Therefore
 
 $$
 J\dot\Omega + \Omega\times J\Omega = m g\,(R\T e_3)\times\rho + \tau . \label{eq4-pendulum}
@@ -210,7 +210,7 @@ $$
 
 That resolves the puzzle. The physics of the pendulum is the three terms of [](#eq4-pendulum). The other hundred terms of the Euler-angle model are $E$, its derivative and their products with $J$: a description of how the chart is bent. The blow-up in [](#fig4-euler-cond) is $E$ losing rank: $\det(E\T J E) = \cos^2\theta\,\det J$. The body-frame velocity $\Omega$ is defined at every attitude, so there was never anything to invert.
 
-You may know these equations from another route. **Newton-Euler** mechanics says that force is the rate of change of linear momentum, and moment about the centre of mass is the rate of change of angular momentum, both in the world frame. The world-frame angular momentum is $R J\Omega$. Differentiate it with $\dot R = R\,\Omega^\wedge$:
+You may know these equations from another route. **Newton-Euler** mechanics says that force is the rate of change of linear momentum, and moment about the center of mass is the rate of change of angular momentum, both in the world frame. The world-frame angular momentum is $R J\Omega$. Differentiate it with $\dot R = R\,\Omega^\wedge$:
 
 $$
 \ddt\big(R J\Omega\big) = R\big(J\dot\Omega + \Omega\times J\Omega\big) = R\,\tau . \label{eq4-newton-euler}
@@ -248,7 +248,7 @@ This is the tennis racket theorem, or Dzhanibekov effect, after the cosmonaut wh
 
 Real robots have several parts, each on its own manifold. The configuration space is the product, the Lagrangian is a sum, and the variations are the ones we already have, one per factor.
 
-**Quadrotor, on $\SE(3)$.** Four rotors produce a total thrust $f$ along the body axis $R e_3$ and a body torque $\tau$. The thrust acts at the centre of mass, so $F = f R e_3$ and $r = 0$ in [](#thm4-rigid-body):
+**Quadrotor, on $\SE(3)$.** Four rotors produce a total thrust $f$ along the body axis $R e_3$ and a body torque $\tau$. The thrust acts at the center of mass, so $F = f R e_3$ and $r = 0$ in [](#thm4-rigid-body):
 
 $$
 m\ddot x = f R e_3 - m g\,e_3, \qquad J\dot\Omega + \Omega\times J\Omega = \tau . \label{eq4-quadrotor}
@@ -277,12 +277,12 @@ J\dot\Omega + \Omega\times J\Omega &= \tau , \qquad \dot R = R\,\Omega^\wedge .
 \end{aligned} \label{eq4-load}
 $$
 
-Read three things off. First, the right side of the load equation is a multiple of $q$: measured against free fall, the load can only accelerate along the cable. Second, the load and the cable see the quadrotor only through the vector $f R e_3$, and the attitude equation does not feel the load at all, because the cable is attached at the centre of mass. Torque turns the body, the body aims the thrust, the thrust swings the cable, the cable pulls the load. Controllers for this system, with four inputs for eight degrees of freedom, are built on that cascade. Third, gravity is absent from the cable equation.
+Read three things off. First, the right side of the load equation is a multiple of $q$: measured against free fall, the load can only accelerate along the cable. Second, the load and the cable see the quadrotor only through the vector $f R e_3$, and the attitude equation does not feel the load at all, because the cable is attached at the center of mass. Torque turns the body, the body aims the thrust, the thrust swings the cable, the cable pulls the load. Controllers for this system, with four inputs for eight degrees of freedom, are built on that cascade. Third, gravity is absent from the cable equation.
 
 ::: {.thought #thought4-cut name="Cut the motors"}
 The quadrotor is flying with the load swinging beneath it. Cut the thrust to zero. What does the cable do?
 
-Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its mass centre on a parabola. A pendulum needs something to hang from, and a falling quadrotor is not it.
+Set $f = 0$ in [](#eq4-load). Then $\dot\omega = 0$: the cable keeps turning at whatever constant rate it had. Gravity does not swing it down, because gravity accelerates both ends equally. The pair has become a dumbbell tumbling in free fall, its mass center on a parabola. A pendulum needs something to hang from, and a falling quadrotor is not it.
 :::
 
 The tension is still available. From the load's free-body equation,
@@ -308,7 +308,7 @@ $$
 
 With one quadrotor this collapses to [](#eq4-load). Each quadrotor adds inertia to the load only along its own cable, through $m_i q_i q_i\T$. Wu (2017) carries the derivation through for a rigid-body payload, on $\SE(3)\times(S^2\times\SO(3))^n$.
 
-Legged robots fit the same mould. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with a leg length and three mass positions: thirteen degrees of freedom. Its simplest piece already shows something new.
+Legged robots fit the same mold. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with a leg length and three mass positions: thirteen degrees of freedom. Its simplest piece already shows something new.
 
 ::: {.example #ex4-leg name="A telescoping leg"}
 A leg pivots about its foot with attitude $R$ and inertia $J_0$, and carries a mass $m$ at distance $\rho$ along its axis $R e_3$. A force $f$ extends it and a torque $\tau$ acts at the ankle. The configuration space is $\R\times\SO(3)$, and with $K = I - e_3 e_3\T$,
@@ -344,7 +344,7 @@ Each update is a rotation, so $R_{k+1} \in \SO(3)$ and $\|q_{k+1}\| = 1$ to roun
 
 ![A 3D pendulum integrated for 60 s at $h = 0.02$ s by two fourth-order methods. Left: the entrywise method drifts off $\SO(3)$, the exponential update does not. Right: the energy error of the two methods is nearly the same.](figures/ch04-integrators.svg){#fig4-integrators}
 
-Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretising Hamilton's principle itself, with an action sum in place of the action integral. They are the subject of the later chapter on variational integrators.
+Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretizing Hamilton's principle itself, with an action sum in place of the action integral. They are the subject of the later chapter on variational integrators.
 
 We now have models that are short, global and checkable. What do you do when the system is too large to derive by hand? [](#ch-symbolic) answers that.
 
@@ -371,7 +371,7 @@ Derive [](#eq4-load) from the Lagrange-d'Alembert principle, using the Lagrangia
 :::
 
 ::: {.exercise #exr4-offset}
-The thrust of a quadrotor acts at the body point $r$, measured from the centre of mass. Use [](#thm4-rigid-body) to write its equations of motion. For $r = (0.01, 0, 0)$ m and a 1 kg vehicle, what constant torque must the rotors supply in hover?
+The thrust of a quadrotor acts at the body point $r$, measured from the center of mass. Use [](#thm4-rigid-body) to write its equations of motion. For $r = (0.01, 0, 0)$ m and a 1 kg vehicle, what constant torque must the rotors supply in hover?
 :::
 
 ::: {.exercise #exr4-integrator}
