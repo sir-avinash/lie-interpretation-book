@@ -13,14 +13,14 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 3 | Variations, errors and transport | written |
 | 4 | Dynamics without coordinates | written |
 | 5 | Symbolic derivation | written |
-| 6 | Tracking control and almost-global stability | planned |
+| 6 | Tracking control and almost-global stability | written |
 | 7 | Variation-based linearization and LQR | written |
-| 8 | Robust, adaptive and safety-critical control | planned |
+| 8 | Robust, adaptive and safety-critical control | written |
 | 9 | Symmetry, fiber bundles and connections | planned |
 | 10 | Differential flatness | planned |
 | 11 | Hybrid zero dynamics on manifolds | planned |
 | 12 | Variational integrators and collocation | planned |
-| 13 | Error-state MPC and on-manifold solvers | planned |
+| 13 | Error-state MPC and on-manifold solvers | written |
 | 14 | Filtering on Lie groups | planned |
 | 15 | Equivariant learning and residual control | planned |
 | 16 | Aerial manipulation, legged and limbless robots | planned |
