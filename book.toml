@@ -1,7 +1,6 @@
 title = "A Lie-Interpretation of Robotics and Control"
 subtitle = "Modeling, control, estimation and optimization on configuration manifolds"
 repo = "sir-avinash/lie-interpretation-book"
-branch = "main"
 index = "chapters/index.md"
 
 [macros]

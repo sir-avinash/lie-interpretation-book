@@ -162,6 +162,11 @@ def chapter_main(ch: dict, prev: dict | None, nxt: dict | None, cfg: dict) -> st
 
 def main() -> None:
     cfg = tomllib.loads((ROOT / "book.toml").read_text(encoding="utf-8"))
+    if "branch" not in cfg:
+        # Link notebooks, scripts and skills on the branch being built, so the links are never dead.
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--abbrev-ref", "HEAD"],
+                              capture_output=True, text=True).stdout.strip()
+        cfg["branch"] = os.environ.get("BOOK_BRANCH") or (head if head and head != "HEAD" else "main")
     tmp = Path(tempfile.mkdtemp(prefix="bookbuild-"))
     macros_path = tmp / "macros.json"
     macros_path.write_text(json.dumps(cfg.get("macros", {})), encoding="utf-8")
