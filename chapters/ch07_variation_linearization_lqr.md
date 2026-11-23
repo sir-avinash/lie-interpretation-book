@@ -5,6 +5,8 @@ id: ch-linearization
 summary: What a small deviation of a rotation is, how to linearize about any trajectory without a singularity, and how far the resulting LQR can be trusted.
 notebook: notebooks/ch07_variation_lqr_sim.ipynb
 verify: verify/ch07.py
+epigraph: "Remember that all models are wrong; the practical question is how wrong do they have to be to not be useful."
+epigraph_source: "George Box and Norman Draper, *Empirical Model-Building and Response Surfaces* (1987)"
 ---
 
 A tail-sitter drone takes off like a rocket, nose pointing at the sky, then tips over and flies like an airplane. You want a linear quadratic regulator for the nose-up hover. LQR needs a model $\dot x = Ax + Bu$. So what is $x$?

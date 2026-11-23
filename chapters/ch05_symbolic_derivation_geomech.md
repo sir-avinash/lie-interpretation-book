@@ -5,6 +5,8 @@ id: ch-symbolic
 summary: The variational recipe is term rewriting, so a program can run it on the manifold. How it works, how to check it, and how to turn its output into a simulation.
 notebook: notebooks/ch05_geomech_symbolic_pipeline.ipynb
 verify: verify/ch05.py
+epigraph: "It is unworthy of excellent men to lose hours like slaves in the labour of calculation which could safely be relegated to anyone else if machines were used."
+epigraph_source: "Gottfried Wilhelm Leibniz, on his calculating machine (1685)"
 ---
 
 Here are the equations of motion of a quadrotor carrying a load on a cable. They are copied from a PhD thesis on aerial transportation (Wu, 2017), where every controller is designed on them.

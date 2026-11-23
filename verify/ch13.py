@@ -6,11 +6,14 @@ The functions above ``main`` are the chapter's solvers and controllers. The figu
 script imports them, so the figures show exactly what is verified here.
 """
 import importlib.util
+import os
 import sys
 import time
 from pathlib import Path
 
-import numpy as np
+os.environ.setdefault("OMP_NUM_THREADS", "1")   # small dense problems: threads only get in the way
+
+import numpy as np  # noqa: E402
 from scipy.integrate import solve_ivp
 from scipy.linalg import expm, solve_discrete_are
 from scipy.optimize import lsq_linear, minimize
@@ -660,7 +663,7 @@ def kkt_error(prob, x, y, z, w, mu):
     return blocks, max(float(np.max(np.abs(b))) for b in blocks)
 
 
-def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, state=None, log=None):
+def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, state=None, log=None, split=False):
     """Primal-dual interior point with on-manifold primal steps.
 
     Unknowns: x (attitudes, velocities, torques), multipliers y of the dynamics, multipliers z >= 0
@@ -713,18 +716,21 @@ def interior_point(prob, x0, mu0=0.1, tol=1e-8, max_iter=300, fixed_mu=None, sta
         dw = -cw - Ac @ dx
         dz = -comp / w - Sig * dw
         frac = max(0.99, 1 - mu)
-        a = 1.0
-        for v, dv in ((w, dw), (z, dz)):
-            neg = dv < 0
-            if np.any(neg):
-                a = min(a, float(np.min(-frac * v[neg] / dv[neg])))
+        a, az = 1.0, 1.0                                 # primal step for (x, w, y), dual step for z
+        if np.any(dw < 0):
+            a = min(1.0, float(np.min(-frac * w[dw < 0] / dw[dw < 0])))
+        if np.any(dz < 0):
+            az = min(1.0, float(np.min(-frac * z[dz < 0] / dz[dz < 0])))
+        if not split:
+            a = az = min(a, az)
         psi0 = np.sqrt(sum(float(b @ b) for b in blocks))
         for _ in range(30):
-            xn, yn, zn, wn = prob.retract(x, dx, a), y + a * dy, z + a * dz, w + a * dw
+            xn, yn, zn, wn = prob.retract(x, dx, a), y + a * dy, z + az * dz, w + a * dw
             bn, _ = kkt_error(prob, xn, yn, zn, wn, mu)
             if np.sqrt(sum(float(b @ b) for b in bn)) <= (1 - 1e-4 * a) * psi0 or delta > 0:
                 break
             a *= 0.5
+            az = a if not split else az
         x, y, z, w = xn, yn, zn, wn
         hist[-1]["alpha"], hist[-1]["delta"] = a, delta
     return dict(x=x, y=y, z=z, w=w, mu=mu, hist=hist, iters=len(hist) - 1,

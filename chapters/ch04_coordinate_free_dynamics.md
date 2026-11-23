@@ -5,6 +5,8 @@ id: ch-dynamics
 summary: Hamilton's principle carried out on the sphere and on the rotation group, and the equations of motion of pendulums, rigid bodies, quadrotors and cable-suspended loads that come out of it.
 notebook: notebooks/ch04_lagrange_dalembert_sim.ipynb
 verify: verify/ch04.py
+epigraph: "No figures will be found in this work. The methods I present require neither constructions nor geometrical or mechanical arguments, but solely algebraic operations subject to a regular and uniform procedure."
+epigraph_source: "Joseph-Louis Lagrange, *Mécanique analytique* (1788), preface"
 ---
 
 Pin a rigid body at one point and let it swing under gravity. This is the 3D pendulum. Write its equations of motion twice.
