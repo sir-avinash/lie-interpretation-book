@@ -1125,14 +1125,25 @@ def main():
         ck.record(f"sample_{int(hh * 1000)}ms_min_H", float(o["H"].min()))
         ck.record(f"sample_{int(hh * 1000)}ms_max_force_jump_N", float(jumps.max()))
         ck.record(f"sample_{int(hh * 1000)}ms_feasible", bool(o["feasible"].all()))
-    # input limits: with a small force budget the QP has no solution
-    o = run_cone(ref, lap, Fmax=4.0)
-    o2 = run_cone(ref, lap, Fmax=1.0)
-    ck.true("force limit 4 N per axis: still feasible and safe", o["feasible"].all() and o["H"].min() > -1e-6)
-    ck.true("force limit 1 N per axis: the QP becomes infeasible", not o2["feasible"].all(),
-            f"{(~o2['feasible']).sum()} of {len(o2['t'])} steps, min H {o2['H'].min():.3f}")
-    ck.record("limit_infeasible_steps", int((~o2["feasible"]).sum()))
-    ck.record("limit_min_H", float(o2["H"].min()))
+    # input limits: arrive at the boundary too fast and no admissible force satisfies the condition
+    def needed_force(tilt_deg, rate):
+        """Smallest |F| that meets the barrier condition at this tilt and outward angular rate."""
+        th = np.radians(tilt_deg)
+        q = np.array([np.sin(th), 0.0, -np.cos(th)])
+        om = rate * E2 * -1.0                                # turns q away from the axis
+        H, H_dot, aH, bH = cone_H(q, om, *cone_static(0.0))
+        short = -(aH + 12.0 * H_dot + 36.0 * H)
+        return q, om, max(short, 0.0) / np.linalg.norm(bH), H_dot
+    q, om, need, H_dot = needed_force(29.0, 1.5)
+    ck.true("the test state moves outward", H_dot < 0)
+    ck.record("limit_needed_force_N", float(need))
+    ck.record("limit_weight_N", float(M_P * GRAV))
+    ok_free = s2_safe_force(0.0, q, om, ref)[2]
+    ok_tight = s2_safe_force(0.0, q, om, ref, Fmax=0.5 * need / np.sqrt(3))[2]
+    ok_loose = s2_safe_force(0.0, q, om, ref, Fmax=2.0 * need)[2]
+    ck.true("29 deg and 1.5 rad/s outward: feasible without a limit, infeasible when |F| is capped at half the need",
+            ok_free and ok_loose and not ok_tight, f"needs {need:.1f} N; the bob weighs {M_P * GRAV:.1f} N")
+    ck.record("limit_needed_force_slow_N", float(needed_force(29.0, 0.5)[2]))
     # a wrong model inside the barrier condition: an unknown steady wind
     wind = np.array([1.0, 0.0, 0.0])
     o = run_cone(ref, 1.5 * lap, wind=wind)

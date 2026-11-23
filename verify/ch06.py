@@ -116,7 +116,8 @@ for _ in range(200):
 ck.true("line: d/dt(1/2 e_dot^2 + 1/2 k_p e^2) = -k_d e_dot^2 for every state", abs(worst) < 1e-9)
 # the poles for the attitude gains on each axis
 poles = [np.roots([J[i, i], k_Om, k_R]) for i in range(3)]
-ck.record("poles_per_axis", [[float(p.real), float(p.imag)] for pp in poles for p in pp[:1]])
+ck.record("poles_per_axis", [[float(p.real) for p in sorted(pp, key=lambda z: z.real)] for pp in poles])
+ck.true("all three axes are overdamped with these gains (real poles)", all(abs(p.imag) < 1e-12 for pp in poles for p in pp))
 ck.record("natural_freq_per_axis", [float(np.sqrt(k_R / J[i, i])) for i in range(3)])
 ck.record("damping_ratio_per_axis", [float(k_Om / (2 * np.sqrt(k_R * J[i, i]))) for i in range(3)])
 slowest_pole = max(p.real for pp in poles for p in pp)
@@ -315,8 +316,8 @@ dV_f = []
 for (R, Om, Rd, Omd) in run_mov:
     eO, eR, C = e_Omega(R, Om, Rd, Omd), e_R(R, Rd), C_R(R, Rd)
     dV_f.append(-k_Om * eO @ eO + c_demo * eO @ C.T @ J @ eO - c_demo * k_R * eR @ eR - c_demo * k_Om * eR @ eO)
-ck.true("V_dot formula matches the derivative of V along a simulated run", np.max(np.abs(dV_fd[5:-5] - np.array(dV_f)[5:-5])) < 2e-3,
-        f"err {np.max(np.abs(dV_fd[5:-5] - np.array(dV_f)[5:-5])):.1e}")
+rel = np.max(np.abs(dV_fd[5:-5] - np.array(dV_f)[5:-5])) / np.max(np.abs(dV_f))
+ck.true("V_dot formula matches the derivative of V along a simulated run", rel < 1e-3, f"relative err {rel:.1e}")
 
 # worked example: 150 degrees of initial error, tumbling reference
 V0s = np.array([V0_att(*a) for a in run_mov])
@@ -406,7 +407,6 @@ ck.record("half_turn_growth_rates", lam_axes)
 ck.record("half_turn_decade_cost_s", [float(np.log(10) / l) for l in lam_axes])
 
 # weighted error function: four isolated equilibria with 0, 1, 2, 3 unstable directions
-Dw = np.diag([0.9, 0.6, 0.3]) * (1 / 1.8) * 2      # scaled so that the mean stiffness matches D = I/2: tr(D) = 2
 Dw = np.diag([0.75, 0.5, 0.25])
 
 
@@ -420,15 +420,16 @@ def Psi_R_w(R, Rd, D=Dw):
 
 n_unst = []
 for U in (I3, np.diag([1.0, -1, -1]), np.diag([-1.0, 1, -1]), np.diag([-1.0, -1, 1])):
-    ck.close(f"weighted e_R vanishes at diag{tuple(np.diag(U).astype(int))}", e_R_w(U, I3), np.zeros(3))
+    nameU = "diag(%d,%d,%d)" % tuple(np.diag(U))
+    ck.close(f"weighted e_R vanishes at {nameU}", e_R_w(U, I3), np.zeros(3))
     cdiag = np.diag(Dw @ U)
     H = np.diag([cdiag[1] + cdiag[2], cdiag[0] + cdiag[2], cdiag[0] + cdiag[1]])
     # Hessian check by finite differences of e_R
     Hfd = np.column_stack([(e_R_w(U @ expm_so3(1e-6 * e), I3) - e_R_w(U @ expm_so3(-1e-6 * e), I3)) / 2e-6 for e in I3])
-    ck.close(f"weighted: e_R = H eta near diag{tuple(np.diag(U).astype(int))}", Hfd, H, tol=1e-8)
+    ck.close(f"weighted: e_R = H eta near {nameU}", Hfd, H, tol=1e-8)
     A = np.block([[np.zeros((3, 3)), I3], [-k_R * Jinv @ H, -k_Om * Jinv]])
     ev = np.linalg.eigvals(A)
-    ck.true(f"weighted: equilibrium diag{tuple(np.diag(U).astype(int))} is hyperbolic", np.min(np.abs(ev.real)) > 1e-3)
+    ck.true(f"weighted: equilibrium {nameU} is hyperbolic", np.min(np.abs(ev.real)) > 1e-3)
     n_unst.append(int(np.sum(ev.real > 0)))
 ck.true("weighted: unstable directions at the four equilibria are 0, 1, 2, 3", n_unst == [0, 1, 2, 3], f"{n_unst}")
 ck.record("weighted_D", np.diag(Dw).tolist())
@@ -490,5 +491,7 @@ ck.record("linger_log_e1_s", [float(x) for x in tl])
 # exactly at a half turn, at rest: nothing happens
 t_half, ang_half = settle_time(np.diag([1.0, -1.0, -1.0]), t_f=10.0)
 ck.true("exactly half a turn, at rest: the body stays there", abs(ang_half - 180) < 1e-6, f"angle after 10 s: {ang_half:.6f}")
+
+# @@NEXT@@
 
 ck.finish()
