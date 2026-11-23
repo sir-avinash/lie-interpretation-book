@@ -44,21 +44,21 @@ chapter = [
 title = "IV. Reduction"
 chapter = [
   { num = 9, title = "Symmetry, fiber bundles and connections" },
-  { num = 10, title = "Differential flatness" },
+  { num = 10, file = "chapters/ch10_differential_flatness.md", title = "Differential flatness" },
   { num = 11, title = "Hybrid zero dynamics on manifolds" },
 ]
 
 [[part]]
 title = "V. Trajectory optimization"
 chapter = [
-  { num = 12, title = "Variational integrators and collocation" },
+  { num = 12, file = "chapters/ch12_variational_integrators.md", title = "Variational integrators and collocation" },
   { num = 13, file = "chapters/ch13_error_state_mpc.md", title = "Error-state MPC and on-manifold solvers" },
 ]
 
 [[part]]
 title = "VI. Estimation and learning"
 chapter = [
-  { num = 14, title = "Filtering on Lie groups" },
+  { num = 14, file = "chapters/ch14_filtering_lie_groups.md", title = "Filtering on Lie groups" },
   { num = 15, title = "Equivariant learning and residual control" },
 ]
 

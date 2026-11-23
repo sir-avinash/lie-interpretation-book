@@ -83,7 +83,7 @@ Rules that keep the build green:
 - Math is KaTeX. A LaTeX error fails the build. Use `\begin{bmatrix}`, `\begin{aligned}`, `\tfrac`, `\operatorname`. One `\label` per display.
 - Shared macros are in `book.toml`: `\R`, `\SO`, `\so`, `\SE`, `\se`, `\T` (transpose, as in `R\T`), `\tr`, `\quat`, `\Ad`, `\ad`, `\dd`, `\ddt`.
 
-Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-tracking` (6), `ch-linearization` (7), `ch-robust` (8), `ch-mpc` (13), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
+Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-tracking` (6), `ch-linearization` (7), `ch-robust` (8), `ch-flatness` (10), `ch-integrators` (12), `ch-mpc` (13), `ch-filtering` (14), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
 
 ## Notation and terminology
 
@@ -114,7 +114,7 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - Rigid bodies are drawn with the kit's `box` and `axis_through_box`, a quadrotor with `quadrotor`, and the in-frame line of an animation with `caption`. Do not copy these into a chapter script.
 - In an animation pass `alpha=1.0` on moving strokes. A translucent stroke dithers into speckle in a GIF.
 - **Look at every figure** before you keep it. For an animation, look at the filmstrip and at least two frames of the GIF. Rasterise it and check for overlaps, clipped text, edge-on planes and labels that landed on a line.
-- Aim for 4 to 6 figures per chapter. At least half should be geometric scenes, the rest data plots produced by simulation.
+- Use as many figures as carry an idea, and no more. At least half should be geometric scenes or animations, the rest data plots produced by simulation.
 
 ## Verification
 
