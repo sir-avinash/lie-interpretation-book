@@ -19,9 +19,9 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 9 | Symmetry, fiber bundles and connections | planned |
 | 10 | Differential flatness | planned |
 | 11 | Hybrid zero dynamics on manifolds | planned |
-| 12 | Variational integrators and collocation | planned |
+| 12 | Variational integrators and collocation | written |
 | 13 | Error-state MPC and on-manifold solvers | written |
-| 14 | Filtering on Lie groups | planned |
+| 14 | Filtering on Lie groups | written |
 | 15 | Equivariant learning and residual control | planned |
 | 16 | How it all comes together | written |
 | A | Notation and glossary | written |
