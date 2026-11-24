@@ -17,7 +17,7 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 7 | Variation-based linearization and LQR | written |
 | 8 | Robust, adaptive and safety-critical control | written |
 | 9 | Symmetry, fiber bundles and connections | planned |
-| 10 | Differential flatness | planned |
+| 10 | Differential flatness | written |
 | 11 | Hybrid zero dynamics on manifolds | planned |
 | 12 | Variational integrators and collocation | written |
 | 13 | Error-state MPC and on-manifold solvers | written |
