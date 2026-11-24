@@ -13,7 +13,7 @@ The extended Kalman filter now does what it always does. It linearizes the model
 
 Here is a question that sounds like wishful thinking. Could the estimation error be defined so that its dynamics do not involve the estimate at all? Then the covariance would be computed from a model that is right however wrong the estimate is. For inertial navigation the answer is yes. It takes the right group and the right error.
 
-![Two filters, one bad start. A vehicle flies a banked loop past three landmarks, and both filters begin 170° wrong in attitude with the same covariance and the same readings. The truth is the dashed gray path, here and in every figure of this chapter. The invariant filter (indigo) is on the path within a few seconds. The conventional one (terracotta) is still finding it after half a lap.](figures/ch14-opening-strip.png){#fig14-opening anim="figures/ch14-opening.gif"}
+![Two filters, one bad start. A vehicle flies a banked loop past three landmarks, and both filters begin 170° wrong in attitude with the same covariance and the same readings. The truth is the dashed gray path, here and in every figure of this chapter. The invariant filter (indigo) is on the path within a few seconds. The conventional one (terracotta) wanders meters away first and comes back the long way round.](figures/ch14-opening-strip.png){#fig14-opening anim="figures/ch14-opening.gif"}
 
 ## A compass and a gyroscope {#sec14-circle}
 
@@ -62,7 +62,7 @@ Somewhere on an arc of radius ten meters about your starting point. If a thousan
 The two errors of [](#eq14-errors) describe the same cloud in two frames. [](#thought3-remount) said what each ignores: $E_r$ does not notice a remounted sensor, and $E_\ell$ does not notice a moved world frame. Their logarithms are related by the adjoint of [](#eq2-ad-se3),
 
 $$
-\chi_r = \Ad_X\,\chi, \qquad \Sigma_r = \Ad_{\hat X}\,\Sigma_\ell\,\Ad_{\hat X}\T \ \text{ to first order.} \label{eq14-left-right}
+\chi_r = \Ad_X\,\chi, \qquad\text{so a covariance } \Sigma \text{ of } \chi \text{ is the covariance } \Ad_{\hat X}\,\Sigma\,\Ad_{\hat X}\T \text{ of } \chi_r \text{, to first order.} \label{eq14-left-right}
 $$
 
 ::: {.thought #thought14-lever name="One degree, a hundred meters out"}
@@ -116,7 +116,7 @@ Take an initial error of 114.6° (2 rad) in attitude, with 1 m/s and 1.2 m in th
 The right-invariant errors of the two flights agree to $3\times10^{-13}$ at every step ([](#fig14-autonomous)). The additive velocity errors $\hat v - v$ differ by 2.7 m/s after 2 s. A conventional filter predicts its error with a Jacobian evaluated at the estimate. On the loop, after 2 s, that prediction of the velocity error is off by 97% of its size.
 :::
 
-![The same mistake on two flights. Left: the velocity part of the right-invariant error on the loop (solid) and in hover (dashed) is one curve, and it is the parabola of [](#eq14-autonomous). Right: the additive velocity error $\hat v - v$ differs between the flights, and the linearized prediction of a conventional filter (thin lines) follows neither.](figures/ch14-autonomous.svg){#fig14-autonomous}
+![The same mistake on two flights. Left: the velocity part of the right-invariant error on the loop (solid) and in hover (dashed) is one line, the straight line that [](#eq14-autonomous) predicts. Right: the additive velocity error $\hat v - v$ differs between the flights, and the linearized prediction of a conventional filter (thin lines) follows neither. One world-frame component is shown.](figures/ch14-autonomous.svg){#fig14-autonomous}
 
 Something stronger is true. Equation [](#eq14-autonomous) is nonlinear in $E_R$. Its logarithm obeys a linear equation, and exactly:
 
@@ -284,7 +284,7 @@ Everything so far used a group. A cable is not a group element.
 
 The direction $q \in S^2$ of a pendulum or a cable has no multiplication. There is no $\hat q\,q^{-1}$, no invariant error and no theorem like [](#thm14-loglinear). The first half of the idea survives: keep the mean on the manifold and the uncertainty in a tangent space. Kotaru (2022, ch. 4) builds an extended Kalman filter this way from the variation-based linearization of [](#ch-linearization).
 
-Take the spherical pendulum of [](#eq7-pendulum) with no applied force. The estimate is a pair $(\hat q, \hat\omega)$ with $\hat q$ of unit length and $\hat\omega\cdot\hat q = 0$. The error is the linear state $s = (\xi, \delta\omega)$ of [](#sec7-variation), and a finite $s$ is applied by
+Take the spherical pendulum of [](#eq7-pendulum) with no applied force. The estimate is a direction $\hat q$ of unit length and an angular velocity perpendicular to it. A hat on $\omega$ would read as the hat map, so the estimated angular velocity is written $\omega_{\hat q}$: it is a tangent vector at $\hat q$, with $\omega_{\hat q}\cdot\hat q = 0$. The error is the linear state $s = (\xi, \delta\omega)$ of [](#sec7-variation), and a finite $s$ is applied by
 
 $$
 (q, \omega) \oplus s = \Big(\exp(\xi^\wedge)\,q,\ \ \exp(\xi^\wedge)\big(\omega + (I - q q\T)\,\delta\omega\big)\Big). \label{eq14-oplus}
@@ -303,31 +303,31 @@ You can store $\Sigma$ either way: as the $6\times6$ matrix of rank four, or as 
 First, the filter never has to invert $\Sigma$. The gain is $\tilde K = \Sigma\,C_y\T\,\Sigma_{\tilde y}^{-1}$, and $\Sigma_{\tilde y}$ is invertible because the measurement noise is. The correction $-\tilde K\tilde y$ is a combination of the columns of $\Sigma$, so it lies in $\ker C$ by itself. Second, the matrix
 
 $$
-E = \begin{bmatrix} I - q q\T & 0 \\ -q\,(q\times\omega)\T & I - q q\T \end{bmatrix} \label{eq14-E}
+E_C = \begin{bmatrix} I - q q\T & 0 \\ -q\,(q\times\omega)\T & I - q q\T \end{bmatrix} \label{eq14-E}
 $$
 
 is a projector onto $\ker C$ at $(q, \omega)$. It puts a covariance into the current constraint subspace.
 
 ::: {.definition #def14-vekf name="Variation-based extended Kalman filter on the sphere"}
-The state of the filter is $(\hat q, \hat\omega)$ and a covariance $\Sigma$ of $s$ with $C\,\Sigma = 0$.
+The state of the filter is $(\hat q, \omega_{\hat q})$ and a covariance $\Sigma$ of $s$ with $C\,\Sigma = 0$.
 
-1. **Propagate.** Integrate the pendulum to the next sample. With $A$ of [](#eq7-s2-lin) at the estimate, $A_k = \exp(A h)$ and $E$ at the new estimate, $\Sigma \leftarrow E\,(A_k\,\Sigma\,A_k\T + \Sigma_n)\,E\T$.
-2. **Correct.** For a position reading $y = l\,q + n_y$: $\tilde y = l\,\hat q - y$, $C_y = [\,-l\,\hat q^\wedge\ \ 0\,]$, the gain of [](#eq14-gain), $s^+ = -\tilde K\tilde y$ and $(\hat q, \hat\omega) \leftarrow (\hat q, \hat\omega)\oplus s^+$.
-3. **Move the covariance.** After the usual covariance update, turn both blocks by $\exp(\xi^{+\wedge})$ and apply $E$ at the new estimate.
+1. **Propagate.** Integrate the pendulum to the next sample. With $A$ of [](#eq7-s2-lin) at the estimate, $A_k = \exp(A h)$ and $E_C$ at the new estimate, $\Sigma \leftarrow E_C\,(A_k\,\Sigma\,A_k\T + \Sigma_n)\,E_C\T$.
+2. **Correct.** For a position reading $y = l\,q + n_y$: $\tilde y = l\,\hat q - y$, $C_y = [\,-l\,\hat q^\wedge\ \ 0\,]$, the gain of [](#eq14-gain), $s^+ = -\tilde K\tilde y$ and $(\hat q, \omega_{\hat q}) \leftarrow (\hat q, \omega_{\hat q})\oplus s^+$.
+3. **Move the covariance.** After the usual covariance update, turn both blocks by the rotation $\exp(\xi^\wedge)$ of the correction, where $\xi$ is the first half of $s^+$, and apply $E_C$ at the new estimate.
 :::
 
 Step 3 is the transport of [](#def3-transport) applied to an uncertainty: the ellipse is carried along the arc to its new tangent plane ([](#fig14-sphere)). It is exact to first order in the size of the correction.
 
 Kotaru's algorithm is organized differently, and the difference is worth knowing. He measures the variation from the previous estimate, updates that variation, and then applies a separate constraint update that projects it onto $\ker C$ with a weight $\Sigma^{-1}$. He observes that two eigenvalues of the covariance are zero and that the estimates converge without the constraint update. Both observations follow from the two facts above. His appendix selects the sign of the rotation axis by a comparison that, as printed in (B.6), has the same value on both sides. With the axis $q_{k-1}\times q_k$ and the angle $\arccos(q_{k-1}\cdot q_k)$ the positive sign is always the right one.
 
-![The estimate lives on the sphere, its uncertainty in the tangent plane. The true direction (dashed gray) and the estimate (indigo) of a swinging pendulum, with the covariance ellipse of $\xi$ drawn in the tangent plane at the estimate, early and late in the run. The estimate of the filter on six numbers (terracotta) is drawn where it is: off the sphere.](figures/ch14-sphere.svg){#fig14-sphere}
+![The estimate lives on the sphere, its uncertainty in the tangent plane. The true direction (dashed gray) and the estimate (indigo) of a swinging pendulum, with the one-standard-deviation ellipse of the direction drawn in the tangent plane at the first estimate and three readings later. The plane and the ellipse travel with the estimate. For this picture the readings are noisier (0.2 m) than in [](#ex14-pendulum), so that the ellipses can be seen. The estimate of the filter on six numbers (terracotta) follows closely, but its length reaches 1.08.](figures/ch14-sphere.svg){#fig14-sphere}
 
 ::: {.example #ex14-pendulum name="The spherical pendulum, estimated two ways"}
 We use Kotaru's setup: $l = 1$ m, an initial covariance equal to the identity, measurement noise of variance $10^{-3}$ on each coordinate of $l\,q$ and process noise of $10^{-5}$. The pendulum is released from horizontal with a sideways velocity and observed at 100 Hz for 5 s. In 100 runs the initial estimate is drawn from the initial covariance: a median of 71° wrong in direction and at most 156°.
 
-The variation-based filter converges in every run. After the first second its direction error has a root mean square of 0.82°. $\|\hat q\| - 1$ and $\hat q\cdot\hat\omega$ never exceed $10^{-15}$, $C\,\Sigma$ stays below $10^{-12}$ with no constraint update, and the NEES in the four constrained dimensions is 1.01.
+The variation-based filter converges in every run. After the first second its direction error has a root mean square of 0.82°. $\|\hat q\| - 1$ and $\hat q\cdot\omega_{\hat q}$ never exceed $10^{-15}$, $C\,\Sigma$ stays below $10^{-12}$ with no constraint update, and the NEES in the four constrained dimensions is 1.01.
 
-The naive filter treats $(q, \omega)$ as six unconstrained numbers and adds its corrections. Its direction error, 0.87° after normalizing, is about as good, because the measurement sees $q$ directly. But $\|\hat q\|$ ranges from 0.91 to 1.08 over the runs, and from 0.97 to 1.03 after the first second. Its $\hat q\cdot\hat\omega$ reaches 2.9 rad/s. Its estimate is not the state of any pendulum, and whatever uses it has to repair it first.
+The naive filter treats $(q, \omega)$ as six unconstrained numbers and adds its corrections. Its direction error, 0.87° after normalizing, is about as good, because the measurement sees $q$ directly. But $\|\hat q\|$ ranges from 0.91 to 1.08 over the runs, and from 0.97 to 1.03 after the first second. Its $\hat q\cdot\omega_{\hat q}$ reaches 2.9 rad/s. Its estimate is not the state of any pendulum, and whatever uses it has to repair it first.
 :::
 
 Kotaru reports the corresponding results: convergence in 100 runs from random initial states, some with nearly the largest possible attitude error, a unit norm that a standard filter does not keep, and singularities in a filter written in spherical coordinates. He then validates the filter in experiments on a pendulum and on a quadrotor with a cable-suspended load.
@@ -377,7 +377,7 @@ Extend [](#eq14-contact) to two feet in contact. Write $C_y$ for the two leg mea
 :::
 
 ::: {.exercise #exr14-pancake}
-Show that $E$ in [](#eq14-E) satisfies $C E = 0$ and $E^2 = E$, and that $E s = s$ for every $s$ in $\ker C$. Then show that if $C\,\Sigma = 0$ before the correction of [](#def14-vekf), then $C\,s^+ = 0$ and $C\,\Sigma^+ = 0$ after it, before the estimate is moved. Why is step 3 still needed?
+Show that $E_C$ in [](#eq14-E) satisfies $C E_C = 0$ and $E_C^2 = E_C$, and that $E_C\,s = s$ for every $s$ in $\ker C$. Then show that if $C\,\Sigma = 0$ before the correction of [](#def14-vekf), then $C\,s^+ = 0$ and $C\,\Sigma^+ = 0$ after it, before the estimate is moved. Why is step 3 still needed?
 :::
 
 ## Notes and sources {#sec14-notes .unnumbered}

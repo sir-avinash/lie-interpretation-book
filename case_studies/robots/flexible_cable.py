@@ -50,7 +50,7 @@ def chain_mass_matrix(m, l):
 # =====================================================================
 @dataclass
 class ChainParams:
-    """Defaults: the chain of equal links simulated in sec5-nbodies (n = 4)."""
+    """Defaults: the chain of equal links simulated in sec5-scaling (n = 4)."""
     n: int = 4
     m: np.ndarray = None      # point masses at joints 1..n, kg  (n,)
     l: np.ndarray = None      # link lengths, m                  (n,)
@@ -70,7 +70,7 @@ class ChainState:
 class HangingChain(Robot):
     name = "flexible_cable"
     Params, State = ChainParams, ChainState
-    labels = {"equations": "eq5-chain", "manifold": "tbl2-robots", "section": "sec5-nbodies",
+    labels = {"equations": "eq5-chain", "manifold": "tbl2-robots", "section": "sec5-scaling",
               "figure": "fig5-chain"}
 
     def __init__(self, n=4, params=None):
@@ -172,7 +172,7 @@ class CableState:
 class QuadrotorCable(Robot):
     name = "quadrotor_cable"
     Params, State = CableParams, CableState
-    labels = {"manifold": "tbl2-robots", "section": "sec5-nbodies", "chain": "eq5-chain",
+    labels = {"manifold": "tbl2-robots", "section": "sec5-scaling", "chain": "eq5-chain",
               "one_link": "eq4-load"}
 
     def __init__(self, n=5, attach=(0,), params=None):

@@ -79,6 +79,7 @@
   "hour_rk4_h0.08_pi3_change": 0.7400146061546827,
   "hour_rk4_h0.02_dE_J": -0.016039531872472423,
   "hour_rk4_h0.02_dE_1min_J": -0.00022298733211245647,
+  "hour_rk4_h0.08_dE_30min_J": -5.5351821031560045,
   "newton_iterations_max": 7,
   "newton_iterations_mean": 5.550911111111111,
   "book": {
@@ -98,6 +99,8 @@
     "0.01": 50.235148693251276,
     "0.001": 2.505104738017235
   },
+  "book_explicit_energy_ratio": 2.0634632759918157,
+  "hour_pi3_initial": -0.13602592357507523,
   "onesided_implicit_band_60s_J": 0.2561324851480604,
   "s2": {
     "h": 0.01,
@@ -114,6 +117,10 @@
   "midpoint_det_30deg": 0.9330127018922195,
   "midpoint_det_90deg": 0.49999999999999994,
   "midpoint_direction_length_90deg": 0.7071067811865476,
+  "opt_entrywise_dependent_constraints": [
+    6,
+    264
+  ],
   "opt": {
     "N": 20,
     "h": 0.1,
@@ -125,7 +132,7 @@
   },
   "opt_chart": {
     "iterations": 62,
-    "seconds": 5.6,
+    "seconds": 3.4,
     "variables": 189,
     "cost": 0.16138395615661197,
     "constraint_residual": 1.2838757834643388e-12,
@@ -138,7 +145,7 @@
   },
   "opt_chart_first_order": {
     "iterations": 53,
-    "seconds": 2.2,
+    "seconds": 1.5,
     "variables": 189,
     "cost": 0.20492106768024673,
     "constraint_residual": 2.427710810160022e-13,
@@ -151,7 +158,7 @@
   },
   "opt_entrywise": {
     "iterations": 188,
-    "seconds": 17.2,
+    "seconds": 12.4,
     "variables": 315,
     "cost": 0.24302852529150562,
     "constraint_residual": 3.5388358909926865e-16,
@@ -164,7 +171,7 @@
   },
   "opt_variational": {
     "iterations": 60,
-    "seconds": 4.6,
+    "seconds": 3.3,
     "variables": 123,
     "cost": 0.15720375939419273,
     "constraint_residual": 2.244170202800148e-12,

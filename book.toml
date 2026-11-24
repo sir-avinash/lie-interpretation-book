@@ -44,7 +44,7 @@ chapter = [
 title = "IV. Reduction"
 chapter = [
   { num = 9, title = "Symmetry, fiber bundles and connections" },
-  { num = 10, file = "chapters/ch10_differential_flatness.md", title = "Differential flatness" },
+  { num = 10, id = "ch-flatness", file = "chapters/ch10_differential_flatness.md", title = "Differential flatness" },
   { num = 11, title = "Hybrid zero dynamics on manifolds" },
 ]
 
@@ -65,7 +65,7 @@ chapter = [
 [[part]]
 title = "VII. Case studies"
 chapter = [
-  { num = 16, title = "Aerial manipulation, legged and limbless robots" },
+  { num = 16, file = "chapters/ch16_case_studies.md", title = "How it all comes together" },
 ]
 
 [[part]]

@@ -23,7 +23,7 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 13 | Error-state MPC and on-manifold solvers | written |
 | 14 | Filtering on Lie groups | planned |
 | 15 | Equivariant learning and residual control | planned |
-| 16 | Aerial manipulation, legged and limbless robots | planned |
+| 16 | How it all comes together | written |
 | A | Notation and glossary | written |
 
 ## What each chapter comes with
@@ -42,6 +42,7 @@ figures/src/       one script per chapter; writes figures/*.svg
 verify/            one script per chapter; must exit 0
 notebooks/src/     notebook sources; built to notebooks/*.ipynb
 skills/            one skill per chapter
+case_studies/      the robot model library (case_studies/robots) used by Chapter 16
 tools/             build script, cross-reference filter, figure kit
 docs/              the built site (GitHub Pages serves this directory)
 AUTHORING.md       how chapters are written: voice, markup, figures

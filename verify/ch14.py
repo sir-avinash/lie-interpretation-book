@@ -607,7 +607,7 @@ def pend_step(q, om, h, l=L_PEND):
     return q, z[3:] - q * (q @ z[3:])
 
 
-def expm3(M):
+def expm_series(M):
     """Matrix exponential to third order, for a small step."""
     M2 = M @ M
     return np.eye(M.shape[0]) + M + M2 / 2 + M2 @ M / 6
@@ -690,7 +690,7 @@ def s2_filters(truth, seed, sig0=1.0, sig_y=np.sqrt(1e-3), q_proc=1e-5, l=L_PEND
         S = E @ (np.eye(6) * sig0**2) @ E.T
         rec = dict(q=[q], om=[om], nees=[], cmax=0.0, cov=[S])
         for k in range(len(t) - 1):
-            Ak = expm3(s2_A(q, om, l) * h)
+            Ak = expm_series(s2_A(q, om, l) * h)
             q, om = pend_step(q, om, h, l)
             E = s2_E(q, om)
             S = E @ (Ak @ S @ Ak.T + Qn) @ E.T
@@ -725,7 +725,7 @@ def s2_filters(truth, seed, sig0=1.0, sig_y=np.sqrt(1e-3), q_proc=1e-5, l=L_PEND
             F[:3, :3] = hat(om)
             F[:3, 3:] = -hat(q)
             F[3:, :3] = (G / l) * hat(E3)
-            Fk = expm3(F * h)
+            Fk = expm_series(F * h)
             z = np.concatenate([q, om])
 
             def f(z):

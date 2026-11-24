@@ -83,7 +83,7 @@ Rules that keep the build green:
 - Math is KaTeX. A LaTeX error fails the build. Use `\begin{bmatrix}`, `\begin{aligned}`, `\tfrac`, `\operatorname`. One `\label` per display.
 - Shared macros are in `book.toml`: `\R`, `\SO`, `\so`, `\SE`, `\se`, `\T` (transpose, as in `R\T`), `\tr`, `\quat`, `\Ad`, `\ad`, `\dd`, `\ddt`.
 
-Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-tracking` (6), `ch-linearization` (7), `ch-robust` (8), `ch-flatness` (10), `ch-integrators` (12), `ch-mpc` (13), `ch-filtering` (14), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
+Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-tracking` (6), `ch-linearization` (7), `ch-robust` (8), `ch-flatness` (10), `ch-integrators` (12), `ch-mpc` (13), `ch-filtering` (14), `ch-cases` (16), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
 
 ## Notation and terminology
 

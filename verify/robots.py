@@ -250,7 +250,7 @@ conservation(pend, watch=lambda s: s.omega[2], watch_name="e3 . omega (vertical 
 pend = robots.get("spherical_pendulum")                  # m = 1 kg, l = 1 m
 state = pend.State(q=np.array([1.0, 0.0, 0.0]), omega=np.zeros(3))
 swing = pend.rollout(state, pend.zero_input(), 1e-3, 1000)
-print(max(pend.tension(s) for s in swing))               # 29.43 N: three times the weight
+print(max(pend.tension(s) for s in swing))   # 29.43 N: three times the weight
 print(max(pend.on_manifold(s) for s in swing))           # 2e-15
 # --- end
 T_max = max(pend.tension(s) for s in swing)
@@ -326,13 +326,13 @@ conservation(body, watch=lambda s: body.momentum(s), watch_name="world-frame ang
 conservation(pend3, watch=lambda s: pend3.momentum(s)[2], watch_name="e3 . R J Omega")
 
 # --- listing: book
-book = robots.get("rigid_body")                          # the paperback of Chapter 4
+book = robots.get("rigid_body")   # the paperback of Chapter 4
 spin = 2 * np.pi * 2.0                                   # two turns per second
 state = book.State(R=np.eye(3), Omega=spin * np.array([0.01, 1.0, 0.01]))
 flight = book.rollout(state, book.zero_input(), 1e-3, 6000)
 flip = next(k for k, s in enumerate(flight) if s.Omega[1] < 0) * 1e-3
-print(flip)                                              # 0.88 s: the first half flip
-print(np.ptp([book.momentum(s) for s in flight], axis=0).max())   # 4e-12
+print(flip)   # 0.88 s: the first half flip
+print(np.ptp([book.momentum(s) for s in flight], axis=0).max())    # 4e-12
 # --- end
 ck.true("listing book: first reversal of Omega_2 at 0.88 s, as in Chapter 4", abs(flip - 0.8805) < 2e-3, f"{flip:.4f} s")
 mom_spread = float(np.ptp([book.momentum(s) for s in flight], axis=0).max())
@@ -441,7 +441,8 @@ def load_momentum(s):
 conservation(ql, watch=load_momentum, watch_name="horizontal momentum")
 
 # --- listing: load
-robot = robots.get("quadrotor_load", params=robots.quadrotor_load.chapter6_params())
+params = robots.quadrotor_load.chapter6_params()         # 4.34 kg carrying 0.5 kg
+robot = robots.get("quadrotor_load", params=params)
 swing = robots.expm_so3(np.radians(40) * robots.E1) @ -robots.E3
 state, target = robot.State(q=swing), np.array([1.5, 0.0, 0.5])
 T_min = np.inf
@@ -568,12 +569,12 @@ ck.close("multi_quadrotor_payload: with r_i = 0 it equals multi_quadrotor_load",
          np.concatenate([a_rigid[0], a_rigid[2].ravel()]), np.concatenate([a_point[0], a_point[1].ravel()]), tol=1e-10)
 
 # --- listing: team
-team = robots.get("multi_quadrotor_payload", n=3)        # rigid payload, three quadrotors
+team = robots.get("multi_quadrotor_payload", n=3)        # three quadrotors
 state = team.random_state(np.random.default_rng(1), speed=0.5)
 E0 = team.energy(state)
 for k in range(1000):
     state = team.step(state, team.zero_input(), 1e-3)    # motors off: free fall
-print(team.manifold, team.dim)                           # R^3 x SO(3) x (S^2 x SO(3))^3 21
+print(team.manifold, team.dim)   # R^3 x SO(3) x (S^2 x SO(3))^3 21
 print(abs(team.energy(state) - E0) / E0)                 # 6e-14
 print(team.on_manifold(state))                           # 9e-15
 # --- end
@@ -689,12 +690,12 @@ ck.close("quadrotor_cable: under a very heavy joint 0 the links obey eq5-chain w
 ck.close("quadrotor_cable: ... and joint 0 is in free fall", a_cable[0], -G * E3, tol=1e-6)
 
 # --- listing: cable
-cable = robots.get("quadrotor_cable", n=5, attach=(0, 5))  # two quadrotors, five links
+cable = robots.get("quadrotor_cable", n=5, attach=(0, 5))  # five links
 state = cable.random_state(np.random.default_rng(2), speed=0.5)
 E0 = cable.energy(state)
 for k in range(1000):
     state = cable.step(state, cable.zero_input(), 1e-3)
-print(cable.manifold, cable.dim)                         # R^3 x (S^2)^5 x SO(3)^2 19
+print(cable.manifold, cable.dim)   # R^3 x (S^2)^5 x SO(3)^2 19
 print(abs(cable.energy(state) - E0) / abs(E0))           # 3e-11
 # --- end
 cable_drift = float(abs(cable.energy(state) - E0) / abs(E0))
@@ -757,15 +758,17 @@ conservation(biped, watch=biped_momentum, watch_name="e3 . angular momentum abou
 # --- listing: biped
 biped = robots.get("reaction_mass_biped")
 p, I = biped.params, np.eye(3)
-state = biped.State(l=0.5, l_dot=0.0, R1=I, Omega1=np.zeros(3), RP=I, OmegaP=np.array([0.0, 0.0, 3.0]),
-                    R2=I, Omega2=np.zeros(3), slide=np.full(3, 0.05), slide_dot=np.zeros(3))
-u = (p.m * p.g, np.zeros(3), np.zeros(3), np.zeros(3), np.zeros(3))   # the leg holds the weight
+zero = np.zeros(3)
+state = biped.State(l=0.5, l_dot=0.0, R1=I, Omega1=zero, RP=I,
+                    OmegaP=np.array([0.0, 0.0, 3.0]), R2=I, Omega2=zero,
+                    slide=np.full(3, 0.05), slide_dot=zero)
+u = (p.m * p.g, zero, zero, zero, zero)                  # the leg holds the weight
 momentum = lambda s: s.RP @ biped.torso_inertia(s.slide) @ s.OmegaP
 H0 = momentum(state)
 for k in range(800):
     state = biped.step(state, u, 1e-3)
 print(state.slide[0], state.OmegaP[2])                   # 0.26 m, 2.21 rad/s
-print(np.abs(momentum(state) - H0).max())                # 1e-12
+print(np.abs(momentum(state) - H0).max())                # 7e-14
 # --- end
 ck.true("listing biped: the masses slide out and the torso slows down",
         abs(state.slide[0] - 0.257) < 2e-3 and abs(state.OmegaP[2] - 2.21) < 5e-3, f"slide {state.slide[0]:.3f} m, spin {state.OmegaP[2]:.3f} rad/s")

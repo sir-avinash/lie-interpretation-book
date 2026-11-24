@@ -8,8 +8,8 @@
   "team_energy_drift": 5.843428448892297e-14,
   "chain4_energy_drift": 2.6221414428651002e-08,
   "cable_energy_drift": 2.5804656139358003e-11,
-  "biped_slide_m": 1.531447202452073,
-  "biped_spin_rad_s": 0.42354752265082196,
+  "biped_slide_m": 0.25699127354758855,
+  "biped_spin_rad_s": 2.210529126736247,
   "summary": {
     "spherical_pendulum": {
       "check_eom": 4.568124223671277e-08,

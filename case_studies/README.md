@@ -60,9 +60,9 @@ Only NumPy is needed to run a model. `geomech` is imported inside `lagrangian()`
 | `quadrotor` | Quadrotor | R^3 x SO(3) | 6 | eq4-quadrotor | sec4-products | verified |
 | `quadrotor_load` | Quadrotor with a cable-suspended load | R^3 x S^2 x SO(3) | 8 | eq4-load, eq4-load-tension | sec4-products, eq5-wu | verified |
 | `multi_quadrotor_load`, `n=` | n quadrotors, point-mass load | R^3 x (S^2 x SO(3))^n | 3 + 5n | eq4-multi | sec4-products | verified, n = 1, 2, 3 |
-| `multi_quadrotor_payload`, `n=` | n quadrotors, rigid payload | SE(3) x (S^2 x SO(3))^n | 6 + 5n | tbl2-robots (stated in words) | sec5-nbodies, Wu (2017, ch. 3) | verified, n = 2, 3 |
-| `flexible_cable`, `n=` | Chain of n links hanging from a pivot | (S^2)^n | 2n | eq5-chain | sec5-nbodies | verified, n = 1 to 5 |
-| `quadrotor_cable`, `n=`, `attach=` | Cable of n links carried by quadrotors at chosen joints | R^3 x (S^2)^n x SO(3)^nQ | 3 + 2n + 3 nQ | not in the book yet | Kotaru (2022, ch. 7) | verified for five layouts |
+| `multi_quadrotor_payload`, `n=` | n quadrotors, rigid payload | SE(3) x (S^2 x SO(3))^n | 6 + 5n | tbl2-robots (stated in words) | sec5-scaling, Wu (2017, ch. 3) | verified, n = 2, 3 |
+| `flexible_cable`, `n=` | Chain of n links hanging from a pivot | (S^2)^n | 2n | eq5-chain | sec5-scaling | verified, n = 1 to 5 |
+| `quadrotor_cable`, `n=`, `attach=` | Cable of n links carried by quadrotors at chosen joints | R^3 x (S^2)^n x SO(3)^nQ | 3 + 2n + 3 nQ | sec16-teams (stated in words) | Kotaru (2022, ch. 7) | verified for five layouts |
 | `telescoping_leg` | Telescoping stance leg | R x SO(3) | 4 | eq4-leg | ex4-leg | verified |
 | `reaction_mass_biped` | Reaction Mass Biped, stance phase | R x SO(3)^3 x R^3 | 13 | eq4-leg for the leg, tbl2-robots | Siravuru (2019, ch. 5) | verified (stance dynamics only) |
 | `cassie` | Cassie, reduced geometric model | SE(3) x SO(3)^2 x R^2 | 14 | tbl2-robots | Siravuru (2019, ch. 6) | floating base verified; no ground contact |

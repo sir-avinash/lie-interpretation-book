@@ -15,7 +15,7 @@ MultiQuadrotorPayload: n quadrotors and a rigid payload, on
 SE(3) x (S^2 x SO(3))^n (Wu, 2017, ch. 3). The payload has mass m_L, inertia
 J_L, position x_L and attitude R_L. Cable i is attached at the body-frame
 point r_i, so quadrotor i is at x_L + R_L r_i - l_i q_i. The book states this
-model in words only (sec4-products, sec5-nbodies). Here it is written as the
+model in words only (sec4-products, sec5-scaling). Here it is written as the
 Lagrange-d'Alembert principle gives it, one equation per variation:
 
     delta x_L:  m_L (a_L + g e3) + sum_i (m_i (a_i + g e3) - f_i R_i e3) = 0,
@@ -192,7 +192,7 @@ class PayloadState:
 class MultiQuadrotorPayload(Robot):
     name = "multi_quadrotor_payload"
     Params, State = PayloadParams, PayloadState
-    labels = {"manifold": "tbl2-robots", "section": "sec4-products", "symbolic": "sec5-nbodies"}
+    labels = {"manifold": "tbl2-robots", "section": "sec4-products", "symbolic": "sec5-scaling"}
 
     def __init__(self, n=3, params=None):
         super().__init__(params if params is not None else PayloadParams(n=n))

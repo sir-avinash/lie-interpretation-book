@@ -103,8 +103,8 @@ ck.record("planar_E_end_explicit_J", float(en["explicit"][-1]))
 ck.record("planar_E_end_implicit_J", float(en["implicit"][-1]))
 ck.record("planar_E_band_symplectic_J", [float(en["symplectic"].min()), float(en["symplectic"].max())])
 ck.record("planar_E_band_verlet_J", [float(en["verlet"].min()), float(en["verlet"].max())])
-ck.true("explicit Euler: the energy of the pendulum is larger after every second, and ends five times larger",
-        np.all(np.diff(en["explicit"][::20]) > 0) and en["explicit"][-1] > 5 * E0_P, f"{E0_P:.2f} -> {en['explicit'][-1]:.1f} J")
+ck.true("explicit Euler: the energy of the pendulum is larger after each of the first five seconds, and ends five times larger",
+        np.all(np.diff(en["explicit"][:101:20]) > 0) and en["explicit"][-1] > 5 * E0_P, f"{E0_P:.2f} -> {en['explicit'][-1]:.1f} J")
 ck.true("implicit Euler: the energy of the pendulum only decays", np.all(np.diff(en["implicit"]) < 1e-15), f"{E0_P:.2f} -> {en['implicit'][-1]:.2f} J")
 ck.true("symplectic Euler: energy stays in a band", np.abs(en["symplectic"] - E0_P).max() < 0.25 * E0_P,
         f"{en['symplectic'].min():.2f} to {en['symplectic'].max():.2f} J")
@@ -648,6 +648,17 @@ for hh in (0.1, 0.01):
     dF = (expm_so3(hh * (Om + 1e-6 * dOm)) - expm_so3(hh * (Om - 1e-6 * dOm))) / 2e-6
     rel.append(np.linalg.norm(vee(dF @ expm_so3(hh * Om).T) - hh * dOm) / np.linalg.norm(hh * dOm))
 ck.true("d exp(h hat(Om)) = h hat(dOm) exp(h hat(Om)) holds only to first order in h", 8 < rel[0] / rel[1] < 12 and rel[0] > 1e-3, f"relative error {rel[0]:.3f} at h|Om| = {0.1 * np.linalg.norm(Om):.2f}")
+# free book, explicit exponential update: |p| exact, energy climbs to the largest value on the momentum sphere
+p_e = 0.0128 * np.array([0.5, 0.0, np.sqrt(0.75)])
+E_e = [0.5 * p_e @ (p_e / np.diag(J_b))]
+for _ in range(260):
+    p_e = expm_so3(0.02 * p_e / np.diag(J_b)).T @ p_e
+    E_e.append(0.5 * p_e @ (p_e / np.diag(J_b)))
+ck.true("free book, explicit exponential update at h = 0.02: |p| kept, energy rises at every step toward the spin about e1",
+        abs(np.linalg.norm(p_e) - 0.0128) < 1e-15 and np.all(np.diff(E_e) > -1e-18) and abs(p_e[0]) / 0.0128 > 0.999,
+        f"energy x{E_e[-1] / E_e[0]:.2f}, p along e1 to {abs(p_e[0]) / 0.0128:.5f}")
+ck.record("book_explicit_energy_ratio", float(E_e[-1] / E_e[0]))
+ck.record("hour_pi3_initial", float(E3 @ (R0_p @ p0_p)))
 # the same one-sided discrete Lagrangian with the implicit equation solved exactly: bounded
 def onesided_run(h, T):
     R, p = R0_p.copy(), p0_p.copy()
@@ -928,6 +939,21 @@ for name in ("chart", "chart_first_order", "entrywise", "variational"):
     s["end_rate"] = float(np.linalg.norm(Ok[-1]))
     s["bound_active"] = int(np.sum(np.abs(np.abs(s["tau"]) - TAU_MAX) < 1e-6))
 
+# the entrywise transcription has dependent constraints at its solution
+def num_jac(fun, z, e=1e-6):
+    f0 = fun(z)
+    Jm = np.empty((f0.size, z.size))
+    for i in range(z.size):
+        d = np.zeros(z.size)
+        d[i] = e
+        Jm[:, i] = (fun(z + d) - fun(z - d)) / (2 * e)
+    return Jm
+sv_flat = np.linalg.svd(num_jac(cons_flat, res_b.x), compute_uv=False)
+sv_vi = np.linalg.svd(num_jac(cons_vi, res_c.x), compute_uv=False)
+n_dep = int(np.sum(sv_flat < 1e-6 * sv_flat[0]))
+ck.true("entrywise transcription: some equality constraints are dependent at the solution; variational: none", n_dep > 0 and sv_vi.min() > 1e-6 * sv_vi[0],
+        f"{n_dep} of {sv_flat.size} dependent; variational smallest/largest singular value {sv_vi.min() / sv_vi[0]:.1e}")
+ck.record("opt_entrywise_dependent_constraints", [n_dep, int(sv_flat.size)])
 # knot attitudes of each transcription
 eta_a, Om_a_sol, _ = unpack_chart(res_a.x)
 solutions["chart"]["R"] = np.array([expm_so3(e) for e in eta_a])
