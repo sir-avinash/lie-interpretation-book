@@ -25,6 +25,7 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 15 | Equivariant learning and residual control | planned |
 | 16 | How it all comes together | written |
 | 17 | Case study: a quadrotor, end to end | written |
+| 18 | Case study: a quadrotor with a cable-suspended load | written |
 | A | Notation and glossary | written |
 
 ## What each chapter comes with
