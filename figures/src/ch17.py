@@ -1,12 +1,12 @@
 """Figures for Chapter 17.  Run: python figures/src/ch17.py
 
 Every curve and every pose is a simulation from verify/ch17.py, the script that checks
-the chapter. The flights take a few seconds each and are kept in a temporary file.
+the chapter. The flights take a few seconds each and are kept, thinned, in
+verify/ch17_cache.pkl.
 """
 import importlib.util
 import pickle
 import sys
-import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -28,7 +28,9 @@ SANS = dict(fontfamily="Source Sans 3")
 MS = m.Mission()
 PLAN = m.Plan(MS)
 KEEP = ("t", "x", "xd", "R", "xhat", "Rhat", "H", "e_x", "att_err", "pos_err", "Psi", "Psi_pred", "Df", "f",
-        "tilt", "dist", "n_rel")
+        "tilt", "dist", "active")
+THIN = 2                                # every second step is kept
+HF = THIN * MS.h                        # time between kept samples
 FLIGHTS = {
     "full": (MS, {}),
     "plain": (replace(MS, x_o=np.array([100.0, 0.0, 0.0])), dict(adapt=False, safety=False)),
@@ -42,7 +44,7 @@ _cache = {}
 
 def flight(name):
     """One flight of verify/ch17.py, computed once."""
-    path = Path(tempfile.gettempdir()) / "ch17_flights.pkl"
+    path = ROOT / "verify" / "ch17_cache.pkl"
     stamp = (ROOT / "verify" / "ch17.py").stat().st_mtime
     if not _cache and path.exists():
         saved = pickle.loads(path.read_bytes())
@@ -51,7 +53,8 @@ def flight(name):
     if name not in _cache:
         ms, blocks = FLIGHTS[name]
         o = m.fly(ms, **blocks)
-        _cache[name] = {key: o[key] for key in KEEP}
+        _cache[name] = {key: o[key][::THIN].astype(np.float32) for key in KEEP}
+        _cache[name]["n_rel"] = o["n_rel"] // THIN
         _cache["stamp"] = stamp
         path.write_bytes(pickle.dumps(_cache))
     return _cache[name]
@@ -85,7 +88,7 @@ def ball(s):
 # ------------------------------------------------------------ opening picture
 def mission():
     o = flight("full")
-    j, h = o["n_rel"], MS.h
+    j, h = o["n_rel"], HF
     s = scene_course()
     carry = m.Carry(MS)
     hand = np.array([carry.position(t) for t in np.linspace(0, MS.t_carry, 120)])
@@ -115,19 +118,19 @@ def mission():
         xk = carry.position(0.0) if idx == 0 else o["x"][j]
         s.dot(xk + scale * Rk @ MS.r_add, color=TERRACOTTA, size=4.2, zorder=38)
     # the crosswind
-    for xw in (5.6, 6.6, 7.6):
-        a = np.array([xw, 2.6, 3.9])
+    for xw in (6.9, 7.8, 8.7):
+        a = np.array([xw, 2.6, 4.1])
         s.arrow(a, a - 1.1 * E2, color=TEAL, lw=1.2, head=0.08, zorder=16)
-    s.label((6.6, 2.6, 3.9), "crosswind, 3 N", dx=30, dy=11, size=9.5, color=TEAL, **SANS)
-    s.label(carry.position(0.0), "pad: the filter starts\n140° and 2 m wrong", dx=-8, dy=-27, size=9.5,
+    s.label((7.8, 2.6, 4.1), "crosswind, 3 N", dx=-4, dy=13, size=9.5, color=TEAL, **SANS)
+    s.label(carry.position(0.0), "pad: the filter starts\n140° and 2 m off", dx=2, dy=-25, size=9.5,
             linespacing=1.15, **SANS)
-    s.label(hand[70], "carried, motors off", dx=-46, dy=4, size=9.5, **SANS)
-    s.label(o["x"][j], "thrown upside down", dx=-38, dy=30, size=9.5, color=TERRACOTTA, **SANS)
-    s.label(MS.x_o, "ball, not\nin the plan", size=8.5, halo="none", linespacing=1.05, **SANS)
-    s.label(ref[40], r"reference $x_d(t)$", dx=16, dy=17, size=10, color=INDIGO, **SANS)
+    s.label(hand[45], "carried, motors off", dx=52, dy=-9, size=9.5, **SANS)
+    s.label(o["x"][j], "thrown\nupside down", dx=-52, dy=2, size=9.5, color=TERRACOTTA, linespacing=1.0, **SANS)
+    s.label(MS.x_o + MS.r_o * E3, "a ball that is not in the plan", dx=30, dy=11, size=9.5, **SANS)
+    s.label(ref[70], r"reference $x_d(t)$", dx=-4, dy=15, size=10, color=INDIGO, **SANS)
     s.label(MS.waypoints[-1], "target", dx=20, dy=-9, size=9.5, **SANS)
-    s.label(MS.landmarks[2], "landmark", dx=-2, dy=11, size=9.5, **SANS)
-    s.label(o["x"][j] + scale * o["R"][j] @ MS.r_add, "package", dx=27, dy=-3, size=9, color=TERRACOTTA, **SANS)
+    s.label(MS.landmarks[2], "landmark", dx=-30, dy=6, size=9.5, **SANS)
+    s.label(o["x"][j] + scale * o["R"][j] @ MS.r_add, "package", dx=27, dy=-12, size=9, color=TERRACOTTA, **SANS)
     s.save(OUT / "ch17-mission.svg", pad=0.02)
 
 
@@ -136,7 +139,7 @@ def plan():
     hover = m.believed(MS).m * 9.81
     fig, axes = new_plot(6.8, 2.5, ncols=3)
     fig.subplots_adjust(left=0.07, right=0.985, bottom=0.2, top=0.86, wspace=0.3)
-    for T, col in ((5.0, TERRACOTTA), (MS.t_course, INDIGO)):
+    for T, col in ((4.0, TERRACOTTA), (MS.t_course, INDIGO)):
         ms = replace(MS, t_course=T)
         pl = m.Plan(ms)
         ts = np.linspace(ms.t_start, ms.t_start + T, 500)
@@ -150,16 +153,18 @@ def plan():
     axes[2].axhline(MS.r_o, color=INK, lw=0.8)
     axes[2].axhspan(0, MS.r_o, color=PEACH, alpha=0.45, lw=0)
     axes[2].set_ylim(0, 3.0)
-    axes[2].text(7.4, 0.3, "inside the ball", fontsize=9, ha="right", va="center", color=TERRACOTTA, **SANS)
+    axes[2].text(5.9, 0.3, "inside the ball", fontsize=9, ha="right", va="center", color=TERRACOTTA, **SANS)
     axes[0].axhline(1.0, color=MUTED, lw=0.7, linestyle=DASH)
-    axes[0].text(7.4, 1.5, "course of 5 s", color=TERRACOTTA, fontsize=9, ha="right", **SANS)
-    axes[0].text(7.4, 0.82, "course of 7.5 s", color=INDIGO, fontsize=9, ha="right", **SANS)
+    axes[0].set_ylim(0.6, 1.52)
+    axes[1].set_ylim(0, 48)
+    axes[1].text(5.9, 44, "course of 4 s", color=TERRACOTTA, fontsize=9, ha="right", **SANS)
+    axes[1].text(5.9, 25, "course of 6 s", color=INDIGO, fontsize=9, ha="right", **SANS)
     axes[1].set_yticks([0, 20, 40])
     axes[1].set_yticklabels(["0°", "20°", "40°"])
     for ax, title in zip(axes, ("thrust over hover thrust", "tilt", "distance to the center (m)")):
         ax.set_title(title, fontsize=9.5, loc="left", color=INK, **SANS)
         ax.set_xlabel("time on the course (s)", fontsize=9, **SANS)
-        ax.set_xlim(0, 7.5)
+        ax.set_xlim(0, MS.t_course)
     save(fig, OUT / "ch17-plan.svg")
 
 
@@ -176,10 +181,10 @@ def adapt():
     ax0.set_ylim(0.02, 400)
     ax0.set_yticks([0.1, 1, 10, 100])
     ax0.set_yticklabels(["0.1°", "1°", "10°", "100°"])
-    ax0.text(17.8, 9.0, "plain controller", color=TERRACOTTA, ha="right", fontsize=9.5, **SANS, path_effects=halo())
-    ax0.text(17.8, 0.035, "with adaptation", color=INDIGO, ha="right", fontsize=9.5, **SANS, path_effects=halo())
+    ax0.text(16.3, 9.0, "plain controller", color=TERRACOTTA, ha="right", fontsize=9.5, **SANS, path_effects=halo())
+    ax0.text(16.3, 0.035, "with adaptation", color=INDIGO, ha="right", fontsize=9.5, **SANS, path_effects=halo())
     ax0.axvspan(MS.t_start + MS.gust_window[0], MS.t_start + MS.gust_window[1], color=TEAL, alpha=0.1, lw=0)
-    ax0.text(12.2, 180, "gust", color=TEAL, fontsize=9.5, ha="center", **SANS)
+    ax0.text(11.5, 180, "crosswind and gust torque", color=TEAL, fontsize=9.5, ha="center", **SANS)
     ax0.set_title(r"attitude error between $R$ and $R_d$", fontsize=9.5, loc="left", color=INK, **SANS)
     o = flight("l1")
     j = o["n_rel"]
@@ -190,9 +195,9 @@ def adapt():
         ax1.plot(o["t"][j:], o["Df"][j:, i], color=col, lw=1.3)
     ax1.set_xlim(MS.t_carry, MS.t_end)
     ax1.set_ylim(-1.2, 3.4)
-    ax1.text(17.8, 2.05, "second component", color=INDIGO, ha="right", fontsize=9.5, **SANS, path_effects=halo())
-    ax1.text(17.8, 0.42, "first component", color=TEAL, ha="right", fontsize=9.5, **SANS, path_effects=halo())
-    ax1.text(6.5, 3.05, "dashed: torque of the thrust about the center of mass", color=MUTED, fontsize=8.5, **SANS)
+    ax1.text(16.3, 2.25, "second component", color=INDIGO, ha="right", fontsize=9.5, **SANS, path_effects=halo())
+    ax1.text(16.3, 0.3, "first component", color=TEAL, ha="right", fontsize=9.5, **SANS, path_effects=halo())
+    ax1.text(6.3, 3.05, "dashed: torque of the thrust about the center of mass", color=MUTED, fontsize=8.5, **SANS)
     ax1.set_title(r"filtered estimate $\Delta_f$ (N·m)", fontsize=9.5, loc="left", color=INK, **SANS)
     for ax in (ax0, ax1):
         ax.set_xlabel("time (s)", fontsize=9, **SANS)
@@ -205,7 +210,7 @@ def compose():
     fig.subplots_adjust(left=0.075, right=0.985, bottom=0.16, top=0.88, wspace=0.24)
     rows = (("neither", TERRACOTTA, "neither wire"), ("informed", OCHRE, "barrier informed only"),
             ("told", TEAL, "predictor told only"), ("full", INDIGO, "both wires"))
-    t0, t1 = 10.2, 13.2
+    t0, t1 = 9.6, 13.4
     for name, col, _ in rows:
         o = flight(name)
         sel = (o["t"] >= t0) & (o["t"] <= t1)
@@ -216,11 +221,11 @@ def compose():
     ax0.set_ylim(-0.62, 1.6)
     ax0.set_xlim(t0, t1)
     ax1.set_xlim(t0, t1)
-    ax1.set_ylim(1e-9, 3)
-    ax1.set_yticks([1e-8, 1e-6, 1e-4, 1e-2, 1])
-    for y, (name, col, text) in zip((1.47, 1.3, 1.13, 0.96), rows):
-        ax0.text(13.15, y, text, color=col, fontsize=9.5, ha="right", **SANS, path_effects=halo())
-    ax0.text(10.3, -0.5, "outside the safe set", color=TERRACOTTA, fontsize=9, **SANS)
+    ax1.set_ylim(1e-10, 3)
+    ax1.set_yticks([1e-6, 1e-4, 1e-2, 1])
+    for y, (name, col, text) in zip((1.0e-8, 6e-8, 3.6e-7, 2.2e-6)[::-1], rows):
+        ax1.text(13.3, y / 40, text, color=col, fontsize=9.5, ha="right", **SANS, path_effects=halo())
+    ax0.text(9.7, -0.52, "outside the safe set", color=TERRACOTTA, fontsize=9, **SANS)
     ax0.set_title(r"barrier function $H$", fontsize=9.5, loc="left", color=INK, **SANS)
     ax1.set_title(r"prediction error $\tilde\Psi$", fontsize=9.5, loc="left", color=INK, **SANS)
     for ax in (ax0, ax1):
@@ -231,28 +236,28 @@ def compose():
 # ------------------------------------------------------------ animation: the estimate converges
 def estimate_frame(u):
     o = flight("full")
-    h = MS.h
-    t = 6.6 * u
+    h = HF
+    t = 6.4 * u
     k = int(round(t / h))
-    s = Scene(width=6.6, height=6.6 * 4.3 / 5.8, azim=-62, elev=18, xlim=(-3.3, 2.5), ylim=(-0.95, 3.35))
+    s = Scene(width=5.6, height=5.6 * 4.1 / 4.2, azim=-62, elev=18, xlim=(-2.75, 1.45), ylim=(-0.95, 3.15))
     lm = MS.landmarks[0]
     s.curve(np.array([[lm[0], lm[1], 0.0], lm]), color=INK, lw=0.6, alpha=1.0, zorder=4)
     s.dot(np.array([-1.0, -3.0, 0.0]), color=INK, size=5, zorder=12)
     s.label(np.array([-1.0, -3.0, 0.0]), "landmark", dx=0, dy=-11, size=9, **SANS)
     # the truth: dashed gray, like a reference
     s.curve(o["x"][:k + 1], color=MUTED, lw=0.9, alpha=1.0, zorder=14, linestyle=DASH)
-    quadrotor(s, o["x"][k], o["R"][k], arm=0.36, color=MUTED, lw=1.3, dashed=True, zorder=20)
+    quadrotor(s, o["x"][k], o["R"][k], arm=0.4, color=MUTED, lw=1.4, dashed=True, zorder=20)
     s.dot(o["x"][k], color=MUTED, size=4.5, zorder=21, hollow=True)
     # the estimate: solid indigo
-    k0 = max(0, k - int(round(1.5 / h)))
+    k0 = max(0, k - int(round(0.8 / h)))
     s.curve(o["xhat"][k0:k + 1], color=INDIGO, lw=1.3, alpha=1.0, zorder=24)
-    quadrotor(s, o["xhat"][k], o["Rhat"][k], arm=0.36, color=INDIGO, lw=1.7, zorder=30)
+    quadrotor(s, o["xhat"][k], o["Rhat"][k], arm=0.4, color=INDIGO, lw=1.7, zorder=30)
     s.dot(o["xhat"][k], color=INDIGO, size=4.5, zorder=31)
-    s.text2d(-3.2, 3.12, "truth", fontsize=10, color=MUTED, ha="left", **SANS)
-    s.text2d(-3.2, 2.86, "estimate", fontsize=10, color=INDIGO, ha="left", **SANS)
-    s.text2d(2.4, 3.12, f"t = {t:3.1f} s", fontsize=10, ha="right", **SANS)
-    s.text2d(2.4, 2.86, f"attitude error {np.degrees(o['att_err'][k]):5.1f}°", fontsize=10, ha="right", **SANS)
-    s.text2d(2.4, 2.6, f"position error {o['pos_err'][k]:4.2f} m", fontsize=10, ha="right", **SANS)
+    s.text2d(-2.65, 2.98, "truth (dashed)", fontsize=10, color=MUTED, ha="left", **SANS)
+    s.text2d(-2.65, 2.76, "estimate", fontsize=10, color=INDIGO, ha="left", **SANS)
+    s.text2d(1.35, 2.98, f"t = {t:3.1f} s, real speed", fontsize=10, ha="right", **SANS)
+    s.text2d(-2.65, 2.4, f"attitude error {np.degrees(o['att_err'][k]):5.1f}°", fontsize=10, ha="left", **SANS)
+    s.text2d(-2.65, 2.18, f"position error {o['pos_err'][k]:4.2f} m", fontsize=10, ha="left", **SANS)
     if t < 0.25:
         msg = "the estimate starts level at the origin, 140° and 2 m wrong"
     elif t < 1.6:
@@ -262,20 +267,20 @@ def estimate_frame(u):
     elif t < MS.t_carry:
         msg = "the throw: the estimate flips with the vehicle"
     else:
-        msg = "released upside down, with an estimate good to 0.05°"
-    caption(s, msg, y=-0.72)
+        msg = "released upside down, with an estimate good to 0.1°"
+    caption(s, msg, y=-0.8)
     return s
 
 
 def estimate():
-    animate(estimate_frame, OUT / "ch17-estimate.gif", OUT / "ch17-estimate-strip.png", n=100, fps=15,
-            width_px=640, stills=(0.0, 0.06, 0.5, 0.955), strip_px=820, strip_cols=2, colors=48)
+    animate(estimate_frame, OUT / "ch17-estimate.gif", OUT / "ch17-estimate-strip.png", n=96, fps=15,
+            width_px=560, stills=(0.0, 0.05, 0.5, 0.97), strip_px=560, strip_cols=2, colors=64)
 
 
 # ------------------------------------------------------------ animation: the flight
 def flight_frame(u):
     o = flight("full")
-    h, j = MS.h, o["n_rel"]
+    h, j = HF, o["n_rel"]
     t = MS.t_carry + (MS.t_end - MS.t_carry) * u
     k = min(int(round(t / h)), len(o["t"]) - 1)
     s = scene_course(width=7.0)
@@ -301,19 +306,21 @@ def flight_frame(u):
              fontsize=10, ha="right", color=INK, **SANS)
     s.text2d(10.6, 4.6, f"distance from the reference {o['e_x'][k]:4.2f} m", fontsize=10, ha="right", **SANS)
     tr = t - MS.t_carry
+    act = o["t"][(o["active"] > 1e-6) & (o["t"] > MS.t_start)]
+    T_ON, T_OFF = float(act[0]), float(act[-1])
     if tr < 0.22:
         msg, col = "thrown upside down: thrust off, turning", TERRACOTTA
     elif tr < 0.9:
         msg, col = "upright after half a second", INDIGO
     elif t < MS.t_start:
         msg, col = "joining the reference, which waits at the first waypoint", INDIGO
-    elif t < 10.17:
+    elif t < T_ON:
         msg, col = "on the course: the cascade with flat feedforward", INDIGO
-    elif t < 12.15:
+    elif t < T_OFF:
         msg, col = "the safety filter bends the flight around the ball", TERRACOTTA
-    elif t < 14.3:
+    elif t < T_OFF + 1.6:
         msg, col = "back to the reference, in a crosswind of 3 N", INDIGO
-    elif t < 16.0:
+    elif t < MS.t_start + MS.t_course:
         msg, col = "last leg, heading still turning", INDIGO
     else:
         msg, col = "hover at the target, 1 cm off", INDIGO

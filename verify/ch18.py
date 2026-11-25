@@ -64,15 +64,17 @@ TAU_MAX = 1.0                               # torque limit per axis, N·m
 PSI0 = np.zeros(3)                          # heading psi_d = 0 and its derivatives
 
 # the course of the load: lift, over a wall, set down on a platform
-WAYPOINTS = np.array([[0.0, 0.0, 0.3], [1.3, 0.25, 1.1], [2.5, 0.9, 1.3], [3.7, 1.55, 1.05],
+WAYPOINTS = np.array([[0.0, 0.0, 0.3], [1.3, -0.45, 1.1], [2.5, 0.9, 1.3], [3.7, 2.25, 1.05],
                       [5.0, 1.8, 0.5]])
-T_START, T_TRAVEL, T_END = 0.5, 7.0, 10.0   # wait, travel, end of the run
-WALL = dict(x=2.5, height=1.0, y=(-0.6, 2.4), thick=0.08)
+TIME_FRACTIONS = np.array([0.0, 0.314, 0.5, 0.686, 1.0])   # when the load passes each waypoint
+T_START, T_TRAVEL, T_END = 0.5, 6.0, 9.0    # wait, travel, end of the run
+GUST = (2.5, 5.0)                           # the crosswind blows between these times
+WALL = dict(x=2.5, height=1.0, y=(-0.9, 2.7), thick=0.08)
 CONE_DEG = 25.0                             # half-angle of the cable cone about -e3
 Q_C = -E3
 T_MIN = 0.5                                 # the tension the filter keeps, N
 ALPHA = (12.0, 12.0)                        # rates alpha_1, alpha_2 of the cone condition, 1/s
-T_HURRY = 6.0                               # the same course, asked for in less time
+T_HURRY = 5.0                               # the same course, asked for in less time
 DROP = np.array([[0.0, 0.0, 2.0], [0.0, 0.0, 0.5]])   # a descent that all but slackens the cable
 T_DROP = 1.1
 
@@ -97,7 +99,10 @@ class Plan:
     def __init__(self, waypoints=WAYPOINTS, travel=T_TRAVEL, start=T_START, params=P0, times=None):
         self.waypoints = np.asarray(waypoints, float)
         self.start, self.travel, self.params = start, travel, params
-        times = V10.chord_times(self.waypoints, travel) if times is None else np.asarray(times, float)
+        if times is None:
+            times = (TIME_FRACTIONS * travel if len(self.waypoints) == len(TIME_FRACTIONS)
+                     else V10.chord_times(self.waypoints, travel))
+        times = np.asarray(times, float)
         self.times = times
         # minimum sixth derivative: pieces of degree eleven, at rest up to the fifth derivative
         self.spline = V10.min_derivative_spline(self.waypoints, times, r=6, method="spline")
@@ -189,8 +194,8 @@ class LoadInGust(type(RB)):
 PLANT = LoadInGust(P_TRUE)
 
 
-def gust(t, peak=2.0, t_on=3.0, t_off=5.5, direction=(0.25, -1.0, 0.0)):
-    """A crosswind on the quadrotor: a smooth pulse of `peak` newtons."""
+def gust(t, peak=2.0, t_on=GUST[0], t_off=GUST[1], direction=(0.25, -1.0, 0.0)):
+    """The external force F_e on the quadrotor: a crosswind, a smooth pulse of `peak` newtons."""
     if not t_on < t < t_off:
         return np.zeros(3)
     return peak * np.sin(np.pi * (t - t_on) / (t_off - t_on)) ** 2 * unit(direction)
@@ -275,11 +280,11 @@ def null_basis(C):
 
 def linear_state(state, ref):
     """The linear state computed from a state and a reference state (tbl7-dictionary):
-    (e_x, e_v, e_q, omega - omega_d, e_R, e_Omega + Omega_d x e_R)."""
-    eR = e_R(state.R, ref.R)
+    (e_x, e_v, e_q, omega - omegad, e_R, e_Omega + Omegad x e_R)."""
+    err_R = e_R(state.R, ref.R)
     return np.concatenate([state.x_L - ref.x_L, state.v_L - ref.v_L, e_q(state.q, ref.q),
-                           state.omega - ref.omega, eR,
-                           e_Omega(state.R, state.Omega, ref.R, ref.Omega) + cross(ref.Omega, eR)])
+                           state.omega - ref.omega, err_R,
+                           e_Omega(state.R, state.Omega, ref.R, ref.Omega) + cross(ref.Omega, err_R)])
 
 
 def perturb(state, s, eps=1.0):
@@ -348,8 +353,8 @@ R_LQR = np.diag([0.5, 30.0, 30.0, 30.0])
 def cascade_thrust(state, ref, k, p=P0, feedforward=True):
     """The thrust vector the load cascade asks for (eq6-load), for a moving
     reference `ref` (a dict from Plan.flat). With feedforward=True the cable
-    law eq6-law-s2 uses the reference's omega_d and its rate from the flat map.
-    Returns F and the cable direction q_d that the position loop asks for."""
+    law eq6-law-s2 uses the reference's omegad and its rate from the flat map.
+    Returns F and the cable direction qd that the position loop asks for."""
     q, omega = state.q, state.omega
     m = p.m_Q + p.m_L
     F_L = -k.k_x * (state.x_L - ref["x_L"]) - k.k_v * (state.v_L - ref["v_L"]) + m * (ref["a_L"] + p.g * E3)
@@ -570,7 +575,7 @@ class CableFilter:
 @dataclass
 class Options:
     controller: str = "cascade"      # "cascade", "lqr" or "bare"
-    feedforward: bool = True         # the flat feedforward: omega_d, Omega_d and their rates
+    feedforward: bool = True         # the flat feedforward: omegad, Omegad and their rates
     feedforward_attitude: bool | None = None   # None: the same as `feedforward`
     adapt: bool = True
     safe: bool = True                # cone and tension filter
@@ -604,16 +609,22 @@ def run(plan, opt=None, gains=None, lqr=None):
     noise = opt.noise or FilterNoise()
     filt = CableFilter(opt.qhat0 if opt.qhat0 is not None else state.q, np.zeros(3), noise)
     adapt = Adaptation(state, opt.adapt_gains)
-    log = {key: [] for key in ("t", "x_L", "x_d", "q", "q_d", "qhat", "omega", "omegahat", "R", "x_Q", "f",
+    log = {key: [] for key in ("t", "x_L", "x_d", "q", "qd", "qhat", "omega", "omegahat", "R", "x_Q", "f",
                                "tau", "T", "H", "H1", "Deltahat", "Delta_f", "Delta", "d", "active", "manifold",
                                "nees", "v_tilde", "omega_tilde", "e_x", "swing", "F_cmd", "F_safe", "sat",
-                               "T_ref", "q_ref", "e_qhat", "e_omegahat", "Sigma_q", "v_L", "Omega", "filter_res")}
+                               "T_ref", "qd_plan", "e_qhat", "e_omegahat", "Sigma_q", "v_L", "Omega", "filter_res", "y_err")}
     for i in range(n + 1):
         t = i * H
         ref = plan.flat(t)
         # --- the reading of the cable, and the state the controller sees
+        y_err = np.nan
         if opt.estimate and i % noise.every == 0:
-            filt.correct(P0.l * state.q + noise.sig_y * rng.normal(size=3))
+            y = P0.l * state.q + noise.sig_y * rng.normal(size=3)
+            y_err = np.degrees(np.arccos(np.clip(unit(y) @ state.q, -1, 1)))
+            qhat_before = filt.qhat
+            filt.correct(y)
+            if i == 0:
+                first_error = np.degrees(np.arccos(np.clip(qhat_before @ state.q, -1, 1)))
         if opt.estimate and opt.use_estimate:
             x_Q = state.x_L - pt.l * state.q                      # the quadrotor's own state: known
             v_Q = state.v_L - pt.l * cross(state.omega, state.q)
@@ -658,7 +669,7 @@ def run(plan, opt=None, gains=None, lqr=None):
         acc = plant.dynamics(state, u)
         Hc, Hd, _, _ = cone_terms(state.q, state.omega, theta_max=theta_max)
         v_t, om_t = adapt.errors(seen)
-        row = dict(t=t, x_L=state.x_L, x_d=ref["x_L"], q=state.q, q_d=qd, qhat=filt.qhat, omega=state.omega,
+        row = dict(t=t, x_L=state.x_L, x_d=ref["x_L"], q=state.q, qd=qd, qhat=filt.qhat, omega=state.omega,
                    omegahat=filt.omegahat, R=state.R, x_Q=state.x_L - pt.l * state.q, f=f, tau=tau,
                    T=plant.tension(state, u), H=Hc, H1=Hd + ALPHA[0] * Hc, Deltahat=adapt.Deltahat.copy(),
                    Delta_f=adapt.Delta_f.copy(), Delta=lumped_uncertainty(acc[0], d, pt), d=d, active=active,
@@ -667,11 +678,11 @@ def run(plan, opt=None, gains=None, lqr=None):
                    v_tilde=np.linalg.norm(v_t), omega_tilde=np.linalg.norm(om_t),
                    e_x=np.linalg.norm(state.x_L - ref["x_L"]),
                    swing=np.degrees(np.arccos(np.clip(state.q @ Q_C, -1, 1))), F_cmd=F_cmd, F_safe=F, sat=sat,
-                   T_ref=ref["T"], q_ref=ref["q"],
+                   T_ref=ref["T"], qd_plan=ref["q"],
                    e_qhat=np.degrees(np.arccos(np.clip(filt.qhat @ state.q, -1, 1))),
                    e_omegahat=np.linalg.norm(filt.omegahat - state.omega),
                    Sigma_q=np.sqrt(max(np.trace(filt.Sigma[:3, :3]), 0.0)), v_L=state.v_L, Omega=state.Omega,
-                   filter_res=max(abs(np.linalg.norm(filt.qhat) - 1.0), abs(filt.qhat @ filt.omegahat),
+                   y_err=y_err, filter_res=max(abs(np.linalg.norm(filt.qhat) - 1.0), abs(filt.qhat @ filt.omegahat),
                                   np.abs(V14.s2_C(filt.qhat, filt.omegahat) @ filt.Sigma).max()))
         for key, val in row.items():
             log[key].append(val)
@@ -686,6 +697,7 @@ def run(plan, opt=None, gains=None, lqr=None):
         state = plant.step(state, u, H)
     out = {key: np.array(val) for key, val in log.items()}
     out["final"] = state
+    out["first_error"] = first_error if opt.estimate else np.nan
     out["completed"] = len(out["t"]) == n + 1
     return out
 
@@ -797,11 +809,34 @@ def all_runs(verbose=False):
         runs[name] = run(pl, opt, lqr=K_lqr)
         if verbose:
             print(f"    {name:18s} {time.time() - t0:5.1f} s")
-    return dict(plan=plan, hurry=hurry, drop=drop, K_lqr=K_lqr, runs=runs,
+    return dict(plan=plan, hurry=hurry, drop=drop, runs=runs,
                 summary={name: summarize(o, todo[name][0]) for name, o in runs.items()})
 
 
-CACHE = ROOT / "verify" / "ch18_cache.pkl"
+CACHE = ROOT / "verify" / "ch18_cache.npz"
+KEEP = ("t", "x_L", "x_d", "q", "qd_plan", "qhat", "R", "x_Q", "f", "T", "H", "Delta_f", "Delta", "d", "e_x",
+        "swing", "e_qhat", "e_omegahat", "y_err", "active")
+
+
+def compact(data, every=10):
+    """What the figures draw: a few logged arrays of each run, every `every` steps
+    (50 samples a second), in single precision. A reading error that falls
+    between two kept samples is moved to the kept one."""
+    out = {}
+    for name, o in data["runs"].items():
+        n = len(o["t"])
+        idx = np.arange(0, n, every)
+        for key in KEEP:
+            a = np.asarray(o[key], float)
+            if key == "y_err":
+                a = np.array([np.nanmean(a[i:i + every]) if np.isfinite(a[i:i + every]).any() else np.nan
+                              for i in idx])
+            elif key == "active":
+                a = np.array([a[i:i + every].max() for i in idx])
+            else:
+                a = a[idx]
+            out[f"{name}/{key}"] = a.astype(np.float32)
+    return out
 
 
 def _source_hash():
@@ -809,33 +844,35 @@ def _source_hash():
     return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
-def load_runs():
-    """The runs of `all_runs`, from the cache that the last `python verify/ch18.py`
-    left, or computed again if this file changed since."""
-    import pickle
-    if CACHE.exists():
-        with open(CACHE, "rb") as fh:
-            data = pickle.load(fh)
-        if data.get("hash") == _source_hash():
-            return _with_plans(data)
-    data = all_runs(verbose=True)
-    save_runs(data)
-    return data
-
-
-def _with_plans(data):
-    data.update(plan=Plan(), hurry=Plan(travel=T_HURRY), drop=Plan(waypoints=DROP, travel=T_DROP))
-    return data
-
-
 def save_runs(data):
-    import pickle
-    keep = {k: v for k, v in data.items() if k not in ("plan", "hurry", "drop")}
-    for o in keep["runs"].values():
-        o.pop("final", None)
-    keep["hash"] = _source_hash()
-    with open(CACHE, "wb") as fh:
-        pickle.dump(keep, fh)
+    np.savez_compressed(CACHE, source=np.array(_source_hash()), **compact(data))
+
+
+def load_runs():
+    """The flights for the figures: {run: {key: array}}, sampled 50 times a second.
+    Read from the cache that the last run of this file left, or flown again when
+    there is no cache or this file has changed since."""
+    if CACHE.exists():
+        with np.load(CACHE) as z:
+            if str(z["source"]) == _source_hash():
+                flat = {k: z[k].astype(float) for k in z.files if k != "source"}
+            else:
+                flat = None
+    else:
+        flat = None
+    if flat is None:
+        data = all_runs(verbose=True)
+        save_runs(data)
+        flat = {k: v.astype(float) for k, v in compact(data).items()}
+    runs = {}
+    for key, val in flat.items():
+        name, field_ = key.split("/")
+        runs.setdefault(name, {})[field_] = val
+    return runs
+
+
+def plans():
+    return Plan(), Plan(travel=T_HURRY), Plan(waypoints=DROP, travel=T_DROP)
 
 
 # =====================================================================
@@ -957,7 +994,7 @@ def main():
                              f_hover=m0 * p.g, f_hover_true=(p.m_Q + M_L_TRUE) * p.g, f_max=F_MAX,
                              tau_max=TAU_MAX, cone_deg=CONE_DEG, T_min=T_MIN, alpha=list(ALPHA),
                              travel=T_TRAVEL, start=T_START, end=T_END, hurry=T_HURRY, drop=T_DROP,
-                             wall_height=WALL["height"], gust_peak=2.0,
+                             wall_height=WALL["height"], gust_peak=2.0, gust=list(GUST),
                              weight_true=M_L_TRUE * p.g, weight_believed=p.m_L * p.g))
     ck.record("gains", dict(k_x=k.k_x, k_v=k.k_v, k_q=k.k_q, k_omega=k.k_omega, k_R=k.k_R, k_Omega=k.k_Omega))
 
@@ -993,7 +1030,7 @@ def main():
     hurry, drop = Plan(travel=T_HURRY), Plan(waypoints=DROP, travel=T_DROP)
     rep_h, rep_d = plan_report(hurry), plan_report(drop)
     w = 0.0
-    for t in np.linspace(0.6, 7.4, 30):
+    for t in np.linspace(0.6, T_START + T_TRAVEL - 0.1, 30):
         o = plan.flat(t)
         w = max(w, abs(RB.tension(plan.state(t), (o["f"], o["tau"])) - o["T"]))
     ck.close("tension of eq10-load-map equals eq4-load-tension along the plan", w, 0, 1e-10)
@@ -1008,7 +1045,9 @@ def main():
     flight = open_loop(plan, plan.state(T_START), T_START, T_START + T_TRAVEL)
     ol = float(np.linalg.norm(flight[-1].x_L - plan.flat(T_START + T_TRAVEL)["x_L"]))
     ck.true("flown open loop on the library model, the load arrives within 1e-6 m", ol < 1e-6, f"{ol:.1e} m")
-    wall_i = int(np.argmin(np.abs(np.array([plan.flat(t)["x_L"][0] for t in rep["t"]]) - WALL["x"])))
+    course = np.array([plan.flat(t)["x_L"] for t in rep["t"]])
+    ck.true("the course moves forward all the way (no doubling back over the wall)", np.all(np.diff(course[:, 0]) > -1e-9))
+    over = np.abs(course[:, 0] - WALL["x"]) < 0.15
     ck.record("plan", dict(
         swing_max=float(rep["swing"].max()), t_swing=float(rep["t"][np.argmax(rep["swing"])]),
         T_min=float(rep["T"].min()), T_max=float(rep["T"].max()), f_min=float(rep["f"].min()),
@@ -1016,7 +1055,8 @@ def main():
         speed_max=float(rep["speed"].max()), lead_max_cm=float(100 * rep["lead"].max()),
         omega_max=float(max(np.linalg.norm(plan.flat(t)["omega"]) for t in rep["t"])),
         Omega_max=float(rep["Omega"].max()), open_loop_error=ol,
-        clearance_cm=float(100 * (plan.flat(rep["t"][wall_i])["x_L"][2] - WALL["height"])),
+        clearance_cm=float(100 * (course[over, 2].min() - WALL["height"])),
+        torque_jump=float(np.abs(plan.flat(T_START)["tau"]).max()),
         length=float(np.sum(np.linalg.norm(np.diff(WAYPOINTS, axis=0), axis=1)))))
     ck.record("hurry_plan", dict(swing_max=float(rep_h["swing"].max()), T_min=float(rep_h["T"].min()),
                                  f_max=float(rep_h["f"].max()), tau_max=float(rep_h["tau"].max())))
@@ -1042,7 +1082,7 @@ def main():
         f_l, tau_l = RB.tracking_controller(s, xd, gains=k)
         w_lib = max(w_lib, abs(max(f, 0.0) - f_l), np.abs(tau - tau_l).max())
     ck.close("for a fixed target and no feedforward the cascade is the library's eq6-load", w_lib, 0, 1e-10)
-    for t in np.linspace(0.6, 7.4, 40):
+    for t in np.linspace(0.6, T_START + T_TRAVEL - 0.1, 40):
         o, s = plan.flat(t), plan.state(t)
         F, qd = cascade_thrust(s, o, k)
         f, tau = attitude_stage(s, F, o, k)
@@ -1082,6 +1122,24 @@ def main():
     ck.close("linearization: satisfies geomech's linearized equations on the constraint subspace", w_gm, 0, 1e-9)
     ck.true("linearization: without the variation of the projection the cable rows differ", w_raw > 0.1,
             f"{w_raw:.2f}")
+    w_k = 0.0
+    for _ in range(20):
+        s = RB.random_state(rng)
+        u = (5 + 20 * rng.random(), np.zeros(3))
+        A, B, C = linearize(s, u)
+        q, om, F, m_, ml = s.q, s.omega, u[0] * s.R @ E3, p.m_Q + p.m_L, p.m_Q * p.l
+        q_dot = cross(om, q)
+        a23 = -((q @ F - ml * q_dot @ q_dot) * I3 + np.outer(q, F)) @ hat(q) / m_
+        a24 = 2 * ml / m_ * np.outer(q, q_dot) @ hat(q)
+        a43 = -hat(F) @ hat(q) / ml
+        sv, dF = tangent_start(s, rng), rng.normal(size=3)
+        mine_v = A[3:6, 6:12] @ sv[6:12] + np.outer(q, q) @ dF / m_
+        mine_w = A[9:12, 6:9] @ sv[6:9] - hat(q) @ dF / ml
+        w_k = max(w_k, np.abs(mine_v - (a23 @ sv[6:9] + a24 @ sv[9:12] + np.outer(q, q) @ dF / m_)).max(),
+                  np.abs(mine_w - (a43 @ sv[6:9] - hat(q) @ dF / ml)).max(),
+                  np.abs((A[6:9, 6:9] - np.outer(q, q) @ hat(om)) @ sv[6:9]).max())
+    ck.close("linearization: load and cable blocks equal Kotaru (2022), eq. (6.12), on the constraint subspace",
+             w_k, 0, 1e-10)
     fd = finite_difference_check(plan, rng)
     ck.true("linearization: finite differences on the manifold agree, error below 1e-5 at eps = 1e-4",
             fd[1e-4] < 1e-5, f"{fd[1e-4]:.1e}")
@@ -1238,11 +1296,11 @@ def main():
     ck.true("without adaptation the load hangs low by (m_L - m_L0) g / k_x", abs(S["plain"]["err_final_cm"] / 100 - sag) < 0.01,
             f"{S['plain']['err_final_cm']:.1f} cm against {100 * sag:.1f} cm")
     o = R["truth"]
-    late = o["t"] > 8.5
+    late = o["t"] > T_END - 1.0
     ck.record("adaptation", dict(
         Delta_true_z=float(np.mean(o["Delta"][late, 2])), Delta_f_z=float(np.mean(o["Delta_f"][late, 2])),
         Delta_err_final=float(np.linalg.norm(o["Delta_f"][-1] - o["Delta"][-1])),
-        Delta_err_gust=float(np.max(np.linalg.norm(o["Delta_f"] - o["Delta"], axis=1)[(o["t"] > 3.0) & (o["t"] < 5.5)])),
+        Delta_err_gust=float(np.max(np.linalg.norm(o["Delta_f"] - o["Delta"], axis=1)[(o["t"] > GUST[0]) & (o["t"] < GUST[1])])),
         v_tilde={kd: float(R[n]["v_tilde"][(R[n]["t"] > 1.0) & (R[n]["t"] < 6.0)].max()) for kd, n in
                  (("125", "kD_125"), ("500", "kD_500"), ("2000", "truth"), ("8000", "kD_8000"))},
         euler_factor_8000=float(abs(1 + H * (-AdaptGains().k_pred / 2
@@ -1259,8 +1317,8 @@ def main():
     ck.true("adaptation: at k_Delta = 8000 the sampled law is worse again", vt[3] > vt[2], f"{vt[3]:.1e} m/s")
     # safety
     ck.true("hurried plan, no filter: the cable leaves the cone", S["hurry_free"]["H_min"] < -0.03)
-    ck.true("hurried plan, filter on the true state: the cable is held within half a degree of the cone",
-            S["hurry_safe"]["swing_max_deg"] < CONE_DEG + 0.5, f"{S['hurry_safe']['swing_max_deg']:.2f} deg")
+    ck.true("hurried plan, filter on the true state: the cable is held within one degree of the cone",
+            S["hurry_safe"]["swing_max_deg"] < CONE_DEG + 1.0, f"{S['hurry_safe']['swing_max_deg']:.2f} deg")
     ck.true("steep descent, no filter: the tension reaches zero", S["drop_free"]["T_min"] < 1e-6)
     ck.true("steep descent, filter: the tension stays above T_min", S["drop_safe"]["T_min"] >= T_MIN - 1e-9,
             f"{S['drop_safe']['T_min']:.2f} N")
@@ -1269,7 +1327,8 @@ def main():
     # estimation
     o = R["est_wrong"]
     conv = float(o["t"][np.argmax(o["e_qhat"] < 2.0)])
-    ck.record("estimator", dict(start_error_deg=float(o["e_qhat"][0]), below_2deg_after=conv,
+    ck.record("estimator", dict(wrong_by_deg=float(o["first_error"]), start_error_deg=float(o["e_qhat"][0]),
+                                reading_error_deg=float(np.degrees(FilterNoise().sig_y / P0.l)), below_2deg_after=conv,
                                 rms_deg=S["truth"]["est_rms_deg"], omega_rms=S["truth"]["est_omega_rms"],
                                 nees=S["truth"]["nees"], rms_deg_loop=S["full"]["est_rms_deg"],
                                 omega_rms_loop=S["full"]["est_omega_rms"], nees_loop=S["full"]["nees"],

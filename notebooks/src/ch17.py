@@ -113,7 +113,7 @@ class Mission:
     r_o: float = 0.6
     beta: float = 1.8
     sigma_k: tuple = (0.25, 4.0, 0.0)              # sigma(p) = k1 tanh((k3 - k2 p) / 2)
-    alpha: tuple = (3.0, 6.0)
+    alpha: tuple = (2.0, 4.0)
     w_tau: float = 40.0
     # actuator limits
     f_max: float = 100.0                           # N
@@ -650,7 +650,7 @@ def gust(ms, t):
     a, b = ms.t_start + ms.gust_window[0], ms.t_start + ms.gust_window[1]
     s = np.clip((t - a) / 1.0, 0.0, 1.0) * np.clip((b - t) / 1.0, 0.0, 1.0)
     s = s * s * (3 - 2 * s)
-    return ms.gust_force * s * np.array([0.0, -1.0, 0.0]), ms.gust_torque * gust_shape(t)
+    return ms.gust_force * s * np.array([0.0, -1.0, 0.0]), ms.gust_torque * s * gust_shape(t)
 
 
 # %% [markdown]
@@ -881,20 +881,29 @@ class InvariantEKF:
 # %%
 class Carry:
     """The vehicle in the operator's hand: a prescribed motion from the pad to the release.
-    Position: a quintic from rest to the release point and the release velocity. Attitude:
+    Position: two quintics, the carry and the throw. Attitude:
     the pad heading with a wobble, then a flip about a body axis during the last t_flip."""
 
     def __init__(self, ms):
         self.ms = ms
 
     def position(self, t, order=0):
-        ms, T = self.ms, self.ms.t_carry
-        s = t / T
-        b = [10 * s**3 - 15 * s**4 + 6 * s**5, (30 * s**2 - 60 * s**3 + 30 * s**4) / T,
-             (60 * s - 180 * s**2 + 120 * s**3) / T**2][order]
-        c = [-4 * s**3 + 7 * s**4 - 3 * s**5, (-12 * s**2 + 28 * s**3 - 15 * s**4) / T,
-             (-24 * s + 84 * s**2 - 60 * s**3) / T**2][order]
-        return (ms.x_pad if order == 0 else 0.0) + (ms.x_release - ms.x_pad) * b + ms.v_release * T * c
+        """Rest to rest from the pad to a point 0.6 m under the release point, then the
+        throw: from rest to the release point and the release velocity in t_flip."""
+        ms = self.ms
+        T1, T2 = ms.t_carry - ms.t_flip, ms.t_flip
+        low = ms.x_release - 0.6 * E3
+
+        def b(s, T):
+            return [10 * s**3 - 15 * s**4 + 6 * s**5, (30 * s**2 - 60 * s**3 + 30 * s**4) / T,
+                    (60 * s - 180 * s**2 + 120 * s**3) / T**2][order]
+
+        if t <= T1:
+            return (ms.x_pad if order == 0 else 0.0) + (low - ms.x_pad) * b(t / T1, T1)
+        s = (t - T1) / T2
+        c = [-4 * s**3 + 7 * s**4 - 3 * s**5, (-12 * s**2 + 28 * s**3 - 15 * s**4) / T2,
+             (-24 * s + 84 * s**2 - 60 * s**3) / T2**2][order]
+        return (low if order == 0 else 0.0) + (ms.x_release - low) * b(s, T2) + ms.v_release * T2 * c
 
     def attitude(self, t):
         ms = self.ms
@@ -1072,7 +1081,7 @@ def fly(ms=None, plan=None, t_end=None, **blocks):
     return out
 
 
-def detour_window(o, tol=1e-6, after=1.0):
+def detour_window(o, tol=1e-6, after=2.0):
     """First and last step of the course at which the safety filter changes the input,
     the last one extended by `after` seconds for the return to the reference."""
     ms = o["mission"]

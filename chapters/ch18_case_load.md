@@ -7,20 +7,20 @@ notebook: notebooks/ch18_case_load.ipynb
 verify: verify/ch18.py
 ---
 
-A quadrotor of 1.5 kg has picked up a package on a 1 m cable. It must carry the package across a room, over a wall 1 m high, and set it down on a platform, 7 s after it starts. Here is the obvious way to do it. Draw a smooth course for the package. Fly the quadrotor along the same course, one cable length higher. Let the package hang. Will that work?
+A quadrotor of 1.5 kg has picked up a package on a 1 m cable. It must carry the package across a room, over a wall 1 m high, and set it down on a platform, 6 s after it starts. Here is the obvious way to do it. Draw a smooth course for the package. Fly the quadrotor along the same course, one cable length higher. Let the package hang. Will that work?
 
-Try it on the model of [](#eq4-load), with the vehicle held on its course by the position loop [](#eq6-Fd). The quadrotor does what it is told. The package does not. It trails as the vehicle pulls away, swings out to 42° from the vertical, misses the top of the wall by 13 cm where the drawing said 30, and at the appointed instant it is 32 cm from the platform and swinging through 19°.
+Try it on the model of [](#eq4-load), with the vehicle held on its course by the position loop [](#eq6-Fd). The quadrotor does what it is told. The package does not. It trails as the vehicle pulls away and swings out to 48° from the vertical. At the appointed instant it is 27 cm from the platform, moving at 0.8 m/s, with the cable 18° off the vertical.
 
 The obvious plan treats the package as luggage. The equations say otherwise. The package is the thing being flown, and the quadrotor is the hand that flies it ([](#thought10-hand)). This chapter flies it properly: one robot, taken through every step of the recipe of [](#sec16-recipe), in one flight ([](#fig18-mission)).
 
-![The mission, drawn from the plan of [](#sec18-plan). The dashed gray curve is the course of the load: up from the floor, over the wall, down to the platform. The quadrotor is drawn every second where the flat map puts it. It leads the load while the load speeds up and trails it while the load slows down. The cone under the third pose is the set the cable must stay in.](figures/ch18-mission.svg){#fig18-mission}
+![The mission, drawn from the plan of [](#sec18-plan). The indigo curve is the course drawn for the load: up from the floor, over the wall, down to the platform. The quadrotor is drawn once a second where the flat map puts it. It leads the load while the load speeds up and trails it while the load slows down. The cone under the third pose is the set the cable must stay in.](figures/ch18-mission.svg){#fig18-mission}
 
 ## The mission {#sec18-mission}
 
 Here are the numbers, once. They are the defaults of the robot model library ([](#sec16-library)), so they agree with [](#sec4-products) and [](#ex10-eight).
 
 - **The robot.** Quadrotor mass $m_Q = 1.5$ kg, cable length $l = 1$ m, and the inertia matrix of the library, with principal moments near 0.02, 0.025 and 0.04 kg·m². The manifest says the load weighs $m_{L,0} = 0.3$ kg. The subscript 0 marks what the controller believes, as in $J_0$ ([](#sec8-baseline)).
-- **The course.** The load starts 0.3 m above the floor, hanging at rest. It must pass 30 cm above a wall that stands 2.5 m away, and come to rest 5 m away on a platform, 0.5 m up. The course is 5.7 m long and is to take 7 s.
+- **The course.** The load starts 0.3 m above the floor, hanging at rest. It must pass over a wall that stands 2.5 m away, 30 cm above its top, and come to rest 5 m away on a platform, 0.5 m up. The course swings wide on both sides of the straight line, is 6.7 m long, and is to take 6 s.
 - **What the controller does not know.** The package weighs $m_L = 0.45$ kg, half as much again as the manifest says. A crosswind pushes on the quadrotor with up to 2 N for 2.5 s in the middle of the flight.
 - **What it can see.** The quadrotor knows its own position, velocity, attitude and angular velocity. Of the cable it has only a reading of where the load hangs below it, $l\,q$ plus noise of 3.2 cm on each coordinate, a hundred times a second.
 - **What it must respect.** The thrust is limited to 35.3 N, twice the believed hover thrust, and each torque component to 1 N·m. The cable must stay taut, with a tension of at least $T_{\min} = 0.5$ N. And it must stay inside a cone of half-angle $\theta_{\max} = 25^\circ$ about the downward vertical, so that the load stays in view of the camera that reads it.
@@ -90,22 +90,23 @@ $$
 
 and then the attitude, the angular velocity and the torque from $F$ by [](#eq10-quad-map) to [](#eq10-quad-Omega-dot). The state needs five derivatives of $x_L$ and the torque needs the sixth ([](#fig10-ladder)).
 
-So the curve is the one [](#sec10-trajectories) recommends for a load: through five waypoints, minimizing the integral of the squared sixth derivative, with pieces of degree eleven that are at rest up to the fifth derivative at both ends. The sixth is free there, so the torque jumps, by 0.05 N·m, at the instant the course begins. The heading is held at $\psi_d = 0$.
+So the curve is the one [](#sec10-trajectories) recommends for a load: through five waypoints, minimizing the integral of the squared sixth derivative, with pieces of degree eleven that are at rest up to the fifth derivative at both ends. The sixth is free there, so the torque jumps, by 0.08 N·m, at the instant the course begins. The heading is held at $\psi_d = 0$.
 
-Now read the feasibility off the flat map, before anything flies ([](#fig18-plan)). With the believed masses and 7 s for the course:
+Now read the feasibility off the flat map, before anything flies ([](#fig18-plan)). With the believed masses and 6 s for the course:
 
-- the cable leans at most 22.2° from the vertical, inside the 25° cone;
-- the tension stays between 2.53 and 3.37 N around the believed weight of 2.94 N;
-- the thrust stays between 14.4 and 20.2 N, the tilt below 14.2°, the torque below 0.08 N·m;
-- the quadrotor is up to 38 cm ahead of the load horizontally, or behind it.
+- the cable leans at most 21.3° from the vertical, inside the 25° cone;
+- the tension stays between 2.68 and 3.36 N around the believed weight of 2.94 N;
+- the thrust stays between 15.4 and 20.2 N, the tilt below 11.2°, the torque below 0.08 N·m;
+- the quadrotor is up to 36 cm from the point above the load, ahead of it or behind;
+- the load clears the wall by 26 cm at the lowest point of its crossing.
 
-Flown open loop on the library model from the instant the course begins, with nothing but the thrust and torque of the map, the load arrives $1\times10^{-9}$ m from the platform. The plan is an exact solution of the model.
+Flown open loop on the library model from the instant the course begins, with nothing but the thrust and torque of the map, the load arrives $2\times10^{-9}$ m from the platform. The plan is an exact solution of the model.
 
-![What the flat map says about two plans, before any flight. Indigo: the course in 7 s. Terracotta: the same course in 6 s. Top: the angle of the cable from the vertical, with the edge of the cone. Bottom: the tension and the thrust, each as a fraction of its believed hover value. The faster plan leaves the cone and is still far from a slack cable.](figures/ch18-plan.svg){#fig18-plan}
+![What the flat map says about two plans, before any flight. Indigo: the course in 6 s. Terracotta: the same course in 5 s. Top: the angle of the cable from the vertical, with the edge of the cone. Bottom: the tension and the thrust, each as a fraction of its believed hover value. The faster plan leaves the cone and is still far from a slack cable.](figures/ch18-plan.svg){#fig18-plan}
 
-Ask for the same course in 6 s and the map answers at once: 30.0° of swing, outside the cone. That is how a constraint should be met first, at the drawing board, by stretching the time. We keep the 6 s plan for [](#sec18-safety), where something else has to stop it.
+Ask for the same course in 5 s and the map answers at once: 31.1° of swing, outside the cone. That is how a constraint should be met first, at the drawing board, by stretching the time. We keep the 5 s plan for [](#sec18-safety), where something else has to stop it.
 
-The same figure shows which constraint is close. The tension never drops below 81% of the load's weight. [](#sec10-limits) found the same on the figure-eight: on a smooth course the cable is the last thing to give, and the thrust and the cone go first.
+The same figure shows which constraint is close. Even on the 5 s plan the tension never drops below 90% of the load's weight. [](#sec10-limits) found the same on the figure-eight: on a smooth course the cable is the last thing to give, and the thrust and the cone go first.
 
 A plan is a feedforward. [](#sec10-limits) flew one open loop with a cable 2° off and lost 19 cm in two laps. Something must close the loop.
 
@@ -132,11 +133,11 @@ with $\omega_d$ and $\dot\omega_d$ of the reference cable, and this $\dot\omega$
 
 The gains: $k_x = 7.2$ N/m and $k_v = 5.04$ N·s/m put the position loop at 2 rad/s, and $k_q = 25$ s⁻², $k_\omega = 7$ s⁻¹ put the cable loop at 5 rad/s, as in [](#sec6-cascade). For the attitude, $k_R = 8$ N·m and $k_\Omega = 1.2$ N·m·s, which gives a slowest pole of 7.6 s⁻¹. That respects what [](#sec6-cascade) and [](#sec10-feedforward) found: the load cascade diverges when the attitude loop is no faster than the loops outside it, and feedforward from the reference does not remove that need.
 
-With the believed mass, no wind and the true state, this controller follows the course to 0.6 mm at worst.
+With the believed mass, no wind and the true state, this controller follows the course to 0.4 mm at worst.
 
-Now take the flat feedforward away: $\omega_d = \dot\omega_d = 0$ and $\Omega_d = \dot\Omega_d = 0$, with everything else as before. The worst error is 89 cm, the cable swings to 45°, and the load crosses the wall 6 cm above it ([](#fig18-feedforward)). Restore the cable's two terms alone and the worst error is 12 cm. So nearly all of the damage is done in the cable loop.
+Now take the flat feedforward away: $\omega_d = \dot\omega_d = 0$ and $\Omega_d = \dot\Omega_d = 0$, with everything else as before. The worst error is 87 cm, the cable swings to 48°, and the load strikes the wall, 1 cm below its top ([](#fig18-feedforward)). Restore the cable's two terms alone and the worst error is 8 cm. So nearly all of the damage is done in the cable loop.
 
-A line of arithmetic says why. Without $\omega_d$ the term $-k_\omega e_\omega$ is a brake on any motion of the cable. The reference cable turns at up to 0.82 rad/s, so the brake must be balanced by a direction error of about $k_\omega/k_q \times 0.82 = 0.23$ rad, or 13°. A thrust of 17.7 N aimed 13° wrong is 4 N in the wrong direction, and the position loop needs 56 cm of error to push back that hard. A faster attitude loop does not help here. The lag is in the middle loop.
+A line of arithmetic says why. Without $\omega_d$ the term $-k_\omega e_\omega$ is a brake on any motion of the cable. The reference cable turns at up to 0.81 rad/s, so the brake must be balanced by a direction error of about $k_\omega/k_q \times 0.81 = 0.23$ rad, or 13°. A thrust of 17.7 N aimed 13° wrong is 4 N in the wrong direction, and the position loop needs 55 cm of error to push back that hard. A faster attitude loop does not help here. The lag is in the middle loop.
 
 ![The same course, the same gains, with and without the flat feedforward. The dashed gray curve is the reference of the load. Indigo: the cascade with $\omega_d$, $\dot\omega_d$, $\Omega_d$ and $\dot\Omega_d$ from the flat map. Terracotta: the same cascade with all four set to zero. Watch the terracotta cable hang back at the start and swing through at the end.](figures/ch18-feedforward-strip.png){#fig18-feedforward anim="figures/ch18-feedforward.gif"}
 
@@ -189,11 +190,11 @@ Lines three and four are [](#eq7-s2-lin) for the pendulum [](#eq18-pendulum). Li
 
 A linearization is a claim, so we tested it three ways.
 
-*Against the symbolic derivation.* The library of [](#ch-symbolic) linearizes the same Lagrangian. Its rows and ours agree to $10^{-12}$ at random states, for random $s$ in the constraint subspace, after one correction that is worth knowing. An equation on the sphere holds only after projection by $I - q q\T$ ([](#secA-conventions)). The symbolic rows for the cable are the variation of the unprojected equation $E_\xi$. The projection varies too, and contributes $-(\xi\times q)(q\cdot E_\xi)$. For the lone pendulum of [](#ex7-s2-check) that term vanishes. Here it does not, and without it the cable rows differ by amounts of order one.
+*Against the symbolic derivation.* The library of [](#ch-symbolic) linearizes the same Lagrangian. Its rows and ours agree to $10^{-15}$ at random states, for random $s$ in the constraint subspace, after one correction that is worth knowing. An equation on the sphere holds only after projection by $I - q q\T$ ([](#secA-conventions)). The symbolic rows for the cable are the variation of the unprojected equation $E_\xi$. The projection varies too, and contributes $-(\xi\times q)(q\cdot E_\xi)$. For the lone pendulum of [](#ex7-s2-check) that term vanishes. Here it does not, and without it the cable rows differ by amounts of order one.
 
 *Against finite differences on the manifold.* Perturb the reference state at $t = 3$ s by $\pm\epsilon s_0$, moving each factor along its own exponential, and perturb the inputs too. Fly both neighbors open loop for one second and difference them, as in [](#ex7-s2-check). With $\epsilon = 10^{-3}$ the result differs from the solution of [](#eq18-linear) by $2\times10^{-6}$ of its size, and with $\epsilon = 10^{-4}$ by $2\times10^{-8}$: second order, as it should be.
 
-*Controllability where the state lives.* At hover the rank test on the 18 numbers reports 16, the broom of [](#thought7-broom) again. On the constraint subspace the reduced pair of [](#def7-constrained) has rank 16 of 16. Along the moving reference we integrated the reachability Gramian from 3 s to 5 s: sixteen nonzero singular values, and the seventeenth is $10^{-14}$ of the first. The linearized robot is controllable along this course, with four inputs for sixteen states.
+*Controllability where the state lives.* At hover the rank test on the 18 numbers reports 16, the broom of [](#thought7-broom) again. On the constraint subspace the reduced pair of [](#def7-constrained) has rank 16 of 16. Along the moving reference we integrated the reachability Gramian from 3 s to 5 s: sixteen nonzero singular values, and the seventeenth is $10^{-13}$ of the first. The linearized robot is controllable along this course, with four inputs for sixteen states.
 
 Kotaru (2022, ch. 6) prints the linearization of the first four lines, with the thrust vector as the input, and uses it for predictive control of the load and the cable. Our blocks agree with his on the constraint subspace. The attitude is what [](#eq18-linear) adds.
 
@@ -207,7 +208,7 @@ One gain matrix of 4 by 18 replaces three pairs of scalar gains.
 
 ![The load's distance from its reference after a bad start: the load 37 cm off and the cable swung away from the vertical by 10°, 30° and 50°. Indigo: the cascade. Teal: the LQR of [](#eq18-lqr). The LQR is back within 5 cm in half the time from 10° and 30°. From 50° it leaves the picture.](figures/ch18-lqr.svg){#fig18-lqr}
 
-[](#fig18-lqr) is the honest comparison. On the reference the two are equally good: the LQR's worst error is 0.5 mm, the cascade's 0.6 mm. From a start with the load 37 cm off and the cable swung 10° away, the LQR is back within 5 cm after 1.7 s and the cascade after 4.0 s. From 30° it is 2.0 s against 5.3 s. From 50° the LQR saturates the torque, loses the vehicle and never comes back. The cascade recovers in 5.5 s. That is the trade of [](#sec7-local), on a larger system: the linear design is better where it is valid, and the geometric one is valid much farther out. The mission below uses the cascade, because what happens next is not small.
+[](#fig18-lqr) is the honest comparison. On the reference the two are equally good: each follows the course to 0.4 mm at worst. From a start with the load 37 cm off and the cable swung 10° away, the LQR is back within 5 cm after 1.7 s and the cascade after 3.8 s. From 30° it is 2.0 s against 4.2 s. From 50° the LQR saturates the torque, loses the vehicle and never comes back. The cascade recovers in 5.0 s. That is the trade of [](#sec7-local), on a larger system: the linear design is better where it is valid, and the geometric one is valid much farther out. The mission below uses the cascade, because what happens next is not small.
 
 ## What you did not pick up {#sec18-uncertain}
 
@@ -227,7 +228,7 @@ $$
 
 This is the lumped uncertainty of [](#eq8-lumped) for this robot. There it was a torque in the body frame. Here it is a force in the world frame, and it enters exactly where the thrust vector enters, so it is matched in the sense of [](#sec8-uncertainty) for the two outer loops: if you knew $\Delta$ you would subtract it from $F_d$. The second term is along $q$, as the bucket said. In hover it is 1.47 N straight down.
 
-What does it do to the errors? The position loop balances a constant $\Delta$ with a constant error, $e_x = \Delta/k_x$. For the package that is $0.15\times9.81/7.2 = 20.4$ cm of sag. The simulation gives 20.5 cm, and the load crosses the wall 12 cm above it where the plan had 30.
+What does it do to the errors? The position loop balances a constant $\Delta$ with a constant error, $e_x = \Delta/k_x$. For the package that is $0.15\times9.81/7.2 = 20.4$ cm of sag. The simulation gives 20.6 cm, and the load crosses the wall 9 cm above it where the plan had 26.
 
 The attitude needs no adaptation. The cable is attached at the center of mass, so neither the load nor the wind exerts a torque on the body, and the inertia is known. The adaptive law of [](#sec8-l1) on $\SO(3)$ has nothing to estimate here. Its architecture is what we borrow.
 
@@ -252,7 +253,7 @@ with $k_\Delta = 2000$ and $k_f = 6$ rad/s, and the cascade asks for $F_d - \Del
 
 Be exact about what carries over from [](#ch-robust). [](#thm8-l1) is a theorem about the attitude predictor on $\SO(3)$, and it does not cover this one. What we have is the computation just described, which is the first step of that proof, for a different predictor. If $\Delta$ and its rate are bounded, the same argument would bound these prediction errors, but $\Delta$ contains $\ddot x_L$, and we have not proved that bound. And as there, nothing here is a statement about the tracking error, or about the loop with the filter in it. So we measure.
 
-The measurement is kind ([](#fig18-adapt)). With the true state fed back, the error over the course drops from 21.0 cm to 3.3 cm RMS, the load ends within 3 mm of the platform, and the filtered estimate ends within 0.005 N of the true $\Delta$. During the gust it trails the truth by up to 0.42 N of the 2 N: a cutoff of 6 rad/s passes a pulse of 2.5 s only in part, which is the trade of [](#warn8-cutoff). The prediction error behaves as the theory of the predictor suggests while the gain is moderate. Its largest value is $2.8\times10^{-3}$, $1.4\times10^{-3}$ and $7.6\times10^{-4}$ m/s for $k_\Delta = 125$, 500 and 2000: each factor of four in the gain roughly halves it. At $k_\Delta = 8000$ it is worse again, $5\times10^{-3}$ m/s. The update is an explicit step of 2 ms, and at that gain the step is at the edge of its own stability. A sampled adaptation law has a largest useful gain, and here it is not far above the one we use.
+The measurement is kind ([](#fig18-adapt)). With the true state fed back, the error over the course drops from 20.5 cm to 3.0 cm RMS, the load ends 5 mm from the target, and the filtered estimate ends within 0.007 N of the true $\Delta$. During the gust it trails the truth by up to 0.37 N of the 2 N: a cutoff of 6 rad/s passes a pulse of 2.5 s only in part, which is the trade of [](#warn8-cutoff). The prediction error shrinks as the gain grows, while the gain is moderate. Its largest value is $7.2\times10^{-3}$, $1.9\times10^{-3}$ and $7.8\times10^{-4}$ m/s for $k_\Delta = 125$, 500 and 2000. At $k_\Delta = 8000$ it is worse again, $5\times10^{-3}$ m/s. The update is an explicit step of 2 ms, and at that gain the step is at the edge of its own stability. A sampled adaptation law has a largest useful gain, and here it is not far above the one we use.
 
 ![Left: the load's distance from its reference over the mission with the true state fed back, without adaptation (terracotta) and with it (indigo). The shaded band is the gust. Right: the vertical component of the lumped uncertainty [](#eq18-lumped), dashed gray, and its filtered estimate. The estimate finds the extra weight in the first second.](figures/ch18-adapt.svg){#fig18-adapt}
 
@@ -294,18 +295,18 @@ The cone is not like that. The direction of the thrust vector is not an input. I
 
 Now the two tests that the mission's own plan would never give.
 
-*A hurried course.* Fly the 6 s plan, which leans the cable to 30.0°, with the true state fed back ([](#fig18-cone)). Without the filter the cable follows the plan out to 30.5°, with $H$ as low as $-0.044$. With the filter it stops at 25.3°. That is 0.3° outside: the smallest $H$ is $-0.002$, and the torque is at its limit for 6% of the flight. The barrier held as well as the attitude loop could deliver its thrust vector, and no better.
+*A hurried course.* Fly the 5 s plan, which leans the cable to 31.1°, with the true state fed back ([](#fig18-cone)). Without the filter the cable follows the plan out to 30.1°, with $H$ as low as $-0.041$. With the filter it stops at 25.6°. That is 0.6° outside: the smallest $H$ is $-0.004$, and an input is at its limit for 4% of the flight. The barrier held as well as the attitude loop could deliver its thrust vector, and no better.
 
-Look at the price. The load can no longer keep up with a reference that needs 30°. It falls 69 cm behind, and at the planned instant of arrival it is 54 cm from the platform with the cable at 20°. This is what [](#sec8-cone) promised and no more: safety while the reference is unsafe, and nothing about tracking. A filter is the last line of defense. The first is the plan.
+Look at the price. The load can no longer keep up with a reference that needs 30°. It falls 54 cm behind, and at the planned instant of arrival it is 33 cm from the platform with the cable at 13°. Three seconds later it is 3 cm from the target. This is what [](#sec8-cone) promised and no more: safety while the reference is unsafe, and nothing about tracking. A filter is the last line of defense. The first is the plan.
 
-![The cable direction seen from below, on the 6 s plan. The ink circle is the edge of the cone, $H = 0$, and the forbidden side is shaded. Dashed gray: the cable direction of the reference, which leaves the cone twice. Terracotta: the cable without the filter. Indigo: with it. The indigo path turns back at the edge while the terracotta one follows the reference out.](figures/ch18-cone-strip.png){#fig18-cone anim="figures/ch18-cone.gif"}
+![The cable direction seen from below, on the 5 s plan. The ink circle is the edge of the cone, $H = 0$, and the forbidden side is shaded. Dashed gray: the cable direction of the reference, which leaves the cone twice. Terracotta: the cable without the filter. Indigo: with it. The indigo path turns back at the edge while the terracotta one follows the reference out.](figures/ch18-cone-strip.png){#fig18-cone anim="figures/ch18-cone.gif"}
 
 *A descent that is too steep.* Ask the load to drop 1.5 m in 1.1 s. That curve accelerates downward at up to 1.42 times gravity, which no cable can do: it would have to push. The flat map does not object. Past free fall it returns a cable that points up and a tension that is positive again, as [](#thought10-freefall) warned. Without the filter the thrust is cut to zero, the tension with it, and from that instant the simulation is of a robot that does not exist ([](#warn4-slack)). With the floor [](#eq18-floor) the thrust never drops below 3.4 N and the tension never below 0.79 N. That is more than the 0.5 N asked for, because the load is heavier than the formula believes. A lighter load than believed would get less, and [](#exr18-lighter) asks how much. The load falls as fast as a taut cable allows, is 25 cm behind at worst, and catches up.
 
-::: {.warning #warn18-noise name="A barrier amplifies the noise of what it is fed"}
-Both tests above fed the filter the true state. Run the hurried course on the estimate of [](#sec18-estimate) and the cable reaches 27.7°, not 25.3°, and the load falls 1.0 m behind, not 0.7 m. Condition [](#eq8-rd2) multiplies $\dot H$, and so the estimated angular velocity, by $\alpha_1 + \alpha_2 = 24$ s⁻¹. Near the edge every jitter of the estimate that points outward is answered with thrust, and none that points inward is. The filter then pushes inward on average, and the cascade pushes back.
+::: {.warning #warn18-composition name="Blocks that pass alone can fail together"}
+Both tests above fed the filter the true state. On the estimate of [](#sec18-estimate) the hurried course goes a little worse: the cable reaches 25.7° and the load falls 60 cm behind. Condition [](#eq8-rd2) multiplies $\dot H$, and so the estimated angular velocity, by $\alpha_1 + \alpha_2 = 24$ s⁻¹, and near the edge the filter answers every outward jitter of the estimate with thrust.
 
-One combination failed outright. Take the flat feedforward away and keep the filter, on the hurried course with the true state: the cable swings to 43°, farther out than with no filter at all, and the load strikes the wall. Each block had been tested alone. Size the cone for the estimator's error, test the blocks together, and do not let a filter stand in for a plan.
+One combination failed outright. Take the flat feedforward away and keep the filter, on the hurried course with the true state. The cascade without $\omega_d$ lags, the filter acts for 60% of the flight, an input sits on its limit for more than half of it, and the vehicle is lost: the simulation was stopped with the load 20 m from its reference. Each block had passed its own test. Size the cone for the estimator's error, test the blocks together, and do not let a filter stand in for a plan.
 :::
 
 Both constraints are now watched. But the watchman has been reading the true cable direction, which no sensor provides.
@@ -320,9 +321,9 @@ Two facts make this estimator easy to live with. The cable equation does not con
 
 The load's state then follows from the kinematics of [](#sec18-manifold): $\hat x_L = x_Q + l\,\hat q$ and $\hat v_L = v_Q + l\,\hat\omega\times\hat q$.
 
-Run on the mission, with the controller still fed the truth, the estimator is within 0.62° RMS in direction and 0.04 rad/s in angular velocity ([](#fig18-estimate)). The readings themselves are 1.8° wrong per coordinate. Started 40° wrong, the estimate is within 4.1° after its first reading and within 2° after 0.03 s. $\|\hat q\| - 1$, $\hat q\cdot\hat\omega$ and $C\,\Sigma$ never exceed $10^{-15}$. Before trusting our code we ran it on the pendulum of [](#ex14-pendulum), where a constant thrust vector $m_Q g\,e_3$ makes the cable a free pendulum: it reproduces the estimates of that chapter's script to $10^{-15}$.
+Run on the mission, with the controller still fed the truth, the estimator is within 0.57° RMS in direction and 0.04 rad/s in angular velocity ([](#fig18-estimate)). The readings themselves are 1.8° wrong per coordinate. Started 40° wrong, the estimate is within 4.1° after its first reading and within 2° after 0.03 s. $\|\hat q\| - 1$, $\hat q\cdot\hat\omega$ and $C\,\Sigma$ never exceed $10^{-15}$. Before trusting our code we ran it on the pendulum of [](#ex14-pendulum), where a constant thrust vector $m_Q g\,e_3$ makes the cable a free pendulum: it reproduces the estimates of that chapter's script to $10^{-15}$.
 
-Its consistency is less tidy than its accuracy. The NEES in the four constrained dimensions should be 1. It is 0.63 with the truth in the loop, so the filter is cautious, and 1.06 when the controller flies on the estimate. The process noise was set by hand to cover the gust, and a number set by hand is not a noise model.
+Its consistency is less tidy than its accuracy. The NEES in the four constrained dimensions should be 1. It is 0.62 with the truth in the loop, so the filter is cautious, and 0.90 when the controller flies on the estimate. The process noise was set by hand to cover the gust, and a number set by hand is not a noise model.
 
 ![The estimator on the mission. Top: the angle between the estimated and the true cable direction, started 40° wrong. The gray dots are the raw readings. Bottom: the error of the estimated angular velocity, with the gust shaded. The reading has no information on $\omega$ except through the model, and the model does not know the wind.](figures/ch18-estimate.svg){#fig18-estimate}
 
@@ -330,29 +331,29 @@ Every block is now in place. Do they work when each feeds the next?
 
 ## The whole flight {#sec18-flight}
 
-Everything on: the 7 s plan, the cascade with flat feedforward, adaptation, the cone and tension filter, the controller fed by the estimator, the heavier package, the gust, the noisy readings ([](#fig18-flight)).
+Everything on: the 6 s plan, the cascade with flat feedforward, adaptation, the cone and tension filter, the controller fed by the estimator, the heavier package, the gust, the noisy readings ([](#fig18-flight)).
 
 ![The mission flown with every block on. The dashed gray curve and hollow marker are the reference of the load. The indigo trace is the load. The thin gray line under the quadrotor is the true cable and the indigo line the estimated one: at this scale they coincide. The bars show the tension against its floor $T_{\min}$ and the barrier $H$ of the cone against zero. Time runs at the rate printed in the frame.](figures/ch18-flight-strip.png){#fig18-flight anim="figures/ch18-flight.gif"}
 
-- **Tracking.** The load follows its course to 5.3 cm RMS and 11.3 cm at worst, and clears the wall by 29 cm of the planned 30.
-- **Set-down.** At the planned instant the load is 3.0 cm from the platform, moving at 0.04 m/s, with the cable 1.5° from the vertical. Over the next 2.5 s the cable never passes 2.1°, and the load ends 0.6 cm from the target.
-- **The cable.** The tension stays between 3.8 and 5.1 N: the package weighs 4.4 N. The largest swing is 23.5°, and the smallest value of $H$ is 0.011. It is positive, with 1.5° to spare.
-- **The estimate.** 0.79° RMS in direction, 0.07 rad/s in angular velocity.
-- **The inputs.** Thrust between 15.6 and 21.9 N of the 35.3 N allowed, torque at most 0.57 N·m of 1 N·m, no saturation.
-- **The manifold.** $\big|\|q\| - 1\big| \le 4\times10^{-15}$ and $\|R\T R - I\| \le 9\times10^{-15}$ entry by entry, after 5000 steps.
+- **Tracking.** The load follows its course to 3.9 cm RMS and 8.4 cm at worst, and clears the wall by 27 cm.
+- **Set-down.** At the planned instant the load is 3.8 cm from the platform, moving at 0.10 m/s, with the cable 1.8° from the vertical. Over the next 2.5 s the cable never passes 2.2°, and the load ends 0.5 cm from the target.
+- **The cable.** The tension stays between 4.0 and 5.0 N: the package weighs 4.4 N. The largest swing is 21.1°, and the smallest value of $H$ is 0.027. The cable never came within 3.9° of the edge of the cone.
+- **The estimate.** 0.67° RMS in direction, 0.07 rad/s in angular velocity.
+- **The inputs.** Thrust between 16.6 and 21.9 N of the 35.3 N allowed, torque at most 0.33 N·m of 1 N·m, no saturation.
+- **The manifold.** $\big|\|q\| - 1\big| \le 3\times10^{-15}$, and no entry of $R\T R - I$ exceeds $2\times10^{-14}$, after 4500 steps.
 
 Now remove one block at a time and fly the same mission ([](#tbl18-ablation)).
 
 ::: {.table #tbl18-ablation}
 
-| Mission flown with | Error, RMS (cm) | Error, worst (cm) | Over the wall (cm) | Off the platform at 7.5 s (cm) | Cable at 7.5 s | Largest swing | Smallest $H$ | Smallest $T$ (N) |
+| Mission flown with | Error, RMS (cm) | Error, worst (cm) | Over the wall (cm) | Off the platform at 6.5 s (cm) | Cable at 6.5 s | Largest swing | Smallest $H$ | Smallest $T$ (N) |
 | :-- | --: | --: | --: | --: | --: | --: | --: | --: |
-| Everything on | 5.3 | 11.3 | 29 | 3.0 | 1.5° | 23.5° | 0.011 | 3.8 |
-| No flat feedforward | 82.7 | 192.1 | 5 | 79.6 | 20.9° | 36.7° | −0.105 | 0.7 |
-| No adaptation | 21.8 | 29.6 | 12 | 22.2 | 2.2° | 22.3° | 0.019 | 3.8 |
-| No cone and tension filter | 5.2 | 11.2 | 29 | 2.9 | 1.4° | 23.7° | 0.009 | 3.8 |
-| Truth in place of the estimate | 3.3 | 7.1 | 29 | 1.7 | 0.8° | 22.5° | 0.018 | 3.8 |
-| Load treated as a disturbance | 47.1 | 82.6 | 13 | 32.2 | 19.5° | 42.3° | −0.167 | 3.9 |
+| Everything on | 3.9 | 8.4 | 27 | 3.8 | 1.8° | 21.1° | 0.027 | 4.0 |
+| No flat feedforward | 56.7 | 116.6 | 49 | 40.3 | 17.1° | 31.4° | −0.052 | 0.8 |
+| No adaptation | 20.4 | 23.3 | 11 | 22.0 | 2.7° | 18.9° | 0.040 | 4.0 |
+| No cone and tension filter | 3.9 | 8.4 | 27 | 3.8 | 1.8° | 21.1° | 0.027 | 4.0 |
+| Truth in place of the estimate | 3.0 | 6.1 | 26 | 3.0 | 1.3° | 21.2° | 0.026 | 4.0 |
+| Load treated as a disturbance | 43.5 | 79.4 | 27 | 26.8 | 17.8° | 48.2° | −0.240 | 3.8 |
 
 : The mission with one block removed at a time. Each row is one flight with the same package, gust and readings. The last row is the controller of the opening: [](#eq6-Fd) on the bare quadrotor, no adaptation and no filter.
 
@@ -360,13 +361,13 @@ Now remove one block at a time and fly the same mission ([](#tbl18-ablation)).
 
 Read it row by row.
 
-*No flat feedforward* is the worst flight in the table, worse than ignoring the cable altogether. The cascade without $\omega_d$ fights the reference, the filter fights the cascade ([](#warn18-noise)), and the thrust and the torque sit on their limits for a fifth of the flight. The plan of [](#ch-flatness) is not a convenience for this robot. It is what makes the cascade of [](#ch-tracking) a tracking controller.
+*No flat feedforward* is the worst flight in the table, worse than ignoring the cable altogether. The cascade without $\omega_d$ lags its reference, the cable leaves the cone, the filter acts during 17% of the flight, and an input is on its limit for 11% of it. The plan of [](#ch-flatness) is not a convenience for this robot. It is what makes the cascade of [](#ch-tracking) a tracking controller.
 
-*No adaptation* costs the 20 cm of sag that [](#sec18-uncertain) computed. The load clears the wall, by 12 cm, and is set down 22 cm from the platform.
+*No adaptation* costs the 20 cm of sag that [](#sec18-uncertain) computed. The load clears the wall, by 11 cm where 26 were planned, and is set down 22 cm from the platform.
 
-*No filter* changes nothing you could see. The filter touched the command during 0.9% of the flight and moved the smallest $H$ from 0.009 to 0.011. On a mission whose plan respects the constraints it is insurance, and [](#sec18-safety) showed both what the insurance pays and what it costs.
+*No filter* is the same flight, digit for digit. The filter never acted: the plan kept the cable 3.9° inside the cone and the tension eight times above its floor. On a mission whose plan respects the constraints the filter is insurance, and [](#sec18-safety) showed both what the insurance pays and what it costs.
 
-*Truth in place of the estimate* is the price of not seeing the cable: 5.3 cm against 3.3 cm, and a torque that jitters up to 0.57 N·m where the truth needs 0.08 N·m.
+*Truth in place of the estimate* is the price of not seeing the cable: 3.9 cm against 3.0 cm, and a torque that jitters up to 0.33 N·m where the truth needs 0.08 N·m.
 
 *Load treated as a disturbance* is the opening of this chapter. The quadrotor is well controlled and the load is not controlled at all.
 
@@ -376,7 +377,7 @@ Read it row by row.
 
 **Six derivatives of a plan are six derivatives of its flaws.** The reference came from a polynomial, so its sixth derivative is exact. A reference filtered from measurements, or replanned in flight with a corner in it, is another matter: [](#sec10-limits) put a ripple of 1 mm on a load's curve and the torque grew fifty-fold. Kotaru (2022, ch. 6) reports the same from experiments, where the states generated by flatness jump at the corners of a path and the load is jolted.
 
-**The guarantees are per block.** [](#thm6-s2) is about a direction tracked by a force. [](#thm8-rd2) is about a cable driven by a thrust vector. [](#def14-vekf) comes with no stability theorem at all. Nothing proved in this book covers the cascade with its feedforward taken from a plan, the adaptation law [](#eq18-adapt), the barrier acting through an attitude loop, or any two of them together, and [](#warn18-noise) showed a composition that failed. Sreenath, Lee and Kumar (2013) state stability results for the three loops of the cascade in turn, and Wu (2017) and Kotaru (2022) justify stacking them by a time-scale argument ([](#sec6-cascade)). The flight of [](#sec18-flight) is evidence. It is not a proof.
+**The guarantees are per block.** [](#thm6-s2) is about a direction tracked by a force. [](#thm8-rd2) is about a cable driven by a thrust vector. [](#def14-vekf) comes with no stability theorem at all. Nothing proved in this book covers the cascade with its feedforward taken from a plan, the adaptation law [](#eq18-adapt), the barrier acting through an attitude loop, or any two of them together, and [](#warn18-composition) showed a composition that failed. Sreenath, Lee and Kumar (2013) state stability results for the three loops of the cascade in turn, and Wu (2017) and Kotaru (2022) justify stacking them by a time-scale argument ([](#sec6-cascade)). The flight of [](#sec18-flight) is evidence. It is not a proof.
 
 **The model is kind.** There are no motor dynamics, no drag on the load, no delay between reading and thrust, and the cable is attached exactly at the center of mass. [](#fig8-filter) showed how little delay an adaptive loop tolerates when its cutoff is high. The barrier knows no input limits ([](#sec8-limits)), and the hurried course ran into them. The error-state MPC of [](#def13-mpc) carries the limits inside its optimization and would be the next thing to try on [](#eq18-linear).
 
