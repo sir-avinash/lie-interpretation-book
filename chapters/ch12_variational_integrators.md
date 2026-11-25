@@ -5,6 +5,8 @@ id: ch-integrators
 summary: Discretize Hamilton's principle instead of the equations of motion, and the integrator keeps the momentum, the manifold and, very nearly, the energy. The same discrete equations serve as constraints for trajectory optimization.
 notebook: notebooks/ch12_variational_integrators.ipynb
 verify: verify/ch12.py
+epigraph: "The purpose of computing is insight, not numbers."
+epigraph_source: "Richard Hamming, *Numerical Methods for Scientists and Engineers* (1962)"
 ---
 
 Hang the 3D pendulum of [](#eq4-pendulum) from its pivot, tip it over by two radians, spin it at six radians per second and let go. It has 7.39 J of energy above rest and nothing to lose it to. Now simulate it for an hour, twice.

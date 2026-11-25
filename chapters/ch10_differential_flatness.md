@@ -5,6 +5,8 @@ id: ch-flatness
 summary: Draw a smooth curve for the load and a heading, and the whole state and all four inputs follow by algebra and differentiation. Why that works, how many derivatives it costs, and where it breaks.
 notebook: notebooks/ch10_differential_flatness.ipynb
 verify: verify/ch10.py
+epigraph: "If you cannot solve the proposed problem try to solve first some related problem."
+epigraph_source: "George Pólya, *How to Solve It* (1945)"
 ---
 
 A quadrotor carries a small load on a one-meter cable. You want the load, not the vehicle, to trace a figure-eight in the air. The vehicle has four inputs: one thrust and three torques. The pair has eight degrees of freedom, so sixteen numbers of state. Which thrust and which torques, as functions of time, make the load do that?

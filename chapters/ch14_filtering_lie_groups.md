@@ -5,6 +5,8 @@ id: ch-filtering
 summary: An estimation error whose dynamics do not depend on the estimate, the invariant extended Kalman filter built on it, and what to do when the state is a sphere and not a group.
 notebook: notebooks/ch14_invariant_filtering.ipynb
 verify: verify/ch14.py
+epigraph: "If a man will begin with certainties, he shall end in doubts; but if he will be content to begin with doubts, he shall end in certainties."
+epigraph_source: "Francis Bacon, *The Advancement of Learning* (1605)"
 ---
 
 A drone is switched on in someone's hands. Its filter is told that it sits level and at rest. In fact it is being carried upside down, 170° from where the filter believes it is.

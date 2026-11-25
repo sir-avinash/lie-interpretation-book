@@ -4,6 +4,8 @@ short: Case studies
 id: ch-cases
 summary: Every robot in the book is the same few factors assembled the same way, and every technique applies to each by one recipe. A library of models, and a map of where each is treated.
 verify: verify/robots.py
+epigraph: "Nature uses only the longest threads to weave her patterns, so each small piece of her fabric reveals the organization of the entire tapestry."
+epigraph_source: "Richard Feynman, *The Character of Physical Law* (1965)"
 ---
 
 Here are three machines. A biped stands on one foot, with a torso that carries sliding masses. A quadrotor carries a load on a cable. A second quadrotor carries its load on a cable that sags, so we model the cable as five short links. Suppose you have written a simulator for the first. How much new code does the second need? And the third?
