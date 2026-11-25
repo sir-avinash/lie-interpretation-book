@@ -143,7 +143,7 @@ class CableParams:
     m: np.ndarray = None      # point masses at joints 0..n, kg   (n + 1,)
     l: np.ndarray = None      # link lengths, m                   (n,)
     m_Q: np.ndarray = None    # quadrotor masses, kg              (n_Q,)
-    J: np.ndarray = None      # quadrotor inertias, kg m^2        (n_Q, 3, 3)
+    J: np.ndarray = None      # quadrotor inertias, kg·m²        (n_Q, 3, 3)
     g: float = GRAVITY
 
     def __post_init__(self):

@@ -262,8 +262,8 @@ print("turned by", np.degrees(np.arccos(v0 @ v3)).round(6), "degrees; enclosed a
 # %%
 gyroscope = lambda t: np.array([1.2 * np.sin(1.3 * t), 0.9 * np.cos(0.7 * t), 0.8 + 0.5 * np.sin(2.1 * t)])
 R0 = Rz(0.3) @ Rx(-0.2)
-R_true = curve_on_SO3(gyroscope, R0, T=10)
-R_hat = curve_on_SO3(gyroscope, R0 @ expm_so3(np.radians(5) * unit([1, 2, -1])), T=10)
+Rtrue = curve_on_SO3(gyroscope, R0, T=10)
+Rhat = curve_on_SO3(gyroscope, R0 @ expm_so3(np.radians(5) * unit([1, 2, -1])), T=10)
 
 
 def euler_zyx(R):
@@ -271,12 +271,12 @@ def euler_zyx(R):
 
 
 tt = np.linspace(0, 10, 2001)
-right = np.degrees([np.linalg.norm(log_so3(R_hat(t) @ R_true(t).T)) for t in tt])
-left_axis = np.array([unit(log_so3(R_true(t).T @ R_hat(t))) for t in tt])
-right_axis = np.array([unit(log_so3(R_hat(t) @ R_true(t).T)) for t in tt])
+right = np.degrees([np.linalg.norm(log_so3(Rhat(t) @ Rtrue(t).T)) for t in tt])
+left_axis = np.array([unit(log_so3(Rtrue(t).T @ Rhat(t))) for t in tt])
+right_axis = np.array([unit(log_so3(Rhat(t) @ Rtrue(t).T)) for t in tt])
 eul = []
 for t in tt:
-    d = euler_zyx(R_hat(t)) - euler_zyx(R_true(t))
+    d = euler_zyx(Rhat(t)) - euler_zyx(Rtrue(t))
     eul.append(np.degrees(np.linalg.norm((d + np.pi) % (2 * np.pi) - np.pi)))
 fig, ax = plt.subplots(1, 2, figsize=(9, 3))
 ax[0].plot(tt, right, label="angle of invariant error (left and right)")

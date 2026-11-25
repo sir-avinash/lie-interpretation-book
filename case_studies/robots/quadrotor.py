@@ -17,7 +17,7 @@ from .core import E3, GRAVITY, Factor, Robot, attitude_tracking_torque, hat, uni
 class Params:
     """The vehicle of Chapter 6 (Lee, Leok and McClamroch, 2010)."""
     m: float = 4.34                                                                    # kg
-    J: np.ndarray = field(default_factory=lambda: np.diag([0.0820, 0.0845, 0.1377]))  # kg m^2
+    J: np.ndarray = field(default_factory=lambda: np.diag([0.0820, 0.0845, 0.1377]))  # kg·m²
     g: float = GRAVITY
 
 
@@ -39,15 +39,16 @@ class State:
 
 
 def desired_attitude(F, heading):
-    """eq6-Rd: third axis along F, first axis as close to the heading as that allows.
-    heading is the unit vector R_z(psi_d) e1."""
+    """eq6-Rd: third axis along F, first axis as close to the heading direction as
+    that allows. heading is the unit vector R_z(psi_d) e1, with psi_d the desired
+    heading (not the Euler yaw, unless the roll or the pitch is zero)."""
     b3 = unit(F)
     b2 = unit(np.cross(b3, heading))
     return np.column_stack([np.cross(b2, b3), b2, b3])
 
 
 def desired_attitude_rates(F, F1, F2, hd, hd1, hd2, d=1e-4):
-    """R_d, Omega_d and Omega_d_dot from F_d, the heading and their first two time
+    """Rd, Omegad and Omegad_dot from F_d, the heading direction and their first two time
     derivatives, by central differences of eq6-Rd along the second-order curve."""
     def along(s):
         return desired_attitude(F + s * F1 + 0.5 * s * s * F2, hd + s * hd1 + 0.5 * s * s * hd2)
@@ -106,10 +107,10 @@ class Quadrotor(Robot):
         """The cascade of sec6-cascade: eq6-Fd, eq6-Rd, then eq6-law.
 
         reference = (xd, vd, ad, jd, sd, hd, hd1, hd2): the desired position and its
-        first four time derivatives, then the heading vector R_z(psi_d) e1 and its
+        first four time derivatives, then the heading direction R_z(psi_d) e1 and its
         first two derivatives. Returns u = (f, tau).
 
-        Omega_d and its rate are obtained by differentiating F_d along the model,
+        Omegad and its rate are obtained by differentiating F_d along the model,
         as in Chapter 6: e_v_dot = f R e3 / m - g e3 - ad.
         """
         p, k = params or self.params, gains or self.Gains()

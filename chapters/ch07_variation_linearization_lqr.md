@@ -130,7 +130,7 @@ $$
 $$
 :::
 
-For the pendulum, [](#eq7-ltv-rank) can be done on paper. $\Gamma_0$ has the block $q_d^\wedge$ in its lower half, and $\Gamma_1 = \dot B - AB$ has $-q_d^\wedge$ in its upper half. Each has rank 2, in different rows, so the rank is 4 at every point of every reference. The linearized pendulum is controllable along all of its trajectories, a result due to Wu and Sreenath. Mind the minus sign in $\Gamma_{k+1}$. With a plus the test can pass on a system that is not controllable ([](#exr7-sign)).
+For the pendulum, [](#eq7-ltv-rank) can be done on paper. $\Gamma_0$ has the block $q_d^\wedge$ in its lower half, and $\Gamma_1 = \dot B - AB$ has $-q_d^\wedge$ in its upper half. Each has rank 2, in different rows, so the rank is 4 at every point of every reference. The linearized pendulum is controllable along all of its trajectories, a result due to Wu and Sreenath. The same constraint subspace returns in estimation, where the covariance of a filter on the sphere must lie in it ([](#thought14-flat)). Mind the minus sign in $\Gamma_{k+1}$. With a plus the test can pass on a system that is not controllable ([](#exr7-sign)).
 
 ::: {.example #ex7-upright name="LQR for the upright pendulum"}
 At $q_d = e_3$ the tangent plane is spanned by $e_1, e_2$, so $Z$ selects the first two components of $\xi$ and of $\delta\omega$. The reduced system is two copies of an inverted pendulum,

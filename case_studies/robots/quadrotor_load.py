@@ -26,7 +26,7 @@ class Params:
     m_L: float = 0.3        # load mass, kg
     l: float = 1.0          # cable length, m
     J: np.ndarray = field(default_factory=lambda: np.array(
-        [[0.02, 0.0005, 0.0], [0.0005, 0.025, 0.001], [0.0, 0.001, 0.04]]))   # kg m^2
+        [[0.02, 0.0005, 0.0], [0.0005, 0.025, 0.001], [0.0, 0.001, 0.04]]))   # kg·m²
     g: float = GRAVITY
 
 
@@ -39,7 +39,7 @@ def chapter6_params():
 class Gains:
     """Gains of the load cascade in sec6-cascade, for chapter6_params(). The attitude
     loop is the one of the bare vehicle made twice as fast, (k_R, k_Omega) scaled by
-    (4, 2): with the bare gains the cascade diverges from a 40 degree swing."""
+    (4, 2): with the bare gains the cascade diverges from a 40° swing."""
     k_x: float = 4.0 * (4.34 + 0.5)
     k_v: float = 2.8 * (4.34 + 0.5)
     k_q: float = 25.0
@@ -110,9 +110,13 @@ class QuadrotorLoad(Robot):
         """The load cascade eq6-load for a fixed target xd, then eq6-Rd and eq6-law.
 
         F_L = -k_x e_x - k_v e_v + (m_Q + m_L) g e3 is the force wanted on the pair.
-        The cable is steered to q_d = -(F_L + m_Q l |q_dot|^2 q) / |...| with the
-        direction law (omega_d = 0), and the attitude follows the thrust vector.
+        The cable is steered to qd = -(F_L + m_Q l |q_dot|^2 q) / |...| with the
+        direction law (omegad = 0), and the attitude follows the thrust vector.
         Returns u = (f, tau).
+
+        This controller takes a fixed target only, with no feedforward. For a
+        moving reference of the load, the feedforward would come from the flat
+        map thm10-load. The library does not include such a controller.
         """
         p, k = params or self.params, gains or self.Gains()
         q, omega, R, Omega = state.q, state.omega, state.R, state.Omega

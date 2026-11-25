@@ -10,6 +10,10 @@
   "cable_energy_drift": 2.5804656139358003e-11,
   "biped_slide_m": 0.25699127354758855,
   "biped_spin_rad_s": 2.210529126736247,
+  "rollout_order": {
+    "held": 0.9970718362800379,
+    "staged": 3.8925025708483902
+  },
   "summary": {
     "spherical_pendulum": {
       "check_eom": 4.568124223671277e-08,

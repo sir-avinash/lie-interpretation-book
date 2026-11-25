@@ -44,12 +44,12 @@ Follows Chapter 3. Notation: `R` in SO(3) maps body to world, `R_dot = R hat(Ome
    SO(3):  Psi = trace(D (I - Rd^T R)),   D = diag(d1, d2, d3) > 0     (D = I/2 is the standard choice)
    ```
 
-   Alternatives on SO(3), for a relative rotation `Rd^T R` by angle `theta` about `u`:
+   Alternatives on SO(3), for a relative rotation `Rd^T R` by angle `theta` about the unit axis `a`:
 
    ```
-   trace:       Psi = 1 - cos(theta)            e = sin(theta) u            smooth, e -> 0 at 180 deg
-   logarithm:   Psi = 0.5 theta^2               e = theta u = log(Rd^T R)   e jumps at 180 deg
-   quaternion:  Psi = 4 (1 - cos(theta/2))      e = 2 sin(theta/2) u        e jumps at 180 deg
+   trace:       Psi = 1 - cos(theta)            e = sin(theta) a            smooth, e -> 0 at 180°
+   logarithm:   Psi = 0.5 theta^2               e = theta a = log(Rd^T R)   e jumps at 180°
+   quaternion:  Psi = 4 (1 - cos(theta/2))      e = 2 sin(theta/2) a        e jumps at 180°
    ```
 
    No choice is smooth, never fading and free of extra critical points. State which property is given up.

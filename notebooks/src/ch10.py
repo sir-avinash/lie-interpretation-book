@@ -750,7 +750,7 @@ print("jump of derivatives 0..7 at the first waypoint:", np.round(jump[0], 8))
 #
 # The cascade of Chapter 6 on the circle, from a 5 cm offset, with Lee's gains scaled by $(\kappa^2, \kappa)$ in the
 # attitude loop. `zero`: $\Omega_d = \dot\Omega_d = 0$. `flat`: $\Omega_d$, $\dot\Omega_d$ of the reference, from the
-# flat map. The attitude target $R_d$ is built from $F_d$ in both.
+# flat map. The attitude reference $R_d$ is built from $F_d$ in both.
 
 # %%
 k_x, k_v, k_R, k_Omega = 16 * 4.34, 5.6 * 4.34, 8.81, 2.54

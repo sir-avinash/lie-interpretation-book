@@ -764,16 +764,16 @@ state = biped.State(l=0.5, l_dot=0.0, R1=I, Omega1=zero, RP=I,
                     slide=np.full(3, 0.05), slide_dot=zero)
 u = (p.m * p.g, zero, zero, zero, zero)                  # the leg holds the weight
 momentum = lambda s: s.RP @ biped.torso_inertia(s.slide) @ s.OmegaP
-H0 = momentum(state)
+mom0 = momentum(state)
 for k in range(800):
     state = biped.step(state, u, 1e-3)
 print(state.slide[0], state.OmegaP[2])                   # 0.26 m, 2.21 rad/s
-print(np.abs(momentum(state) - H0).max())                # 7e-14
+print(np.abs(momentum(state) - mom0).max())              # 7e-14
 # --- end
 ck.true("listing biped: the masses slide out and the torso slows down",
         abs(state.slide[0] - 0.257) < 2e-3 and abs(state.OmegaP[2] - 2.21) < 5e-3, f"slide {state.slide[0]:.3f} m, spin {state.OmegaP[2]:.3f} rad/s")
-ck.true("listing biped: the torso's angular momentum is unchanged", np.abs(momentum(state) - H0).max() < 1e-10,
-        f"{np.abs(momentum(state) - H0).max():.1e}")
+ck.true("listing biped: the torso's angular momentum is unchanged", np.abs(momentum(state) - mom0).max() < 1e-10,
+        f"{np.abs(momentum(state) - mom0).max():.1e}")
 ck.record("biped_slide_m", float(state.slide[0]))
 ck.record("biped_spin_rad_s", float(state.OmegaP[2]))
 
@@ -798,6 +798,29 @@ feet = cassie.feet(s)
 ck.close("cassie: feet are a hip width apart when both legs point the same way",
          np.linalg.norm(cassie.feet(cassie.State(**{**s.__dict__, "R_l": s.R_r, "l_l": s.l_r}))[1]
                         - cassie.feet(cassie.State(**{**s.__dict__, "R_l": s.R_r, "l_l": s.l_r}))[0]), 2 * p.d, tol=1e-12)
+
+# =========================================================================
+# rollout with a moving input: held over the step, or evaluated at every stage
+# =========================================================================
+pend = robots.get("spherical_pendulum")
+push = lambda t, s: np.array([1.5 * np.sin(3.0 * t), 2.0 * np.cos(2.0 * t), 0.5 * t])   # a force that moves
+start = pend.State(q=unit([0.6, 0.2, -0.77]), omega=np.zeros(3))
+fine = pend.rollout(start, push, 1.25e-4, 8000, hold=False)[-1].q                          # 1 s
+miss = {hold: [np.linalg.norm(pend.rollout(start, push, h, round(1.0 / h), hold=hold)[-1].q - fine)
+               for h in (0.02, 0.01)] for hold in (True, False)}
+order = {hold: float(np.log2(e[0] / e[1])) for hold, e in miss.items()}
+ck.true("rollout, hold=False: a moving input evaluated at every stage keeps the fourth order",
+        order[False] > 3.7, f"order {order[False]:.2f}, error {miss[False][1]:.1e}")
+ck.true("rollout, hold=True: the same input held over the step is first order",
+        0.8 < order[True] < 1.3, f"order {order[True]:.2f}, error {miss[True][1]:.1e}")
+const = pend.zero_input()
+ck.close("rollout: for a constant input the two options give the same states",
+         pend.rollout(start, lambda t, s: const, 1e-2, 50, hold=False)[-1].q,
+         pend.rollout(start, const, 1e-2, 50)[-1].q, tol=1e-15)
+one = pend.step(start, push, 1e-2, t=0.3)
+two = pend.rollout(start, push, 1e-2, 1, hold=False, t0=0.3)[-1]
+ck.close("step(..., t=t) is one step of rollout(..., hold=False, t0=t)", one.q, two.q, tol=0.0)
+ck.record("rollout_order", {"held": order[True], "staged": order[False]})
 
 ck.record("summary", summary)
 print("\n  robot                              check_eom  vs geomech  vs chapter  manifold  energy drift (order)")

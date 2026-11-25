@@ -13,7 +13,7 @@ description: Use differential flatness to design trajectories and feedforward fo
 
 ## Conventions
 
-World frame with `e3` up, gravity along `-e3`. `R_dot = R hat(Omega)`, `Omega` in the body frame. Cable direction `q` from the quadrotor to the load, `x_Q = x_L - l q`, `q_dot = omega x q`. Thrust `f` along `R e3`, torque `tau`. `x^(k)` is the k-th time derivative. The heading `psi` is the angle for which `R e2` is perpendicular to `Rz(psi) e1`.
+World frame with `e3` up, gravity along `-e3`. `R_dot = R hat(Omega)`, `Omega` in the body frame. Cable direction `q` from the quadrotor to the load, `x_Q = x_L - l q`, `q_dot = omega x q`. Thrust `f` along `R e3`, torque `tau`. `x^(k)` is the k-th time derivative. The heading `psi` is the angle for which `R e2` is perpendicular to `Rz(psi) e1`. It is not the Euler yaw: the two agree only when the roll or the pitch is zero.
 
 ## Procedure
 
@@ -64,7 +64,7 @@ World frame with `e3` up, gravity along `-e3`. `R_dot = R hat(Omega)`, `Omega` i
 
 5. **Check the map against the model, twice.**
    - Algebra: at 20 random times on random smooth curves, put the recovered state and input into the equations of motion. The residual must be at rounding level (1e-10 or better).
-   - Simulation: integrate the model open loop with the recovered input, evaluated at each stage of the integrator, not held over the step. The flat output must be recovered to integration accuracy, and the error must fall with the order of the integrator when the step is halved.
+   - Simulation: integrate the model open loop with the recovered input, evaluated at each stage of the integrator, not held over the step (in the robot model library: `robot.rollout(state, u, h, n, hold=False)`). The flat output must be recovered to integration accuracy, and the error must fall with the order of the integrator when the step is halved.
    - Ladder: perturb one derivative of the flat output at a time and confirm that each quantity depends on exactly the orders you counted.
 
 6. **Draw the curve.** The state must be continuous: the flat output needs continuous derivatives up to the order of the last state (3 for the quadrotor, 5 for the load, `2 n + 3` for `n` links). Minimize the next derivative, where the torque appears. Through waypoints at times `t_0 < ... < t_f`:

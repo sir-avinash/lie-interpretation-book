@@ -66,6 +66,10 @@ chapter = [
 title = "VII. Case studies"
 chapter = [
   { num = 16, file = "chapters/ch16_case_studies.md", title = "How it all comes together" },
+  { num = 17, id = "ch-case-quadrotor", file = "chapters/ch17_case_quadrotor.md", title = "Case study: a quadrotor, end to end" },
+  { num = 18, id = "ch-case-load", file = "chapters/ch18_case_load.md", title = "Case study: a quadrotor with a cable-suspended load" },
+  { num = 19, id = "ch-case-transport", file = "chapters/ch19_case_transport.md", title = "Case study: carrying a payload together" },
+  { num = 20, id = "ch-case-legged", file = "chapters/ch20_case_legged.md", title = "Case study: legged robots" },
 ]
 
 [[part]]

@@ -10,13 +10,13 @@ The biped stands on one foot, pinned at the origin. It has
   distance slide[i];
 * a swing leg with attitude R2, whose center of mass is at the hip.
 
-Write Pi = I - e3 e3' and Pi_i = I - e_i e_i'. With m the total mass, m_r one
+Write Pi = I - e3 e3^T and Pi_i = I - e_i e_i^T. With m the total mass, m_r one
 reaction mass and J_0 the inertia of a leg, the equations of motion are
 
     m l_ddot = m l Omega1 . Pi Omega1 - m g e3 . R1 e3 + f,
     J1(l) Omega1_dot + Omega1 x J1(l) Omega1 + 2 m l l_dot Pi Omega1
-        = m g l (R1' e3) x e3 + tau_1 - R1' RP tau_P,
-    JP(s) OmegaP_dot + OmegaP x JP(s) OmegaP + JP_dot OmegaP = tau_P - RP' R2 tau_2,
+        = m g l (R1^T e3) x e3 + tau_1 - R1^T RP tau_P,
+    JP(s) OmegaP_dot + OmegaP x JP(s) OmegaP + JP_dot OmegaP = tau_P - RP^T R2 tau_2,
     2 m_r slide_i_ddot = 2 m_r slide_i OmegaP . Pi_i OmegaP + f_s_i,
     J_0 Omega2_dot + Omega2 x J_0 Omega2 = tau_2,
 
@@ -53,7 +53,7 @@ PI_I = [I3 - np.outer(e, e) for e in np.eye(3)]                # projections off
 @dataclass
 class LegParams:
     m: float = 30.0                                                           # kg
-    J_0: np.ndarray = field(default_factory=lambda: np.diag([0.9, 1.1, 0.4]))  # kg m^2
+    J_0: np.ndarray = field(default_factory=lambda: np.diag([0.9, 1.1, 0.4]))  # kg·m²
     g: float = GRAVITY
 
 
@@ -211,7 +211,7 @@ class ReactionMassBiped(Robot):
                 side = Scalar(str(sign), value=sign, attr=["Constant"])
                 p = hip + (RP * ei) * si * side
                 L = L + half * m_r * Dot(p.t_diff(), p.t_diff()) - m_r * g * Dot(e[2], p)
-        # eta_P1 = eta_P - RP' R1 eta_1 and eta_P2 = eta_2 - R2' RP eta_P, written in the world frame
+        # eta_P1 = eta_P - RP^T R1 eta_1 and eta_P2 = eta_2 - R2^T RP eta_P, written in the world frame
         dW = (l.delta() * f + Dot(eta1, tau_1) + Dot(RP * etaP - R1 * eta1, RP * tau_P)
               + Dot(R2 * eta2 - RP * etaP, R2 * tau_2))
         for si, fi in zip(s, f_s):

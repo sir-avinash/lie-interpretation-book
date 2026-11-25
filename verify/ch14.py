@@ -631,7 +631,7 @@ def s2_C(q, om):
     return C
 
 
-def s2_E(q, om):
+def s2_Pi(q, om):
     """Projector onto ker C that keeps xi's tangent part and delta omega's tangent part."""
     Pq = np.eye(3) - np.outer(q, q)
     E = np.zeros((6, 6))
@@ -686,13 +686,13 @@ def s2_filters(truth, seed, sig0=1.0, sig_y=np.sqrt(1e-3), q_proc=1e-5, l=L_PEND
     ys = l * qs + rng.normal(size=qs.shape) * sig_y
     if "var" in which:
         q, om = q0.copy(), om0.copy()
-        E = s2_E(q, om)
+        E = s2_Pi(q, om)
         S = E @ (np.eye(6) * sig0**2) @ E.T
         rec = dict(q=[q], om=[om], nees=[], cmax=0.0, cov=[S])
         for k in range(len(t) - 1):
             Ak = expm_series(s2_A(q, om, l) * h)
             q, om = pend_step(q, om, h, l)
-            E = s2_E(q, om)
+            E = s2_Pi(q, om)
             S = E @ (Ak @ S @ Ak.T + Qn) @ E.T
             Cy = np.hstack([-l * hat(q), np.zeros((3, 3))])
             yt = l * q - ys[k + 1]
@@ -706,7 +706,7 @@ def s2_filters(truth, seed, sig0=1.0, sig_y=np.sqrt(1e-3), q_proc=1e-5, l=L_PEND
             Tm = np.zeros((6, 6))
             Tm[:3, :3] = Rs
             Tm[3:, 3:] = Rs
-            E = s2_E(q, om)
+            E = s2_Pi(q, om)
             S = E @ Tm @ S @ Tm.T @ E.T
             rec["cmax"] = max(rec["cmax"], float(np.abs(s2_C(q, om) @ S).max()))
             err = s2_ominus(q, om, qs[k + 1], oms[k + 1])
@@ -1170,9 +1170,9 @@ def main():
     # --- the sphere: operators, linearization, filter
     q = unit(rng.normal(size=3))
     om = np.cross(q, rng.normal(size=3))
-    C, E = s2_C(q, om), s2_E(q, om)
+    C, E = s2_C(q, om), s2_Pi(q, om)
     Z = np.linalg.svd(C)[2][2:].T                        # orthonormal basis of ker C
-    ck.close("E projects onto ker C: C E = 0, E E = E, E Z = Z",
+    ck.close("Pi_C projects onto ker C: C Pi_C = 0, Pi_C Pi_C = Pi_C, Pi_C Z = Z",
              [np.abs(C @ E).max(), np.abs(E @ E - E).max(), np.abs(E @ Z - Z).max()], 0, 1e-12)
     s = Z @ rng.normal(size=4) * 0.7
     q2, om2 = s2_oplus(q, om, s)
@@ -1208,7 +1208,7 @@ def main():
     Tm = np.zeros((6, 6))
     Tm[:3, :3] = Tm[3:, 3:] = expm_so3(sp[:3])
     Gj = np.array([(s2_ominus(*s2_oplus(q, om, sp + 1e-6 * Z[:, i]), qn, omn)) / 1e-6 for i in range(4)]).T
-    gap = np.abs(Gj - s2_E(qn, omn) @ Tm @ Z).max()
+    gap = np.abs(Gj - s2_Pi(qn, omn) @ Tm @ Z).max()
     ck.true("re-centering Jacobian equals E' T up to the size of the step", gap < 0.05, f"gap {gap:.3f} at |s| = {np.linalg.norm(sp):.3f}")
     t, ang, st, i1 = s2_mc()
     ck.true("variation-based EKF: estimate on the sphere to rounding", st["var_norm"] < 1e-12 and st["var_tan"] < 1e-12)

@@ -65,7 +65,7 @@ def unit(x):
 
 
 def tangent(q, x):
-    """(I - q q') x: the part of x in the tangent plane at q (eq4-sph-proj)."""
+    """(I - q q^T) x: the part of x in the tangent plane at q (eq4-sph-proj)."""
     return x - (x @ q) * q
 
 
@@ -98,7 +98,7 @@ def attitude_tracking_torque(R, Omega, Rd, Omegad, Omegad_dot, J, k_R, k_Omega):
     """The attitude tracking law, eq6-law:
 
     tau = -k_R e_R - k_Omega e_Omega
-          + Omega x J Omega - J (Omega x R'Rd Omegad - R'Rd Omegad_dot).
+          + Omega x J Omega - J (Omega x R^T Rd Omegad - R^T Rd Omegad_dot).
     """
     return (-k_R * e_R(R, Rd) - k_Omega * e_Omega(R, Omega, Rd, Omegad)
             + np.cross(Omega, J @ Omega)
@@ -171,7 +171,8 @@ class Robot:
         step(state, u, h, params)    one fourth-order step that stays on the manifold
         on_manifold(state)           largest violation of the manifold constraints
         random_state(rng)            a random state on the manifold
-        rollout(state, u, h, n)      n steps, returns the list of states
+        rollout(state, u, h, n)      n steps, returns the list of states; hold=False
+                                     evaluates a moving input at every stage
     """
     name = ""
     manifold = ""
@@ -208,7 +209,7 @@ class Robot:
         return sum(f.stored for f in self.factors)
 
     def on_manifold(self, state):
-        """Largest violation of |q| = 1, q . omega = 0 and R'R = I, det R = 1."""
+        """Largest violation of |q| = 1, q . omega = 0 and R^T R = I, det R = 1."""
         worst = 0.0
         for f in self.factors:
             c, v = getattr(state, f.config), getattr(state, f.velocity)
@@ -246,16 +247,23 @@ class Robot:
                 rates.append(_each(f.stacked, lambda x, y: _dexpinv(x, y, sign), d, v))
         return rates
 
-    def step(self, state, u, h, params=None):
-        """Advance by h with the input u held constant.
+    def step(self, state, u, h, params=None, t=None):
+        """Advance by h. By default the input u is held constant over the step.
+
+        If u is a function u(t, state) and the time t of the start of the step
+        is given, the input is evaluated at each of the four stages instead, at
+        the stage times t, t + h/2, t + h/2, t + h and the stage states. Use
+        this for an input that moves with time, such as an open-loop input from
+        a flat map: holding it over the step makes the method first order.
 
         Classical fourth-order Runge-Kutta stages are run on one increment per
-        factor (a displacement, or a rotation vector), and the configuration
+        factor (a displacement, or a rotation vector h Omega_k or h omega_k), and
+        the configuration
         is updated by the exponential step eq4-lie-euler,
 
-            R_{k+1} = R_k exp(hat(theta)),    q_{k+1} = exp(hat(phi)) q_k,
+            R_{k+1} = R_k exp(hat(h Omega_k)),    q_{k+1} = exp(hat(h omega_k)) q_k,
 
-        so |q| = 1 and R'R = I hold to rounding error for any h. The velocity
+        so |q| = 1 and R^T R = I hold to rounding error for any h. The velocity
         of each direction is projected onto the tangent plane of the new q at
         the end, which keeps q . omega = 0 exact as well.
         """
@@ -263,17 +271,20 @@ class Robot:
         zero = [0.0 * np.asarray(getattr(state, f.velocity), float) for f in self.factors]
         vel0 = [np.asarray(getattr(state, f.velocity), float) for f in self.factors]
 
-        def slope(inc, vel):
-            acc = self.dynamics(self._moved(state, inc, vel), u, params)
+        staged = t is not None and callable(u)
+
+        def slope(inc, vel, c=0.0):
+            at = self._moved(state, inc, vel)
+            acc = self.dynamics(at, u(t + c * h, at) if staged else u, params)
             return self._rates(inc, vel), [np.asarray(a, float) for a in acc]
 
         def add(a, b, s):
             return [x + s * y for x, y in zip(a, b)]
 
         k1 = slope(zero, vel0)
-        k2 = slope(add(zero, k1[0], h / 2), add(vel0, k1[1], h / 2))
-        k3 = slope(add(zero, k2[0], h / 2), add(vel0, k2[1], h / 2))
-        k4 = slope(add(zero, k3[0], h), add(vel0, k3[1], h))
+        k2 = slope(add(zero, k1[0], h / 2), add(vel0, k1[1], h / 2), 0.5)
+        k3 = slope(add(zero, k2[0], h / 2), add(vel0, k2[1], h / 2), 0.5)
+        k4 = slope(add(zero, k3[0], h), add(vel0, k3[1], h), 1.0)
         inc = [h / 6 * (a + 2 * b + 2 * c + d) for a, b, c, d in zip(k1[0], k2[0], k3[0], k4[0])]
         vel = [v + h / 6 * (a + 2 * b + 2 * c + d)
                for v, a, b, c, d in zip(vel0, k1[1], k2[1], k3[1], k4[1])]
@@ -285,12 +296,23 @@ class Robot:
                                         getattr(new, f.config), getattr(new, f.velocity))
         return replace(new, **fix)
 
-    def rollout(self, state, u, h, n, params=None):
-        """n steps of size h. u is a constant input or a function u(t, state)."""
+    def rollout(self, state, u, h, n, params=None, hold=True, t0=0.0):
+        """n steps of size h from time t0. u is a constant input or a function u(t, state).
+
+        hold=True   u is sampled at the start of each step and held over it, as a
+                    sampled controller does (the sampling period is h).
+        hold=False  u is evaluated at every stage of every step, at the stage
+                    time and the stage state. This keeps the fourth order of the
+                    step for an input that moves within a step.
+        """
         states = [state]
         for k in range(n):
-            uk = u(k * h, states[-1]) if callable(u) else u
-            states.append(self.step(states[-1], uk, h, params))
+            t = t0 + k * h
+            if callable(u) and not hold:
+                states.append(self.step(states[-1], u, h, params, t=t))
+            else:
+                uk = u(t, states[-1]) if callable(u) else u
+                states.append(self.step(states[-1], uk, h, params))
         return states
 
     def random_state(self, rng, speed=1.0):

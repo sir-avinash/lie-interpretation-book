@@ -302,7 +302,7 @@ For $m_Q = 1.5$ kg and $m_L = 0.3$ kg in hover, $q = -e_3$, $R = I$ and $f = (m_
 ![Cut the motors, simulated with [](#eq4-load) for the same two masses and $l = 1$ m. The quadrotor flies level at hover thrust with the load swinging, and the thrust is cut as the cable passes the vertical. The cable keeps turning at a constant rate: the gray lines show it every 0.14 s. The center of mass leaves its level line for a parabola. The tension drops from 4.3 N to 1.4 N and stays there, positive because the cable is still turning.](figures/ch04-cut-strip.png){#fig4-cut anim="figures/ch04-cut.gif"}
 
 ::: {.warning #warn4-slack name="A cable cannot push"}
-Equations [](#eq4-load) assume a taut cable. They stay smooth when [](#eq4-load-tension) goes negative, and will then simulate a cable that pushes. Monitor the sign of $T$. When it reaches zero the load is in free fall, and the model must switch to two separate bodies until the cable snaps taut again.
+Equations [](#eq4-load) assume a taut cable. They stay smooth when [](#eq4-load-tension) goes negative, and will then simulate a cable that pushes. Monitor the sign of $T$. When it reaches zero the load is in free fall, and the model must switch to two separate bodies until the cable snaps taut again. The flat map of the load fails at the same instant, and well before it the map asks for torques no vehicle has ([](#sec10-limits)).
 :::
 
 **More factors.** The recipe does not change with size. Let $n$ quadrotors carry one point mass, each on its own cable $q_i$ of length $l_i$. The configuration space is $\R^3\times(S^2\times\SO(3))^n$ and the same free-body argument gives
@@ -316,7 +316,7 @@ $$
 
 With one quadrotor this collapses to [](#eq4-load). Each quadrotor adds inertia to the load only along its own cable, through $m_i q_i q_i\T$. Wu (2017) carries the derivation through for a rigid-body payload, on $\SE(3)\times(S^2\times\SO(3))^n$.
 
-Legged robots fit the same mold. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with two leg lengths and three mass positions, of dimension fourteen ([](#tbl2-robots)). Its simplest piece already shows something new.
+Legged robots fit the same mold. Siravuru's Reaction Mass Biped has two telescoping legs and a torso with movable masses, on a product of three copies of $\SO(3)$ with two leg lengths and three mass positions, of dimension fourteen ([](#tbl2-robots)). In stance the length of the swing leg drops out of the dynamics, which leaves thirteen ([](#sec16-legs)). Its simplest piece already shows something new.
 
 ::: {.example #ex4-leg name="A telescoping leg"}
 A leg pivots about its foot with attitude $R$ and inertia $J_0$, and carries a mass $m$ at distance $l$ along its axis $R e_3$. A force $f$ extends it and a torque $\tau$ acts at the ankle. The configuration space is $\R\times\SO(3)$, and with $\Pi = I - e_3 e_3\T$, the projection off the leg axis,
@@ -352,7 +352,7 @@ Each update is a rotation, so $R_{k+1} \in \SO(3)$ and $\|q_{k+1}\| = 1$ to roun
 
 ![A 3D pendulum integrated for 60 s at $h = 0.02$ s by two fourth-order methods. Left: the entrywise method drifts off $\SO(3)$, the exponential update does not. Right: the energy error of the two methods is nearly the same.](figures/ch04-integrators.svg){#fig4-integrators}
 
-Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretizing Hamilton's principle itself, with an action sum in place of the action integral. They are the subject of the chapter on variational integrators.
+Now look at the right panel. The energy drifts in both: by $2.9\times10^{-4}$ J for the naive method and $2.2\times10^{-4}$ J for the exponential one, out of 7.4 J. Staying on the manifold is not the same as conserving energy. Integrators that do both are built by discretizing Hamilton's principle itself, with an action sum in place of the action integral. [](#sec12-lgvi) builds one for this pendulum and runs it for an hour.
 
 We now have models that are short, global and checkable. What do you do when the system is too large to derive by hand? [](#ch-symbolic) answers that.
 

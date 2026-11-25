@@ -432,7 +432,7 @@ for deg in (1, 15, 45):
           f"{flip_cost(flip_law('naive'), eta0, t0) / pred:.4f} (e_Omega alone)")
 
 # %% [markdown]
-# ## 5. Starting points for the exercises
+# ## Starting points for the exercises
 #
 # - **Exercise 7.2.** Build $B(t) = e^{At}b$ for a $2\times2$ matrix $A$ and compare the ranks of $[B,\ \dot B - AB]$ and $[B,\ \dot B + AB]$.
 # - **Exercise 7.4.** Call `hold(pitch_deg, err_deg)` over a grid of pitches and errors and record the peak torque of both loops.

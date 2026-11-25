@@ -267,7 +267,7 @@ The block $x^\wedge R$ is the lever arm. A body spinning about its own center, s
 As sets they are the same. They differ in how elements combine: in [](#eq2-se3) the rotation $R_1$ acts on $x_2$, and in the plain product positions simply add. The quadrotor controllers in this book keep $x$ and $v$ in the world frame, which is the product structure. Estimators often prefer $\SE(3)$, because their measurements arrive in the body frame. The manifold and its dimension are the same either way.
 :::
 
-One relative deserves a paragraph. An inertial navigation state has an attitude, a velocity and a position. Put $R$ in the corner of a $5\times5$ matrix, with $v$ and $x$ as two extra columns. These matrices form a nine-dimensional Lie group, $\SE_2(3)$. Hartley et al. (2018) use it to estimate the state of the biped Cassie from an inertial unit and leg kinematics. On this group the estimation error evolves independently of the trajectory being estimated, which is the reason for the construction.
+One relative deserves a paragraph. An inertial navigation state has an attitude, a velocity and a position. Put $R$ in the corner of a $5\times5$ matrix, with $v$ and $x$ as two extra columns. These matrices form a nine-dimensional Lie group, $\SE_2(3)$. Hartley et al. (2018) use it to estimate the state of the biped Cassie from an inertial measurement unit and leg kinematics ([](#sec14-legged)). On this group the estimation error evolves independently of the trajectory being estimated, which is the reason for the construction ([](#eq14-X), [](#thm14-loglinear)).
 
 ## Real robots are products {#sec2-products}
 
@@ -318,7 +318,7 @@ No angles were introduced, and the formula holds for every cable direction, incl
 
 :::
 
-Wu (2017) models $n$ quadrotors carrying one rigid payload: the payload's pose, then a cable direction and an attitude per vehicle. Siravuru (2019) models the Reaction Mass Biped with three rotation matrices (stance leg, torso, swing leg), two leg lengths and three pairs of sliding reaction masses. His reduced model of Cassie has a floating pelvis in $\SE(3)$, a rotation matrix per leg and two leg lengths, with eight of the fourteen degrees of freedom actuated. No joint angle appears in any of them.
+Wu (2017) models $n$ quadrotors carrying one rigid payload: the payload's pose, then a cable direction and an attitude per vehicle. Siravuru (2019) models the Reaction Mass Biped with three rotation matrices (stance leg, torso, swing leg), two leg lengths and three pairs of sliding reaction masses. That makes fourteen dimensions. The stance dynamics involve thirteen of them, because the length of the swing leg drops out ([](#sec16-legs)). His reduced model of Cassie has a floating pelvis in $\SE(3)$, a rotation matrix per leg and two leg lengths, with eight of the fourteen degrees of freedom actuated. No joint angle appears in any of them. [](#tbl16-map) lists where the book treats each of these robots.
 
 ::: {.warning #warn2-taut name="A configuration manifold is a modeling claim"}
 The factor $S^2$ asserts that the cable is taut. If the tension reaches zero the load is in free fall and the configuration space becomes $\R^3 \times \R^3 \times \SO(3)$. A product manifold records the constraints you assumed. It does not enforce them on the hardware. Monitor the tension, and treat slack as a different mode with its own model.

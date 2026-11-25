@@ -11,7 +11,7 @@ Follows Chapter 12. Notation: time step `h`, knots `k = 0..N`; `R` in SO(3) maps
 
 - Long simulations (many periods), coarse steps, or any use where a leak of energy or momentum changes the qualitative answer.
 - A planner needs the dynamics as algebraic constraints between knots.
-- Do not use it for a short, accurate trajectory with cheap force evaluations: a fourth-order Runge-Kutta method with the exponential update is more accurate there (0.00067 deg against 0.68 deg after 1 s at `h = 0.02` s on the 3D pendulum).
+- Do not use it for a short, accurate trajectory with cheap force evaluations: a fourth-order Runge-Kutta method with the exponential update is more accurate there (0.00067° against 0.68° after 1 s at `h = 0.02` s on the 3D pendulum).
 
 ## Procedure: derive
 
@@ -83,14 +83,14 @@ Hermite-Simpson: `x_{k+1/2} = (x_k + x_{k+1})/2 + (h/8)(xdot_k - xdot_{k+1})`, d
 After solving, always:
 
 1. Check the largest constraint residual and `\|R_k^\top R_k - I\|` at every knot.
-2. Replay the inputs through an integrator at least 100 times finer and report the miss at the final knot. At `h = 0.1` s a second-order transcription of a 150 deg turn misses by about 1 deg.
+2. Replay the inputs through an integrator at least 100 times finer and report the miss at the final knot. At `h = 0.1` s a second-order transcription of a 150° turn misses by about 1°.
 3. For a variational transcription, check the momentum balance `R_N p_N - R_0 p_0 = \sum (h/2)(R_k tau_k + R_{k+1} tau_{k+1})`.
 
 ## Failure modes
 
 - **Explicit step rotation.** Computing `Upsilon_k = \exp(h\,(J^{-1}p_k)^\wedge)` from the current momentum, instead of solving the implicit line, keeps the manifold and the momentum and lets the energy drift in proportion to `h` (+108 J in 60 s at `h = 0.02` s on the spinning 3D pendulum). Check 6 catches it. Checks 4 and 5 do not.
 - **Entrywise collocation of `R`.** Knot matrices leave SO(3) by `O(h^2\|\Omega\|^2)`, and end conditions on nine entries are dependent. Do not add `R^\top R = I` to repair it. Change the transcription.
-- **First-order chart kinematics.** Using `\dot\eta \approx \Omega` plans for a different body: a 15 deg miss on a 150 deg turn. Use `dexp^{-1}`.
+- **First-order chart kinematics.** Using `\dot\eta \approx \Omega` plans for a different body: a 15° miss on a 150° turn. Use `dexp^{-1}`.
 - **Chart edge.** `\operatorname{dexp}_\eta` is singular at `\|\eta\| = 2\pi`. Re-center `R_0` or switch to variational constraints.
 - **Variable step.** Changing `h` between steps destroys the energy band. Keep `h` fixed, or use an integrator built for adaptive steps.
 - **Step too large on S^2.** The square root needs `\|h\,\bar p/(m l^2)\| < 1`.

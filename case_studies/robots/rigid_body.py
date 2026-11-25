@@ -1,6 +1,6 @@
 """Rigid body rotating on SO(3): the free rigid body and the 3D pendulum.
 
-    J Omega_dot + Omega x J Omega = m g (R' e3) x rho + tau,     R_dot = R hat(Omega)
+    J Omega_dot + Omega x J Omega = m g (R^T e3) x rho + tau,     R_dot = R hat(Omega)
 
 is eq4-pendulum: a body hinged at a pivot, with inertia J about the pivot and
 its center of mass at R rho. With rho = 0 the gravity term vanishes and the
@@ -17,7 +17,7 @@ from .core import E3, GRAVITY, I3, Factor, Robot, attitude_tracking_torque, hat
 @dataclass
 class Params:
     """The 3D pendulum of Chapter 4's opening."""
-    J: np.ndarray = field(default_factory=lambda: np.diag([0.20, 0.25, 0.10]))  # kg m^2
+    J: np.ndarray = field(default_factory=lambda: np.diag([0.20, 0.25, 0.10]))  # kg·m²
     m: float = 1.0                                                               # kg
     rho: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0, -0.4]))  # m, body frame
     g: float = GRAVITY

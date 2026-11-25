@@ -33,17 +33,21 @@ It consolidates a body of research on geometric mechanics and control into one e
 - **A notebook** in `notebooks/` that reproduces the chapter's examples and starts the exercises. Runs on Colab.
 - **A skill** in `skills/`: a short procedure for applying the chapter to your own system, written so that a person or a coding agent can follow it.
 
+Chapter 16 is the hub of the case studies. It has no notebook and no skill of its own: it comes with the **robot model library** in `case_studies/robots/`, one module per robot with one interface, described in `case_studies/README.md` and checked by `verify/robots.py`.
+
+Appendix A (`chapters/appA_notation.md`) fixes every symbol, convention, term and code name. `terms.toml` holds the same decisions as rules, and `python tools/check_terms.py` enforces them on the chapters, the figure scripts, the notebook sources, the skills and the robot model library.
+
 ## Layout
 
 ```text
 book.toml          title, chapter order, shared math macros
 chapters/          chapter sources (Pandoc Markdown)
 figures/src/       one script per chapter; writes figures/*.svg
-verify/            one script per chapter; must exit 0
-notebooks/src/     notebook sources; built to notebooks/*.ipynb
-skills/            one skill per chapter
-case_studies/      the robot model library (case_studies/robots) used by Chapter 16
-tools/             build script, cross-reference filter, figure kit
+verify/            one script per chapter, and robots.py for the library; each must exit 0
+notebooks/src/     notebook sources; built to notebooks/*.ipynb (Chapters 1 to 14)
+skills/            one skill per chapter (Chapters 1 to 14)
+case_studies/      the robot model library (case_studies/robots) and its README, read by Chapter 16
+tools/             build script, terminology check, notebook builder, figure kit
 docs/              the built site (GitHub Pages serves this directory)
 AUTHORING.md       how chapters are written: voice, markup, figures
 terms.toml         vocabulary and notation rules (python tools/check_terms.py)
@@ -66,7 +70,7 @@ for f in figures/src/ch*.py; do python "$f"; done
 ```
 
 ```bash
-for f in verify/ch*.py; do python "$f"; done
+for f in verify/ch*.py verify/robots.py; do python "$f"; done
 ```
 
 ```bash

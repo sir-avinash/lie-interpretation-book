@@ -62,7 +62,7 @@ class SphericalPendulum(Robot):
                             params=None):
         """The direction tracking law, eq6-law-s2. Returns the force F on the bob.
 
-        omega_dot = (I - q q') omegad_dot - (q . omegad) q_dot - k_q e_q - k_omega e_omega,
+        omega_dot = (I - q q^T) omegad_dot - (q . omegad) q_dot - k_q e_q - k_omega e_omega,
         F = m g e3 + m l omega_dot x q.
         """
         p = params or self.params

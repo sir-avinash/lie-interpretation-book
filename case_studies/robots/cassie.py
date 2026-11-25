@@ -18,7 +18,7 @@ The book does not state them (it lists the manifold in tbl2-robots), and the
 matrices D, C, G, B of the thesis (eq. 6.3) could not be read reliably from
 the source, so `dynamics` assembles the Lagrange-d'Alembert equations
 directly: every point mass m_p with acceleration a_p = Ja z + bias, linear in
-the accelerations z, contributes Ja' m_p (a_p + g e3) to the left side.
+the accelerations z, contributes Ja^T m_p (a_p + g e3) to the left side.
 `verify/robots.py` checks the result against geomech.
 
 What is NOT included: the ground-contact constraints (thesis eqs. 6.8 to

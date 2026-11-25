@@ -29,8 +29,8 @@ Each chapter so far taught one move and tried it on whichever robot showed it be
 5. **Track.** A PD law on the error vector and the velocity error, plus feedforward, on each factor ([](#eq6-law), [](#eq6-law-s2)). When the force must be aimed, nest the loops ([](#sec6-cascade)).
 6. **Linearize.** Vary the equations along a solution to get a linear system in the variations, and design an LQR on it ([](#sec7-variation), [](#sec7-lqr)).
 7. **Protect.** Estimate what the model gets wrong, and filter the input so the state never leaves the safe set ([](#sec8-l1), [](#sec8-barrier)).
-8. **Plan.** Optimize over the error state, with steps taken by a retraction ([](#def13-mpc), [](#sec13-plan)), or plan in flat outputs ([](#ch-flatness)). Discretize the variational principle itself when the simulation must run long ([](#ch-integrators)).
-9. **Estimate.** Put the uncertainty in the tangent space and let the error live on the group ([](#ch-filtering)).
+8. **Plan.** Optimize over the error state, with steps taken by a retraction ([](#def13-mpc), [](#sec13-plan)), or plan in flat outputs ([](#sec10-trajectories)). Discretize the variational principle itself when the simulation must run long ([](#sec12-lgvi)), and use the discrete equations as constraints of a planner ([](#sec12-transcribe)).
+9. **Estimate.** Put the uncertainty in the tangent space and let the error live on the group ([](#def14-gaussian), [](#def14-inekf)). On a sphere, keep the estimate on the manifold and the covariance in the constraint subspace ([](#def14-vekf)).
 
 The steps never ask which robot you have. They ask which factors it has.
 
@@ -42,7 +42,7 @@ The satellite is an attitude and the camera's pointing direction, $\SO(3)\times 
 
 ## The library {#sec16-library}
 
-The folder `case_studies/robots` holds one Python module per robot. Each module is the single place where that model is written down, in the notation of [](#app-notation), and each has the same small interface:
+The folder `case_studies/robots` holds one Python module per robot. Each module is the single place where that model is written down, in the notation of [](#app-notation) with the code names of [](#tblA-code), and each has the same small interface:
 
 ```python
 import robots
@@ -66,22 +66,39 @@ The module of a robot contains its parameters, its state and its equations of mo
 
 ## The map {#sec16-map}
 
-[](#tbl16-map) is the index of the book by robot. Read along a row to follow one machine through the recipe. Read down a column to see one move applied to different manifolds. An empty cell means the book does not treat that robot at that stage. It does not mean the stage does not apply.
+[](#tbl16-map) and [](#tbl16-plan) are the index of the book by robot, in two parts with the same rows. Read along a row to follow one machine through the recipe. Read down a column to see one move applied to different manifolds. An empty cell means the book does not treat that robot at that stage. It does not mean the stage does not apply.
 
 ::: {.table #tbl16-map}
 
-| Robot | Manifold | Dynamics | Symbolic check | Tracking | Linearization | Uncertainty, safety | Planning, integration | Estimation |
-| :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| Spherical pendulum | [](#eq2-s2-kinematics), [](#def-error-s2) | [](#eq4-sph), [](#eq4-tension) | [](#sec5-pipeline) | [](#eq6-law-s2), [](#thm6-s2) | [](#thm7-s2), [](#ex7-upright) | [](#sec8-cone), [](#ex8-cone) | [](#sec12-lgvi) | [](#sec14-s2) |
-| Rigid body, 3D pendulum | [](#def-so3), [](#def-error-so3) | [](#eq4-euler-free), [](#eq4-pendulum) | [](#exr5-rigid-pendulum) | [](#eq6-law), [](#thm6-exp) | [](#thm7-so3), [](#ex7-flip) | [](#sec8-l1), [](#eq8-tilt) | [](#thm13-so3), [](#ex13-flip), [](#sec12-lgvi) | [](#ch-filtering) |
-| Quadrotor | [](#sec2-se3) | [](#eq4-quadrotor) |  | [](#thm6-cascade), [](#ex6-inverted) | [](#thm7-so3) (attitude) | [](#sec8-quad), [](#ex8-obstacle) | [](#thm13-se3), [](#ch-flatness) | [](#sec14-worked) |
-| Quadrotor with a cable-suspended load | [](#fig2-quadload), [](#ex2-quadload) | [](#eq4-load), [](#eq4-load-tension) | [](#eq5-wu), [](#ex5-sign), [](#ex5-conservation) | [](#eq6-load) |  |  | [](#ch-flatness), [](#sec12-collocation) |  |
-| Several quadrotors, one load or payload | [](#tbl2-robots) | [](#eq4-multi) | [](#sec5-scaling) |  |  | [](#sec8-quad) |  |  |
-| Flexible cable |  | [](#eq5-chain) | [](#sec5-scaling), [](#fig5-chain) |  |  |  |  |  |
-| Reaction Mass Biped | [](#tbl2-robots) | [](#ex4-leg) |  | [](#sec6-legs) |  |  | [](#sec12-biped) |  |
-| Cassie | [](#tbl2-robots) |  |  |  |  |  |  | [](#sec14-legged) |
+| Robot | Manifold | Dynamics | Symbolic check | Tracking | Linearization | Uncertainty, safety |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| Spherical pendulum | [](#eq2-s2-kinematics), [](#def-error-s2) | [](#eq4-sph), [](#eq4-tension) | [](#sec5-pipeline) | [](#eq6-law-s2), [](#thm6-s2) | [](#thm7-s2), [](#ex7-upright) | [](#sec8-cone), [](#ex8-cone) |
+| Rigid body, 3D pendulum | [](#def-so3), [](#def-error-so3) | [](#eq4-euler-free), [](#eq4-pendulum) | [](#exr5-rigid-pendulum) | [](#eq6-law), [](#thm6-exp) | [](#thm7-so3), [](#ex7-flip) | [](#sec8-l1), [](#eq8-tilt) |
+| Quadrotor | [](#sec2-se3) | [](#eq4-quadrotor) |  | [](#thm6-cascade), [](#ex6-inverted) | [](#thm7-so3) (attitude) | [](#sec8-quad), [](#ex8-obstacle) |
+| Quadrotor with a cable-suspended load | [](#fig2-quadload), [](#ex2-quadload) | [](#eq4-load), [](#eq4-load-tension) | [](#eq5-wu), [](#ex5-sign), [](#ex5-conservation) | [](#eq6-load) |  |  |
+| Several quadrotors, one load or payload | [](#tbl2-robots) | [](#eq4-multi) | [](#sec5-scaling) |  |  | [](#sec8-quad) |
+| Flexible cable |  | [](#eq5-chain) | [](#sec5-scaling), [](#fig5-chain) |  |  |  |
+| Reaction Mass Biped | [](#tbl2-robots) | [](#ex4-leg) |  | [](#sec6-legs) |  |  |
+| Cassie | [](#tbl2-robots) |  |  |  |  |  |
 
-: Where the book treats each robot at each stage of the recipe.
+: Where the book treats each robot: model and control.
+
+:::
+
+::: {.table #tbl16-plan}
+
+| Robot | Planning, integration | Estimation |
+| :-- | :-- | :-- |
+| Spherical pendulum | [](#eq12-s2) | [](#def14-vekf), [](#ex14-pendulum) |
+| Rigid body, 3D pendulum | [](#thm13-so3), [](#ex13-flip), [](#thm12-lgvi), [](#ex12-opt) | [](#ex3-dead-reckoning), [](#thm14-loglinear) |
+| Quadrotor | [](#thm13-se3), [](#thm10-quad), [](#ex10-waypoints) | [](#def14-inekf), [](#sec14-worked) |
+| Quadrotor with a cable-suspended load | [](#thm10-load), [](#ex10-eight), [](#sec12-collocation) |  |
+| Several quadrotors, one load or payload |  |  |
+| Flexible cable | [](#thm10-chain), [](#eq10-chain) |  |
+| Reaction Mass Biped | [](#sec12-biped), [](#eq12-rmb) |  |
+| Cassie |  | [](#sec14-legged) |
+
+: Where the book treats each robot: planning, integration and estimation.
 
 :::
 
@@ -164,7 +181,7 @@ J\dot\Omega + \Omega\times J\Omega &= \tau , \qquad \dot R = R\,\Omega^\wedge .
 \end{aligned}
 $$
 
-Eight degrees of freedom, four inputs. Torque turns the body, the body aims the thrust, the thrust swings the cable, the cable pulls the load. Two things make this system hard. The first is that ladder: four of its degrees of freedom are reached only through the others, and the cascade [](#eq6-load) of Sreenath, Lee and Kumar (2013) has three nested loops whose rates must be separated. The second is the factor $S^2$ itself, which is an assumption. It says the cable is taut ([](#warn2-taut)). The equations stay smooth when the tension [](#eq4-load-tension) goes negative, and will then simulate a cable that pushes ([](#warn4-slack)).
+Eight degrees of freedom, four inputs. Torque turns the body, the body aims the thrust, the thrust swings the cable, the cable pulls the load. Two things make this system hard. The first is that ladder: four of its degrees of freedom are reached only through the others ([](#fig10-ladder)), and the cascade [](#eq6-load) of Sreenath, Lee and Kumar (2013) has three nested loops whose rates must be separated. The second is the factor $S^2$ itself, which is an assumption. It says the cable is taut ([](#warn2-taut)). The equations stay smooth when the tension [](#eq4-load-tension) goes negative, and will then simulate a cable that pushes ([](#warn4-slack)).
 
 Wu (2017, ch. 3) derives this model and designs controllers on it. [](#ch-symbolic) opens with his equations and uses them to show what a symbolic check catches.
 
@@ -182,7 +199,7 @@ print(np.linalg.norm(state.x_L - target), T_min)         # 1.0 mm, 4.17 N
 print(robot.on_manifold(state))                          # 3e-14
 ```
 
-This is the flight studied in [](#sec6-cascade): the cable starts 40° off the vertical and the load is sent to a target 1.5 m away. The library reproduces that chapter's numbers, 1.0 mm from the target after 12 s with a tension that never falls below 4.17 N. The listing watches the tension because the model cannot.
+This is the flight studied in [](#sec6-cascade): the cable starts 40° off the vertical and the load is sent to a target 1.6 m away. The library reproduces that flight: the load is 1.0 mm from the target after 12 s, and the tension never falls below 4.17 N, the 4.2 N quoted there. The listing watches the tension because the model cannot.
 
 ## Several quadrotors and flexible cables {#sec16-teams}
 
@@ -208,7 +225,7 @@ $$
 
 Let the first joint move and carry quadrotors, and the same matrix $M_{ij}$ appears with one more row and column for the position of that joint. With a single link under a single quadrotor the model is [](#eq4-load) again, written from the quadrotor's end. The library checks that too.
 
-What makes these systems hard is the count. A cable of $n$ links between $n_Q$ quadrotors has $3(n_Q + 1) + 2n$ degrees of freedom and $4 n_Q$ inputs. Kotaru shows that it is nevertheless differentially flat when a quadrotor holds the end of the cable, derives its variation-based linearization, and tracks trajectories in simulation with a finite-horizon LQR on up to ten links. Each cable is also one more tension that must stay positive, and several vehicles must keep clear of each other ([](#sec8-quad)).
+What makes these systems hard is the count. A cable of $n$ links between $n_Q$ quadrotors has $3(n_Q + 1) + 2n$ degrees of freedom and $4 n_Q$ inputs. Kotaru shows that it is nevertheless differentially flat when a quadrotor holds the end of the cable ([](#thm10-chain)), derives its variation-based linearization, and tracks trajectories in simulation with a finite-horizon LQR on up to ten links. Each cable is also one more tension that must stay positive, and several vehicles must keep clear of each other ([](#sec8-quad)).
 
 ```python
 team = robots.get("multi_quadrotor_payload", n=3)        # three quadrotors
@@ -247,7 +264,7 @@ $$
 
 This is [](#eq4-leg), and its new feature is the inertia. $J(l)$ depends on the configuration, and its rate appears in the equation as a term of its own.
 
-Siravuru's Reaction Mass Biped (2019, ch. 5) is built around that feature. On top of the telescoping stance leg sits a torso with its own attitude, carrying three pairs of masses that slide along its axes, and a swing leg with a third attitude. Every mass is balanced about the hip. The consequence is striking: the mass matrix is block diagonal, and the stance leg obeys [](#eq4-leg) exactly, with the hip torque added on the right. The torso obeys an equation of the same shape, with an inertia that depends on the positions of the sliding masses in the way $J(l)$ depends on $l$. The library implements this stance model in full: thirteen degrees of freedom, all actuated. It leaves out the length of the swing leg, which does not enter the stance dynamics and accounts for the fourteenth dimension in [](#tbl2-robots), the impact at touchdown and the walking controller of the thesis ([](#sec6-legs)).
+Siravuru's Reaction Mass Biped (2019, ch. 5) is built around that feature. On top of the telescoping stance leg sits a torso with its own attitude, carrying three pairs of masses that slide along its axes, and a swing leg with a third attitude. Every mass is balanced about the hip. The consequence is striking: the mass matrix is block diagonal, and the stance leg obeys [](#eq4-leg) exactly, with the hip torque added on the right. The torso obeys an equation of the same shape, with an inertia that depends on the positions of the sliding masses in the way $J(l)$ depends on $l$. The library implements this stance model in full: thirteen degrees of freedom, all actuated. The configuration manifold of [](#tbl2-robots) has dimension fourteen. The fourteenth is the length of the swing leg, which does not enter the stance dynamics because the swing leg is balanced about the hip, and the library leaves it out. It also leaves out the impact at touchdown and the walking controller of the thesis ([](#sec6-legs)). The thesis integrates the model with the variational scheme of [](#sec12-biped).
 
 ```python
 biped = robots.get("reaction_mass_biped")
@@ -258,31 +275,32 @@ state = biped.State(l=0.5, l_dot=0.0, R1=I, Omega1=zero, RP=I,
                     slide=np.full(3, 0.05), slide_dot=zero)
 u = (p.m * p.g, zero, zero, zero, zero)                  # the leg holds the weight
 momentum = lambda s: s.RP @ biped.torso_inertia(s.slide) @ s.OmegaP
-H0 = momentum(state)
+mom0 = momentum(state)
 for k in range(800):
     state = biped.step(state, u, 1e-3)
 print(state.slide[0], state.OmegaP[2])                   # 0.26 m, 2.21 rad/s
-print(np.abs(momentum(state) - H0).max())                # 7e-14
+print(np.abs(momentum(state) - mom0).max())              # 7e-14
 ```
 
 The torso spins at 3 rad/s with its masses free to slide. They are thrown outward, 5 cm to 26 cm in 0.8 s, and the spin drops to 2.21 rad/s while the torso's angular momentum does not change in the twelfth digit ([](#fig16-skater)). A walking robot can use that: it can change how fast it turns without pushing on the ground.
 
 ![A torso that changes its own inertia, simulated with the stance model of the Reaction Mass Biped. The torso starts spinning at 3 rad/s about the vertical with its three pairs of reaction masses close to the hip. No force holds them, so they slide outward. The bars show the spin rate falling and the angular momentum staying where it was.](figures/ch16-skater-strip.png){#fig16-skater anim="figures/ch16-skater.gif"}
 
-The same thesis (ch. 6) models Cassie with a floating pelvis in $\SE(3)$, one rotation matrix per leg and two leg lengths, fourteen degrees of freedom of which eight are actuated, and uses the model to plan and track turns in place on a pair of Hovershoes. The library carries the floating-base part of that model, derived from its Lagrangian and checked against the symbolic derivation. It does not carry the ground contact, which is what makes Cassie a walking robot and not a falling one, and the book does not state these equations. The estimation side of legs is further along: a foot on the ground joins the state as one more column of a group element ([](#sec14-legged)).
+The same thesis (ch. 6) models Cassie with a floating pelvis in $\SE(3)$, one rotation matrix per leg and two leg lengths, fourteen degrees of freedom of which eight are actuated, and uses the model to plan and track turns in place on a pair of Hovershoes. The library carries the floating-base part of that model, derived from its Lagrangian and checked against the symbolic derivation. It does not carry the ground contact, which is what makes Cassie a walking robot and not a falling one, and the book does not state these equations. The estimation side of legs is further along: a foot on the ground joins the state as one more column of a group element, [](#eq14-contact), and the filter built on it was tested on Cassie ([](#sec14-legged)).
 
 ## Adding your own robot {#sec16-add}
 
 The recipe, as a checklist. Each step names the skill that carries it out. The skills are the folders under `skills/`, and `case_studies/README.md` has the same list with the files to copy.
 
-1. **Manifold and state.** Write the configuration as a product of $\R^n$, $S^2$ and $\SO(3)$ factors. Name the fields with the code names of [](#app-notation). Skill: `ch02-manifold-kinematics`. If a chart is tempting, run `ch01-manifold-diagnostics` on it first.
+1. **Manifold and state.** Write the configuration as a product of $\R^n$, $S^2$ and $\SO(3)$ factors. Name the fields with the code names of [](#secA-conventions) and [](#tblA-code). Skill: `ch02-manifold-kinematics`. If a chart is tempting, run `ch01-manifold-diagnostics` on it first.
 2. **Errors.** Take the error function, error vector and transport map of each factor from [](#tbl3-summary). Skill: `ch03-geometric-error-design`.
 3. **Equations of motion.** Lagrangian, virtual work, one variation per factor. Write the result with the inertia on the left. Skill: `ch04-manifold-dynamics-modeling`.
 4. **Module.** Copy the module of the closest robot. Fill in the parameters, the state, the list of factors, `dynamics`, `energy` and `lagrangian`. Do not write an integrator.
 5. **Verify.** Two lines in `verify/robots.py` derive the model again and run the conservation checks. Add one more: a smaller model that yours must collapse to. Skill: `ch05-geomech-symbolic-derivation`.
 6. **Track and linearize.** Add `tracking_controller` and `linearize` when you have them, each citing the law it implements. Skills: `ch06-geometric-tracking-control`, `ch07-variation-lqr-design`.
-7. **Protect and plan.** Skills: `ch08-adaptive-safety-design`, `ch13-manifold-mpc-design`.
-8. **Map.** Add a row to [](#tbl16-map), with an empty cell wherever you have not done the work.
+7. **Protect and plan.** Skills: `ch08-adaptive-safety-design`, `ch13-manifold-mpc-design`, `ch10-flatness-trajectory-design` when the robot has a flat output, `ch12-variational-integrator-design` for long simulations and for transcriptions.
+8. **Estimate.** Skill: `ch14-invariant-filter-design`.
+9. **Map.** Add a row to [](#tbl16-map) and [](#tbl16-plan), with an empty cell wherever you have not done the work.
 
 Step 5 is the one people skip, and the one that pays. Every model in the library was written by hand and every one was compared with a derivation it could not have influenced. One printed source had a sign that did not survive this comparison: the centrifugal term on the reaction masses, which must push them outward.
 

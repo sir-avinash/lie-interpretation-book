@@ -224,7 +224,7 @@ R_d e_2 &= \frac{R_d e_3\times R_z(\psi_d)\,e_1}{\|R_d e_3\times R_z(\psi_d)\,e_
 \end{aligned} \label{eq6-Rd}
 $$
 
-The third column of the attitude reference is the direction of the desired force. The desired yaw $\psi_d$ fixes the rotation about it: the first body axis is kept as close to the heading $R_z(\psi_d)e_1$ as the tilt allows. The torque is [](#eq6-law), tracking this $R_d$. Position loop, then direction, then attitude: a **cascade** ([](#fig6-cascade)).
+The third column of the attitude reference is the direction of the desired force. The desired **heading** $\psi_d$ fixes the rotation about it: the first body axis is kept as close to the heading direction $R_z(\psi_d)e_1$ as the tilt allows. The heading is not the yaw of [](#eq-zyx), though the two agree when the roll or the pitch is zero ([](#sec10-quad)). The torque is [](#eq6-law), tracking this $R_d$. Position loop, then direction, then attitude: a **cascade** ([](#fig6-cascade)).
 
 What does the position error see? Substitute:
 
@@ -253,7 +253,7 @@ The reference is a circle of radius 1.5 m flown at 1 rad/s with a vertical wobbl
 Those thrust and torque peaks are a warning about the word "exact", and so is this.
 
 ::: {.warning #warn6-feedforward name="The feedforward is doing the separating"}
-[](#thm6-cascade) needs $\Omega_d$ and $\dot\Omega_d$. They are derivatives of $R_d$, so of $F_d$, so they contain the vehicle's acceleration and jerk. Most flight code sets them to zero, or to the values along the reference $x_d(t)$, and counts on the attitude loop being fast.
+[](#thm6-cascade) needs $\Omega_d$ and $\dot\Omega_d$. They are derivatives of $R_d$, so of $F_d$, so they contain the vehicle's acceleration and jerk. Most flight code sets them to zero, or to the values along the reference $x_d(t)$, and counts on the attitude loop being fast. The values along the reference come from the flat map of [](#thm10-quad), and [](#sec10-feedforward) tries them on the experiment below: they remove the steady error, and they do not remove the need for a fast attitude loop.
 
 Check whether it is. The position loop has natural frequency 4 rad/s. The slowest attitude pole is at 3.98 s⁻¹. These are Lee's published gains, and with exact feedforward they track the circle to $3\times10^{-11}$ m. Set $\Omega_d = \dot\Omega_d = 0$ and the same gains *diverge*: from a 5 cm offset the error passes 5 m after 14.6 s. Multiply the attitude gains by $(\kappa^2, \kappa)$, which speeds the attitude loop up by $\kappa$. With $\kappa = 2$ the loop is stable and the tracking error settles at 1.4 cm. With $\kappa = 4$ it is 0.7 cm.
 
@@ -352,7 +352,7 @@ Derive [](#eq6-eomega-dot) and the closed loop of [](#eq6-law-s2). Prove [](#thm
 :::
 
 ::: {.exercise #exr6-feedforward}
-Reproduce [](#warn6-feedforward) in the notebook. Find, to one decimal place, the smallest speed-up $\kappa$ for which the loop without feedforward is stable on the circle. Then replace the zero feedforward by the $\Omega_d$ of the reference motion, computed from $x_d(t)$ alone, and find $\kappa$ again.
+Reproduce [](#warn6-feedforward) in the notebook. Find, to one decimal place, the smallest speed-up $\kappa$ for which the loop without feedforward is stable on the circle. Then replace the zero feedforward by the $\Omega_d$ and $\dot\Omega_d$ of the reference motion, computed from $x_d(t)$ alone by [](#eq10-quad-Omega) to [](#eq10-quad-Omega-dot), and find $\kappa$ again. Do not expect the threshold to drop to one: at Lee's gains this feedforward still diverges ([](#fig10-feedforward)). [](#exr10-kappa) continues this exercise.
 :::
 
 ::: {.exercise #exr6-grid}

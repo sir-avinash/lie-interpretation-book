@@ -6,7 +6,7 @@ body it carries, and with every quadrotor attached at its center of mass.
 MultiQuadrotorLoad: n quadrotors and a point-mass load, on
 R^3 x (S^2 x SO(3))^n, quadrotor i at x_L - l_i q_i (eq4-multi):
 
-    (m_L I + sum_i m_i q_i q_i')(x_L_ddot + g e3)
+    (m_L I + sum_i m_i q_i q_i^T)(x_L_ddot + g e3)
         = sum_i (q_i . f_i R_i e3 - m_i l_i |q_i_dot|^2) q_i,
     m_i l_i omega_i_dot = q_i x (m_i (x_L_ddot + g e3) - f_i R_i e3),
     J_i Omega_i_dot + Omega_i x J_i Omega_i = tau_i.
@@ -20,7 +20,7 @@ Lagrange-d'Alembert principle gives it, one equation per variation:
 
     delta x_L:  m_L (a_L + g e3) + sum_i (m_i (a_i + g e3) - f_i R_i e3) = 0,
     eta_L:      J_L Omega_L_dot + Omega_L x J_L Omega_L
-                    + sum_i r_i x R_L' (m_i (a_i + g e3) - f_i R_i e3) = 0,
+                    + sum_i r_i x R_L^T (m_i (a_i + g e3) - f_i R_i e3) = 0,
     xi_i:       q_i x (m_i (a_i + g e3) - f_i R_i e3) = 0,
 
 where a_i is the acceleration of quadrotor i,
@@ -54,7 +54,7 @@ class LoadParams:
     m_L: float = 0.5                          # load mass, kg
     m: np.ndarray = None                      # quadrotor masses, kg       (n,)
     l: np.ndarray = None                      # cable lengths, m           (n,)
-    J: np.ndarray = None                      # quadrotor inertias, kg m^2 (n, 3, 3)
+    J: np.ndarray = None                      # quadrotor inertias, kg·m² (n, 3, 3)
     g: float = GRAVITY
 
     def __post_init__(self):
@@ -159,11 +159,11 @@ class MultiQuadrotorLoad(Robot):
 class PayloadParams:
     n: int = 3
     m_L: float = 0.8                                                             # kg
-    J_L: np.ndarray = field(default_factory=lambda: np.diag([0.03, 0.05, 0.08]))  # kg m^2
+    J_L: np.ndarray = field(default_factory=lambda: np.diag([0.03, 0.05, 0.08]))  # kg·m²
     r: np.ndarray = None                      # attachment points, payload frame, m (n, 3)
     m: np.ndarray = None                      # quadrotor masses, kg
     l: np.ndarray = None                      # cable lengths, m
-    J: np.ndarray = None                      # quadrotor inertias, kg m^2
+    J: np.ndarray = None                      # quadrotor inertias, kg·m²
     g: float = GRAVITY
 
     def __post_init__(self):

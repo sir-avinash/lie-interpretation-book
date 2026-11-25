@@ -31,7 +31,7 @@ On the circle that is the whole story, because rotations of the plane commute. A
 
 ## Uncertainty lives in the tangent space {#sec14-gaussian}
 
-Let $X$ be the true state, an element of a matrix Lie group, and $\hat X$ the estimate. A hat marks an estimate throughout. [](#def3-invariant-errors) offers two errors, and we take the estimate in the first slot, as [](#ex3-dead-reckoning) did:
+Let $X$ be the true state, an element of a matrix Lie group, and $\hat X$ the estimate. A hat marks an estimate throughout, and the truth carries no mark. [](#def3-invariant-errors) offers two errors. We put the estimate in the slot of the actual configuration and the truth in the slot of the desired one, as [](#ex3-dead-reckoning) did:
 
 $$
 E_r = \hat X\,X^{-1} = \exp(\chi_r^\wedge), \qquad E_\ell = X^{-1}\hat X = \exp(\chi^\wedge). \label{eq14-errors}
@@ -101,13 +101,13 @@ $$
 This is the group $\SE_2(3)$ of [](#sec2-se3). The vector of an algebra element lists the linear parts first, in the order of the columns, and the rotation last, like a twist. The right-invariant error $\hat X X^{-1}$ has the three parts
 
 $$
-E_R = \hat R R\T, \qquad \eta_v = \hat v - E_R\,v, \qquad \eta_x = \hat x - E_R\,x .
+E_R = \hat R R\T, \qquad \hat v - E_R\,v, \qquad \hat x - E_R\,x .
 $$
 
 Differentiate them along [](#eq14-imu). The attitude part is constant, as in [](#ex3-dead-reckoning). For the velocity part, $\hat R\,a_s - E_R R\,a_s = 0$. The readings cancel, and what remains is
 
 $$
-\dot E_R = 0, \qquad \dot\eta_v = -g\,(I - E_R)\,e_3, \qquad \dot\eta_x = \eta_v . \label{eq14-autonomous}
+\dot E_R = 0, \qquad \ddt\big(\hat v - E_R\,v\big) = -g\,(I - E_R)\,e_3, \qquad \ddt\big(\hat x - E_R\,x\big) = \hat v - E_R\,v . \label{eq14-autonomous}
 $$
 
 Neither the state nor the estimate appears. Not even the readings appear. The error falls freely under the difference between gravity and misrotated gravity, whatever the vehicle does. The intuition of [](#thought14-level) was wrong, and it was wrong because it measured the velocity error as $\hat v - v$. That difference does depend on the maneuver. The quantity $\hat v - E_R\,v$ compares the two velocities after turning one into the frame of the other, and the maneuver drops out.
@@ -180,10 +180,10 @@ $$
 \begin{bmatrix} y_k \\ 0 \\ 1 \end{bmatrix} = X_k^{-1}\,d + \begin{bmatrix} n_y \\ 0 \\ 0 \end{bmatrix} \label{eq14-obs}
 $$
 
-for a known vector $d$. A landmark at a known position $p$, seen from the vehicle, is the case $d = (p, 0, 1)$: then $y = R\T(p - x) + n_y$. Multiply the reading by the estimate. Since $\hat X X^{-1} d = E_r\,d$, the innovation depends on the error alone:
+for a known vector $d$. A **landmark** at a known position $x_m$, seen from the vehicle, is the case $d = (x_m, 0, 1)$: then $y = R\T(x_m - x) + n_y$. Multiply the reading by the estimate. Since $\hat X X^{-1} d = E_r\,d$, the innovation depends on the error alone:
 
 $$
-\tilde y_k = \hat R_k\,y_k + \hat x_k - p = C_y\,\chi_r + \hat R_k\,n_y + O(\|\chi_r\|^2), \qquad C_y = \begin{bmatrix} 0 & I & -p^\wedge \end{bmatrix}. \label{eq14-innovation}
+\tilde y_k = \hat R_k\,y_k + \hat x_k - x_m = C_y\,\chi_r + \hat R_k\,n_y + O(\|\chi_r\|^2), \qquad C_y = \begin{bmatrix} 0 & I & -x_m^\wedge \end{bmatrix}. \label{eq14-innovation}
 $$
 
 $C_y$ is constant. A measurement of the form $X d + n_y$, such as a position fix, pairs with the left-invariant error in the same way ([](#exr14-left)).
@@ -284,9 +284,9 @@ Everything so far used a group. A cable is not a group element.
 
 ## When the state is not a group {#sec14-s2}
 
-The direction $q \in S^2$ of a pendulum or a cable has no multiplication. There is no $\hat q\,q^{-1}$, no invariant error and no theorem like [](#thm14-loglinear). The first half of the idea survives: keep the mean on the manifold and the uncertainty in a tangent space. Kotaru (2022, ch. 4) builds an extended Kalman filter this way from the variation-based linearization of [](#ch-linearization).
+The direction $q \in S^2$ of a pendulum or a cable has no multiplication. There is no $\hat q\,q^{-1}$, no invariant error and no theorem like [](#thm14-loglinear). The first half of the idea survives: keep the mean on the manifold and the uncertainty in a tangent space. Kotaru (2022, ch. 4) builds an extended Kalman filter this way from the variation-based linearization of [](#thm7-s2).
 
-Take the spherical pendulum of [](#eq7-pendulum) with no applied force. The estimate is a direction $\hat q$ of unit length and an angular velocity perpendicular to it. A hat on $\omega$ would read as the hat map, so the estimated angular velocity is written $\omega_{\hat q}$: it is a tangent vector at $\hat q$, with $\omega_{\hat q}\cdot\hat q = 0$. The error is the linear state $s = (\xi, \delta\omega)$ of [](#sec7-variation), and a finite $s$ is applied by
+Take the spherical pendulum of [](#eq7-pendulum) with no applied force. The estimate is a direction $\hat q$ of unit length and an angular velocity perpendicular to it. The estimated angular velocity is $\hat\omega$, a tangent vector at $\hat q$ with $\hat\omega\cdot\hat q = 0$. The hat marks the estimate here as everywhere else, and the hat map stays the postfix $^\wedge$, so $\hat q^\wedge$ is the hat map of the estimated direction. The error is the linear state $s = (\xi, \delta\omega)$ of [](#sec7-variation), and a finite $s$ is applied by
 
 $$
 (q, \omega) \oplus s = \Big(\exp(\xi^\wedge)\,q,\ \ \exp(\xi^\wedge)\big(\omega + (I - q q\T)\,\delta\omega\big)\Big). \label{eq14-oplus}
@@ -305,17 +305,17 @@ You can store $\Sigma$ either way: as the $6\times6$ matrix of rank four, or as 
 First, the filter never has to invert $\Sigma$. The gain is $\tilde K = \Sigma\,C_y\T\,\Sigma_{\tilde y}^{-1}$, and $\Sigma_{\tilde y}$ is invertible because the measurement noise is. The correction $-\tilde K\tilde y$ is a combination of the columns of $\Sigma$, so it lies in $\ker C$ by itself. Second, the matrix
 
 $$
-E_C = \begin{bmatrix} I - q q\T & 0 \\ -q\,(q\times\omega)\T & I - q q\T \end{bmatrix} \label{eq14-E}
+\Pi_C = \begin{bmatrix} I - q q\T & 0 \\ -q\,(q\times\omega)\T & I - q q\T \end{bmatrix} \label{eq14-E}
 $$
 
 is a projector onto $\ker C$ at $(q, \omega)$. It puts a covariance into the current constraint subspace.
 
 ::: {.definition #def14-vekf name="Variation-based extended Kalman filter on the sphere"}
-The state of the filter is $(\hat q, \omega_{\hat q})$ and a covariance $\Sigma$ of $s$ with $C\,\Sigma = 0$.
+The state of the filter is $(\hat q, \hat\omega)$ and a covariance $\Sigma$ of $s$ with $C\,\Sigma = 0$.
 
-1. **Propagate.** Integrate the pendulum to the next sample. With $A$ of [](#eq7-s2-lin) at the estimate, $A_k = \exp(A h)$ and $E_C$ at the new estimate, $\Sigma \leftarrow E_C\,(A_k\,\Sigma\,A_k\T + \Sigma_n)\,E_C\T$.
-2. **Correct.** For a position reading $y = l\,q + n_y$: $\tilde y = l\,\hat q - y$, $C_y = [\,-l\,\hat q^\wedge\ \ 0\,]$, the gain of [](#eq14-gain), $s^+ = -\tilde K\tilde y$ and $(\hat q, \omega_{\hat q}) \leftarrow (\hat q, \omega_{\hat q})\oplus s^+$.
-3. **Move the covariance.** After the usual covariance update, turn both blocks by the rotation $\exp(\xi^\wedge)$ of the correction, where $\xi$ is the first half of $s^+$, and apply $E_C$ at the new estimate.
+1. **Propagate.** Integrate the pendulum to the next sample. With $A$ of [](#eq7-s2-lin) at the estimate, $A_k = \exp(A h)$ and $\Pi_C$ at the new estimate, $\Sigma \leftarrow \Pi_C\,(A_k\,\Sigma\,A_k\T + \Sigma_n)\,\Pi_C\T$.
+2. **Correct.** For a position reading $y = l\,q + n_y$: $\tilde y = l\,\hat q - y$, $C_y = [\,-l\,\hat q^\wedge\ \ 0\,]$, the gain of [](#eq14-gain), $s^+ = -\tilde K\tilde y$ and $(\hat q, \hat\omega) \leftarrow (\hat q, \hat\omega)\oplus s^+$.
+3. **Move the covariance.** After the usual covariance update, turn both blocks by the rotation $\exp(\xi^\wedge)$ of the correction, where $\xi$ is the first half of $s^+$, and apply $\Pi_C$ at the new estimate.
 :::
 
 Step 3 is the transport of [](#def3-transport) applied to an uncertainty: the ellipse is carried along the arc to its new tangent plane ([](#fig14-sphere)). It is exact to first order in the size of the correction.
@@ -327,9 +327,9 @@ Kotaru's algorithm is organized differently, and the difference is worth knowing
 ::: {.example #ex14-pendulum name="The spherical pendulum, estimated two ways"}
 We use Kotaru's setup: $l = 1$ m, an initial covariance equal to the identity, measurement noise of variance $10^{-3}$ on each coordinate of $l\,q$ and process noise of $10^{-5}$. The pendulum is released from horizontal with a sideways velocity and observed at 100 Hz for 5 s. In 100 runs the initial estimate is drawn from the initial covariance: a median of 71° wrong in direction and at most 156°.
 
-The variation-based filter converges in every run. After the first second its direction error has a root mean square of 0.82°. $\|\hat q\| - 1$ and $\hat q\cdot\omega_{\hat q}$ never exceed $10^{-15}$, $C\,\Sigma$ stays below $10^{-12}$ with no constraint update, and the NEES in the four constrained dimensions is 1.01.
+The variation-based filter converges in every run. After the first second its direction error has a root mean square of 0.82°. $\|\hat q\| - 1$ and $\hat q\cdot\hat\omega$ never exceed $10^{-15}$, $C\,\Sigma$ stays below $10^{-12}$ with no constraint update, and the NEES in the four constrained dimensions is 1.01.
 
-The naive filter treats $(q, \omega)$ as six unconstrained numbers and adds its corrections. Its direction error, 0.87° after normalizing, is about as good, because the measurement sees $q$ directly. But $\|\hat q\|$ ranges from 0.91 to 1.08 over the runs, and from 0.97 to 1.03 after the first second. Its $\hat q\cdot\omega_{\hat q}$ reaches 2.9 rad/s. Its estimate is not the state of any pendulum, and whatever uses it has to repair it first.
+The naive filter treats $(q, \omega)$ as six unconstrained numbers and adds its corrections. Its direction error, 0.87° after normalizing, is about as good, because the measurement sees $q$ directly. But $\|\hat q\|$ ranges from 0.91 to 1.08 over the runs, and from 0.97 to 1.03 after the first second. Its $\hat q\cdot\hat\omega$ reaches 2.9 rad/s. Its estimate is not the state of any pendulum, and whatever uses it has to repair it first.
 :::
 
 Kotaru reports the corresponding results: convergence in 100 runs from random initial states, some with nearly the largest possible attitude error, a unit norm that a standard filter does not keep, and singularities in a filter written in spherical coordinates. He then validates the filter in experiments on a pendulum and on a quadrotor with a cable-suspended load.
@@ -346,11 +346,11 @@ Notice what was lost on the way from the group to the sphere. $A$ and $C_y$ in [
 
 **A Gaussian in the algebra is still an approximation.** With process noise the cloud is only nearly Gaussian in exponential coordinates. Repeat [](#fig14-banana) with noisy odometry and no initial uncertainty: the lateral and heading parts match the linear prediction, but the forward variance comes out 2.8 times the predicted one, a second-order effect that the linear equation cannot see. And a Gaussian has one peak. At half a turn the logarithm is not unique. That is the cut locus of [](#sec7-local), and a single mean with a covariance cannot say "this attitude or the opposite one". The 170° row of [](#tbl14-mc) is slow for this reason, in both filters.
 
-**It is local.** Barrau and Bonnabel (2017) prove that the invariant filter, used as an observer, is locally stable around any trajectory under observability conditions. That is a local statement with an unusually wide reach, not a global one, and [](#thm-obstruction) suggests why nobody should expect more from a single smooth estimate on a rotation group.
+**It is local.** Barrau and Bonnabel (2017) prove that the invariant filter, used as an observer, is locally stable around any trajectory, under what their abstract calls the standard conditions of the linear case. See the paper for the precise hypotheses. That is a local statement with an unusually wide reach, not a global one, and [](#thm-obstruction) suggests why nobody should expect more from a single smooth estimate on a rotation group.
 
 **Unobservable stays unobservable.** No filter recovers yaw from gravity and a foothold.
 
-Other filters respect the same geometry: unscented filters on manifolds (Brossard, Barrau and Bonnabel 2020) and smoothers that optimize over a whole trajectory with the steps of [](#def13-retraction). They are not covered here. What they share with this chapter is the rule from its second section: the estimate is a point of the manifold, and the uncertainty is a vector in a tangent space.
+Other filters respect the same geometry: unscented filters on manifolds (Brossard, Barrau and Bonnabel, 2020) and smoothers that optimize over a whole trajectory with the steps of [](#def13-retraction). They are not covered here. What they share with this chapter is the rule from its second section: the estimate is a point of the manifold, and the uncertainty is a vector in a tangent space.
 
 ## Exercises {#sec14-exercises .unnumbered}
 
@@ -379,12 +379,12 @@ Extend [](#eq14-contact) to two feet in contact. Write $C_y$ for the two leg mea
 :::
 
 ::: {.exercise #exr14-pancake}
-Show that $E_C$ in [](#eq14-E) satisfies $C E_C = 0$ and $E_C^2 = E_C$, and that $E_C\,s = s$ for every $s$ in $\ker C$. Then show that if $C\,\Sigma = 0$ before the correction of [](#def14-vekf), then $C\,s^+ = 0$ and $C\,\Sigma^+ = 0$ after it, before the estimate is moved. Why is step 3 still needed?
+Show that $\Pi_C$ in [](#eq14-E) satisfies $C \Pi_C = 0$ and $\Pi_C^2 = \Pi_C$, and that $\Pi_C\,s = s$ for every $s$ in $\ker C$. Then show that if $C\,\Sigma = 0$ before the correction of [](#def14-vekf), then $C\,s^+ = 0$ and $C\,\Sigma^+ = 0$ after it, before the estimate is moved. Why is step 3 still needed?
 :::
 
 ## Notes and sources {#sec14-notes .unnumbered}
 
-The group-affine property, the autonomous error and the log-linear property are due to Barrau and Bonnabel (2017), who also introduced $\SE_2(3)$ for inertial navigation and proved the stability of the filter as an observer. Their 2018 review is the most accessible introduction. [](#thm14-loglinear) is stated as in Hartley et al. (2018, Theorems 1 and 2), whose contact-aided filter, forward-kinematic measurement, observability analysis, bias augmentation and experiments on Cassie are the subject of [](#sec14-legged). Hartley et al. (2020) is the extended journal version. We order the algebra as $(\chi_v, \chi_x, \chi_R)$ and define the innovation as predicted minus measured. The paper uses $(\xi_R, \xi_v, \xi_p)$ and the opposite sign.
+The group-affine property, the autonomous error and the log-linear property are due to Barrau and Bonnabel (2017), who also introduced $\SE_2(3)$ for inertial navigation and proved the stability of the filter as an observer. Their 2018 review is the most accessible introduction. [](#thm14-loglinear) is stated as in Hartley et al. (2018, Theorems 1 and 2), whose contact-aided filter, forward-kinematic measurement, observability analysis, bias augmentation and experiments on Cassie are the subject of [](#sec14-legged). Hartley et al. (2020) is the extended journal version. We order the algebra as $(\chi_v, \chi_x, \chi_R)$ and define the innovation as predicted minus measured. The paper uses $(\xi_R, \xi_v, \xi_p)$ and the opposite sign. [](#secA-conventions) lists these choices.
 
 Wang and Chirikjian (2006) studied how errors propagate on the Euclidean group. Long et al. (2012) showed that the banana-shaped cloud of dead-reckoned poses is modeled well by a Gaussian in exponential coordinates. Barfoot (2017) treats uncertainty on $\SO(3)$ and $\SE(3)$ at textbook length, and Solà, Deray and Atchuthan (2018) give the Jacobians a practitioner needs.
 
@@ -395,9 +395,9 @@ The variation-based extended Kalman filter on $S^2$, its mapping operators and i
 - T. D. Barfoot, [*State Estimation for Robotics*](https://www.cambridge.org/core/product/identifier/9781316671528/type/book), Cambridge University Press, 2017.
 - M. Brossard, A. Barrau and S. Bonnabel, ["A code for unscented Kalman filtering on manifolds (UKF-M)"](https://arxiv.org/abs/2002.00878), *IEEE International Conference on Robotics and Automation*, 2020. arXiv:2002.00878.
 - R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, ["Contact-aided invariant extended Kalman filtering for legged robot state estimation"](https://doi.org/10.15607/RSS.2018.XIV.050), *Robotics: Science and Systems*, 2018. arXiv:1805.10410.
-- R. Hartley, M. Ghaffari, R. M. Eustice and J. W. Grizzle, ["Contact-aided invariant extended Kalman filtering for robot state estimation"](https://arxiv.org/abs/1904.09251), *International Journal of Robotics Research*, 2020. arXiv:1904.09251.
+- R. Hartley, M. Ghaffari, R. M. Eustice and J. W. Grizzle, ["Contact-aided invariant extended Kalman filtering for robot state estimation"](https://doi.org/10.1177/0278364919894385), *International Journal of Robotics Research* 39(4), 2020. arXiv:1904.09251.
 - P. Kotaru, [*Dynamics & Control for Collaborative Aerial Manipulation*](https://escholarship.org/uc/item/1qf6q0n5), PhD thesis, University of California, Berkeley, 2022.
-- P. Kotaru and K. Sreenath, ["Variation based extended Kalman filter on S²"](https://hybrid-robotics.berkeley.edu/publications/ECC2019_VariationEKF_S2.pdf), *European Control Conference*, 2019.
+- P. Kotaru and K. Sreenath, ["Variation based extended Kalman filter on S²"](https://hybrid-robotics.berkeley.edu/publications/ECC2019_VariationEKF_S2.pdf), Hybrid Robotics Lab, University of California, Berkeley, 2019.
 - A. W. Long, K. C. Wolfe, M. J. Mashner and G. S. Chirikjian, ["The banana distribution is Gaussian: a localization study with exponential coordinates"](https://doi.org/10.15607/RSS.2012.VIII.034), *Robotics: Science and Systems*, 2012.
 - J. Solà, J. Deray and D. Atchuthan, ["A micro Lie theory for state estimation in robotics"](https://arxiv.org/abs/1812.01537), arXiv:1812.01537, 2018.
 - Y. Wang and G. S. Chirikjian, ["Error propagation on the Euclidean group with applications to manipulator kinematics"](https://doi.org/10.1109/TRO.2006.878978), *IEEE Transactions on Robotics* 22(4), 2006.

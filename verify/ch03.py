@@ -561,7 +561,7 @@ for t in tt:
     d = euler_zyx(B) - euler_zyx(A)
     eul.append(np.linalg.norm((d + np.pi) % (2 * np.pi) - np.pi))
 right_err, left_ang, eul = np.array(right_err), np.array(left_ang), np.degrees(np.array(eul))
-ck.close("dead reckoning: right-invariant error R_hat R^T does not move at all", right_err, np.tile(right_err[0], (len(tt), 1)), tol=1e-9)
+ck.close("dead reckoning: right-invariant error Rhat R^T does not move at all", right_err, np.tile(right_err[0], (len(tt), 1)), tol=1e-9)
 ck.close("dead reckoning: the left-invariant error keeps its angle (5 deg)", np.degrees(left_ang), 5.0, tol=1e-7)
 ck.true("dead reckoning: the Euler-angle difference wanders", eul.max() - eul.min() > 1.0, f"{eul.min():.2f} to {eul.max():.2f} deg")
 ck.record("dead_reckoning_euler_diff_deg", {"min": float(eul.min()), "max": float(eul.max())})

@@ -91,7 +91,7 @@ def energy(z):
 h, n = 0.05, 200
 runs = {name: run(f, np.radians(60), 0.0, h, n) for name, f in
         [("explicit Euler", explicit_euler), ("implicit Euler", implicit_euler),
-         ("Stormer-Verlet", verlet)]}
+         ("Störmer-Verlet", verlet)]}
 fig, axes = plt.subplots(1, 4, figsize=(13, 3))
 for ax, (name, z) in zip(axes, runs.items()):
     ax.plot(np.degrees(z[:, 0]), z[:, 1], ".-", ms=3, lw=0.6)

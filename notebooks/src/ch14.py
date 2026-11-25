@@ -292,8 +292,8 @@ def banana(N=4000, seed=5, T=10.0, h=0.1, speed=1.0, turn=0.0,
     chi0 = rng.normal(size=(N, 3)) * np.asarray(sig0)
     X = se2_exp(chi0)
     Xbar = (np.zeros(1), np.zeros(1), np.zeros(1))
-    S = np.diag(np.asarray(sig0, float) ** 2)
-    Qd = np.diag([sig_V**2, (0.2 * sig_V) ** 2, sig_Om**2]) * h if noisy else np.zeros((3, 3))
+    Sigma = np.diag(np.asarray(sig0, float) ** 2)
+    Sigma_n = np.diag([sig_V**2, (0.2 * sig_V) ** 2, sig_Om**2]) * h if noisy else np.zeros((3, 3))
     step_bar = se2_exp(zeta[None] * h)
     Phi = se2_Ad(*[c[0] for c in se2_inv(step_bar)])        # Ad of exp(-zeta h)
     poses, chis, covs, bars = [], [], [], []
@@ -301,13 +301,13 @@ def banana(N=4000, seed=5, T=10.0, h=0.1, speed=1.0, turn=0.0,
         poses.append(np.stack(X, -1))
         bars.append(np.array([c[0] for c in Xbar]))
         chis.append(se2_log(*se2_mul(se2_inv(Xbar), X)))
-        covs.append(S.copy())
+        covs.append(Sigma.copy())
         if k == n:
             break
-        noise = rng.multivariate_normal(np.zeros(3), Qd / h**2, size=N) if noisy else np.zeros((N, 3))
+        noise = rng.multivariate_normal(np.zeros(3), Sigma_n / h**2, size=N) if noisy else np.zeros((N, 3))
         X = se2_mul(X, se2_exp((zeta[None] + noise) * h))
         Xbar = se2_mul(Xbar, step_bar)
-        S = Phi @ S @ Phi.T + Qd
+        Sigma = Phi @ Sigma @ Phi.T + Sigma_n
     return dict(poses=np.array(poses), bar=np.array(bars), chi=np.array(chis), cov=np.array(covs),
                 h=h, Phi=Phi)
 
@@ -480,7 +480,7 @@ print("group-affine residual:", np.abs(f(X1 @ X2) - (f(X1) @ X2 + X1 @ f(X2) - X
 # identical readings, batched over Monte Carlo runs.
 #
 # Propagation: $\Sigma_{k+1} = \exp(Ah)\,(\Sigma_k + \mathrm{Ad}_{\hat X_k}\Sigma_n\mathrm{Ad}_{\hat X_k}^\top)\exp(Ah)^\top$.
-# Innovation for a landmark at $p$: $\tilde y = \hat R\,y + \hat x - p$, with $C_y = [\,0\ \ I\ \ -p^\wedge\,]$.
+# Innovation for a landmark at $x_m$: $\tilde y = \hat R\,y + \hat x - x_m$, with $C_y = [\,0\ \ I\ \ -x_m^\wedge\,]$.
 # Gain: $\tilde K = \Sigma C_y^\top(C_y\Sigma C_y^\top + \hat R\Sigma_y\hat R^\top)^{-1}$.
 # Correction: $\hat X^+ = \exp(-(\tilde K\tilde y)^\wedge)\,\hat X$.
 
@@ -504,7 +504,7 @@ def sigma0_std(N, ang_deg, sig_v, sig_x):
 
 def run_filters(sc, rng, N, ang_deg, sig_v, sig_x, which=("inv", "std"), fixed_angle=False,
                 cov_deg=None, keep=False, side="left"):
-    """Monte Carlo of the right-invariant EKF and the conventional EKF on one scenario.
+    """Monte Carlo of the right-invariant and the conventional extended Kalman filter on one scenario.
 
     Both filters get the same initial estimate, the same initial covariance (written in
     each filter's own error coordinates) and the same noisy readings.
@@ -514,12 +514,12 @@ def run_filters(sc, rng, N, ang_deg, sig_v, sig_x, which=("inv", "std"), fixed_a
     h = sc.h
     R0, v0, x0 = initial_estimates(sc, rng, N, ang_deg, sig_v, sig_x, fixed_angle)
     S0 = sigma0_std(N, cov_deg or ang_deg, sig_v, sig_x)
-    Qd = np.zeros((9, 9))
-    Qd[0:3, 0:3] = np.eye(3) * (sc.sig_a * h) ** 2
-    Qd[6:9, 6:9] = np.eye(3) * (sc.sig_g * h) ** 2
-    Ny = np.eye(3 * len(sc.landmarks)) * sc.sig_y**2
+    Sigma_n = np.zeros((9, 9))
+    Sigma_n[0:3, 0:3] = np.eye(3) * (sc.sig_a * h) ** 2
+    Sigma_n[6:9, 6:9] = np.eye(3) * (sc.sig_g * h) ** 2
+    Sigma_y = np.eye(3 * len(sc.landmarks)) * sc.sig_y**2
     Phi = Phi_right(h)
-    Cy = np.concatenate([np.hstack([np.zeros((3, 3)), np.eye(3), -hat(p)]) for p in sc.landmarks])
+    Cy = np.concatenate([np.hstack([np.zeros((3, 3)), np.eye(3), -hat(x_m)]) for x_m in sc.landmarks])
     I9 = np.eye(9)
     st = {}
     if "inv" in which:
@@ -537,7 +537,7 @@ def run_filters(sc, rng, N, ang_deg, sig_v, sig_x, which=("inv", "std"), fixed_a
 
     def log_state(k):
         Rt, vt, xt = sc.R[k], sc.v[k], sc.x[k]
-        for f, (R, v, x, S) in st.items():
+        for f, (R, v, x, Sigma) in st.items():
             ER = R @ Rt.T
             out[f]["att"].append(angle_b(ER))
             out[f]["pos"].append(np.linalg.norm(x - xt, axis=1))
@@ -549,22 +549,22 @@ def run_filters(sc, rng, N, ang_deg, sig_v, sig_x, which=("inv", "std"), fixed_a
                                     np.einsum("nij,nj->ni", Ji, x - ER @ xt), w], axis=1)
             else:
                 e = np.concatenate([v - vt, x - xt, log_so3_b(Rt.T @ R)], axis=1)
-            out[f]["nees"].append(np.einsum("ni,ni->n", e, np.linalg.solve(S, e[..., None])[..., 0]) / 9)
+            out[f]["nees"].append(np.einsum("ni,ni->n", e, np.linalg.solve(Sigma, e[..., None])[..., 0]) / 9)
             if keep:
-                hist[f].append((R.copy(), v.copy(), x.copy(), S.copy()))
+                hist[f].append((R.copy(), v.copy(), x.copy(), Sigma.copy()))
 
     log_state(0)
     for k in range(sc.n):
         Om = sc.Om[k] + gn[k]
         a_s = sc.a_s[k] + an[k]
         if "inv" in st:
-            R, v, x, S = st["inv"]
+            R, v, x, Sigma = st["inv"]
             Ad = Ad_b(R, [v, x])
-            S = Phi @ (S + Ad @ Qd @ np.swapaxes(Ad, 1, 2)) @ Phi.T
+            Sigma = Phi @ (Sigma + Ad @ Sigma_n @ np.swapaxes(Ad, 1, 2)) @ Phi.T
             R, v, x = imu_step(R, v, x, Om, a_s, h)
-            st["inv"] = [R, v, x, S]
+            st["inv"] = [R, v, x, Sigma]
         if "std" in st:
-            R, v, x, S = st["std"]
+            R, v, x, Sigma = st["std"]
             F = np.tile(I9, (N, 1, 1))
             Ra = -R @ hat_b(a_s)
             F[:, 0:3, 6:9] = Ra * h
@@ -574,18 +574,18 @@ def run_filters(sc, rng, N, ang_deg, sig_v, sig_x, which=("inv", "std"), fixed_a
             Gn = np.zeros((N, 9, 9))
             Gn[:, 0:3, 0:3] = R
             Gn[:, 6:9, 6:9] = np.eye(3)
-            S = F @ (S + Gn @ Qd @ np.swapaxes(Gn, 1, 2)) @ np.swapaxes(F, 1, 2)
+            Sigma = F @ (Sigma + Gn @ Sigma_n @ np.swapaxes(Gn, 1, 2)) @ np.swapaxes(F, 1, 2)
             R, v, x = imu_step(R, v, x, Om, a_s, h)
-            st["std"] = [R, v, x, S]
+            st["std"] = [R, v, x, Sigma]
         if (k + 1) % sc.every == 0:
             y = sc.meas(k + 1)[None] + rng.normal(size=(N, L, 3)) * sc.sig_y        # (N, L, 3)
             if "inv" in st:
-                R, v, x, S = st["inv"]
-                yt = (np.einsum("nij,nlj->nli", R, y) + x[:, None, :] - sc.landmarks).reshape(N, -1)
-                Nr = Ny                                   # isotropic noise: R Ny R^T = Ny
-                Sy = Cy @ S @ Cy.T + Nr
-                Kt = np.swapaxes(np.linalg.solve(Sy, Cy @ S), 1, 2)
-                d = -np.einsum("nij,nj->ni", Kt, yt)
+                R, v, x, Sigma = st["inv"]
+                ytilde = (np.einsum("nij,nlj->nli", R, y) + x[:, None, :] - sc.landmarks).reshape(N, -1)
+                Sigma_yw = Sigma_y        # isotropic noise: Rhat Sigma_y Rhat^T = Sigma_y
+                Sigma_ytilde = Cy @ Sigma @ Cy.T + Sigma_yw
+                Ktilde = np.swapaxes(np.linalg.solve(Sigma_ytilde, Cy @ Sigma), 1, 2)
+                d = -np.einsum("nij,nj->ni", Ktilde, ytilde)
                 E = exp_so3_b(d[:, 6:9])
                 J = jl_b(d[:, 6:9])
                 if side == "left":                        # exp(d^) Xhat: the side of the error
@@ -596,26 +596,26 @@ def run_filters(sc, rng, N, ang_deg, sig_v, sig_x, which=("inv", "std"), fixed_a
                     v = v + np.einsum("nij,njk,nk->ni", R, J, d[:, 0:3])
                     x = x + np.einsum("nij,njk,nk->ni", R, J, d[:, 3:6])
                     R = R @ E
-                IK = I9 - Kt @ Cy
-                S = IK @ S @ np.swapaxes(IK, 1, 2) + Kt @ Nr @ np.swapaxes(Kt, 1, 2)
-                st["inv"] = [R, v, x, S]
+                IK = I9 - Ktilde @ Cy
+                Sigma = IK @ Sigma @ np.swapaxes(IK, 1, 2) + Ktilde @ Sigma_yw @ np.swapaxes(Ktilde, 1, 2)
+                st["inv"] = [R, v, x, Sigma]
             if "std" in st:
-                R, v, x, S = st["std"]
-                yh = np.einsum("nji,nlj->nli", R, sc.landmarks[None] - x[:, None, :])   # R^T (p - x)
-                yt = (yh - y).reshape(N, -1)
-                H = np.zeros((N, 3 * L, 9))
+                R, v, x, Sigma = st["std"]
+                yh = np.einsum("nji,nlj->nli", R, sc.landmarks[None] - x[:, None, :])   # R^T (x_m - x)
+                ytilde = (yh - y).reshape(N, -1)
+                Cy_k = np.zeros((N, 3 * L, 9))
                 for i in range(L):
-                    H[:, 3 * i:3 * i + 3, 3:6] = -np.swapaxes(R, 1, 2)
-                    H[:, 3 * i:3 * i + 3, 6:9] = hat_b(yh[:, i])
-                Sy = H @ S @ np.swapaxes(H, 1, 2) + Ny
-                Kt = np.swapaxes(np.linalg.solve(Sy, H @ S), 1, 2)
-                d = -np.einsum("nij,nj->ni", Kt, yt)
+                    Cy_k[:, 3 * i:3 * i + 3, 3:6] = -np.swapaxes(R, 1, 2)
+                    Cy_k[:, 3 * i:3 * i + 3, 6:9] = hat_b(yh[:, i])
+                Sigma_ytilde = Cy_k @ Sigma @ np.swapaxes(Cy_k, 1, 2) + Sigma_y
+                Ktilde = np.swapaxes(np.linalg.solve(Sigma_ytilde, Cy_k @ Sigma), 1, 2)
+                d = -np.einsum("nij,nj->ni", Ktilde, ytilde)
                 v = v + d[:, 0:3]
                 x = x + d[:, 3:6]
                 R = R @ exp_so3_b(d[:, 6:9])
-                IK = I9 - Kt @ H
-                S = IK @ S @ np.swapaxes(IK, 1, 2) + Kt @ Ny @ np.swapaxes(Kt, 1, 2)
-                st["std"] = [R, v, x, S]
+                IK = I9 - Ktilde @ Cy_k
+                Sigma = IK @ Sigma @ np.swapaxes(IK, 1, 2) + Ktilde @ Sigma_y @ np.swapaxes(Ktilde, 1, 2)
+                st["std"] = [R, v, x, Sigma]
         log_state(k + 1)
     res = {f: {key: np.array(val) for key, val in o.items()} for f, o in out.items()}
     if keep:
@@ -683,15 +683,15 @@ def contact_demo(N=100, seed=11, T=6.0, h=0.005, sig_g=0.002, sig_a=0.04, sig_c=
     v = E @ vt + np.einsum("nij,nj->ni", J, chi0[:, 0:3])
     x = E @ xt + np.einsum("nij,nj->ni", J, chi0[:, 3:6])
     c = E @ foot + np.einsum("nij,nj->ni", J, chi0[:, 6:9])
-    S = np.tile(np.diag(np.concatenate([np.full(3, sig_v**2), np.full(6, sig_x**2),
+    Sigma = np.tile(np.diag(np.concatenate([np.full(3, sig_v**2), np.full(6, sig_x**2),
                                         np.full(3, np.radians(max(tilt_deg, yaw_deg))**2)])), (N, 1, 1))
-    Qd = np.zeros((12, 12))
-    Qd[0:3, 0:3] = np.eye(3) * (sig_a * h) ** 2
-    Qd[6:9, 6:9] = np.eye(3) * (sig_c * h) ** 2
-    Qd[9:12, 9:12] = np.eye(3) * (sig_g * h) ** 2
+    Sigma_n = np.zeros((12, 12))
+    Sigma_n[0:3, 0:3] = np.eye(3) * (sig_a * h) ** 2
+    Sigma_n[6:9, 6:9] = np.eye(3) * (sig_c * h) ** 2
+    Sigma_n[9:12, 9:12] = np.eye(3) * (sig_g * h) ** 2
     Phi = Phi_right(h, K=3)
     Cy = np.hstack([np.zeros((3, 3)), np.eye(3), -np.eye(3), np.zeros((3, 3))])
-    Ny = np.eye(3) * sig_y**2
+    Sigma_y = np.eye(3) * sig_y**2
     I12 = np.eye(12)
     out = dict(tilt=[], yaw=[], vel=[], pos=[], rel=[])
 
@@ -707,22 +707,22 @@ def contact_demo(N=100, seed=11, T=6.0, h=0.005, sig_g=0.002, sig_a=0.04, sig_c=
     record()
     for k in range(n):
         Ad = Ad_b(R, [v, x, c])
-        S = Phi @ (S + Ad @ Qd @ np.swapaxes(Ad, 1, 2)) @ Phi.T
+        Sigma = Phi @ (Sigma + Ad @ Sigma_n @ np.swapaxes(Ad, 1, 2)) @ Phi.T
         R, v, x = imu_step(R, v, x, Om[k] + rng.normal(size=(N, 3)) * sig_g,
                            a_s[k] + rng.normal(size=(N, 3)) * sig_a, h)
         Rt, vt, xt = imu_step(Rt, vt, xt, Om[k], a_s[k], h)
         y = (foot - xt) @ Rt + rng.normal(size=(N, 3)) * sig_y
-        yt = np.einsum("nij,nj->ni", R, y) - (c - x)
-        Kt = np.swapaxes(np.linalg.solve(Cy @ S @ Cy.T + Ny, Cy @ S), 1, 2)
-        d = -np.einsum("nij,nj->ni", Kt, yt)
+        ytilde = np.einsum("nij,nj->ni", R, y) - (c - x)
+        Ktilde = np.swapaxes(np.linalg.solve(Cy @ Sigma @ Cy.T + Sigma_y, Cy @ Sigma), 1, 2)
+        d = -np.einsum("nij,nj->ni", Ktilde, ytilde)
         E = exp_so3_b(d[:, 9:12])
         J = jl_b(d[:, 9:12])
         v = np.einsum("nij,nj->ni", E, v) + np.einsum("nij,nj->ni", J, d[:, 0:3])
         x = np.einsum("nij,nj->ni", E, x) + np.einsum("nij,nj->ni", J, d[:, 3:6])
         c = np.einsum("nij,nj->ni", E, c) + np.einsum("nij,nj->ni", J, d[:, 6:9])
         R = E @ R
-        IK = I12 - Kt @ Cy
-        S = IK @ S @ np.swapaxes(IK, 1, 2) + Kt @ Ny @ np.swapaxes(Kt, 1, 2)
+        IK = I12 - Ktilde @ Cy
+        Sigma = IK @ Sigma @ np.swapaxes(IK, 1, 2) + Ktilde @ Sigma_y @ np.swapaxes(Ktilde, 1, 2)
         record()
     return t, {key: np.array(val) for key, val in out.items()}, (Phi, Cy)
 
@@ -740,7 +740,7 @@ print("median yaw error at the end: %.1f deg" % np.degrees(np.median(o["yaw"][-1
 # The variation-based extended Kalman filter on $S^2$ for the spherical pendulum, next to an extended Kalman
 # filter on the six numbers $(q, \omega)$. The mapping operator is
 # $(q, \omega)\oplus s = \big(\exp(\xi^\wedge)q,\ \exp(\xi^\wedge)(\omega + (I - qq^\top)\delta\omega)\big)$
-# and the covariance is kept in $\ker C$ by the projector $E_C$ (`s2_E`).
+# and the covariance is kept in $\ker C$ by the projector $\Pi_C$ (`s2_Pi`).
 
 # %%
 def pend_f(q, om, l=1.0):
@@ -786,7 +786,7 @@ def s2_C(q, om):
     return C
 
 
-def s2_E(q, om):
+def s2_Pi(q, om):
     """Projector onto ker C that keeps xi's tangent part and delta omega's tangent part."""
     Pq = np.eye(3) - np.outer(q, q)
     E = np.zeros((6, 6))
@@ -828,52 +828,52 @@ def s2_truth(T=10.0, h=0.01, seed=21, sig_proc=np.sqrt(1e-5)):
 
 def s2_filters(truth, seed, sig0=1.0, sig_y=np.sqrt(1e-3), q_proc=1e-5, l=1.0, which=("var", "naive"),
                keep_cov=False):
-    """One run of the variation-based EKF and of the EKF on the six numbers (q, omega)."""
+    """One run of the variation-based extended Kalman filter and of the naive one on the six numbers (q, omega)."""
     t, qs, oms = truth
     h = t[1] - t[0]
     rng = np.random.default_rng(seed)
     Pq = np.eye(3) - np.outer(qs[0], qs[0])
     s0 = np.concatenate([Pq @ rng.normal(size=3), Pq @ rng.normal(size=3)]) * sig0
     q0, om0 = s2_oplus(qs[0], oms[0], s0)
-    Sy = np.eye(3) * sig_y**2
-    Qn = np.eye(6) * q_proc
+    Sigma_y = np.eye(3) * sig_y**2
+    Sigma_n = np.eye(6) * q_proc
     out = {}
     ys = l * qs + rng.normal(size=qs.shape) * sig_y
     if "var" in which:
         q, om = q0.copy(), om0.copy()
-        E = s2_E(q, om)
-        S = E @ (np.eye(6) * sig0**2) @ E.T
-        rec = dict(q=[q], om=[om], nees=[], cmax=0.0, cov=[S])
+        E = s2_Pi(q, om)
+        Sigma = E @ (np.eye(6) * sig0**2) @ E.T
+        rec = dict(q=[q], om=[om], nees=[], cmax=0.0, cov=[Sigma])
         for k in range(len(t) - 1):
             Ak = expm_series(s2_A(q, om, l) * h)
             q, om = pend_step(q, om, h, l)
-            E = s2_E(q, om)
-            S = E @ (Ak @ S @ Ak.T + Qn) @ E.T
+            E = s2_Pi(q, om)
+            Sigma = E @ (Ak @ Sigma @ Ak.T + Sigma_n) @ E.T
             Cy = np.hstack([-l * hat(q), np.zeros((3, 3))])
-            yt = l * q - ys[k + 1]
-            Kt = S @ Cy.T @ np.linalg.inv(Cy @ S @ Cy.T + Sy)
-            s = -Kt @ yt
+            ytilde = l * q - ys[k + 1]
+            Ktilde = Sigma @ Cy.T @ np.linalg.inv(Cy @ Sigma @ Cy.T + Sigma_y)
+            s = -Ktilde @ ytilde
             rec["cmax"] = max(rec["cmax"], float(np.abs(s2_C(q, om) @ s).max()))
-            IK = np.eye(6) - Kt @ Cy
-            S = IK @ S @ IK.T + Kt @ Sy @ Kt.T
+            IK = np.eye(6) - Ktilde @ Cy
+            Sigma = IK @ Sigma @ IK.T + Ktilde @ Sigma_y @ Ktilde.T
             Rs = expm_so3(s[:3])
             q, om = s2_oplus(q, om, s)
             Tm = np.zeros((6, 6))
             Tm[:3, :3] = Rs
             Tm[3:, 3:] = Rs
-            E = s2_E(q, om)
-            S = E @ Tm @ S @ Tm.T @ E.T
-            rec["cmax"] = max(rec["cmax"], float(np.abs(s2_C(q, om) @ S).max()))
+            E = s2_Pi(q, om)
+            Sigma = E @ Tm @ Sigma @ Tm.T @ E.T
+            rec["cmax"] = max(rec["cmax"], float(np.abs(s2_C(q, om) @ Sigma).max()))
             err = s2_ominus(q, om, qs[k + 1], oms[k + 1])
-            rec["nees"].append(float(err @ np.linalg.pinv(S, rcond=1e-10) @ err) / 4)
+            rec["nees"].append(float(err @ np.linalg.pinv(Sigma, rcond=1e-10) @ err) / 4)
             rec["q"].append(q), rec["om"].append(om)
             if keep_cov:
-                rec["cov"].append(S)
+                rec["cov"].append(Sigma)
         out["var"] = {key: (np.array(val) if key != "cmax" else val) for key, val in rec.items()}
     if "naive" in which:
         q, om = q0.copy(), om0.copy()
-        S = np.eye(6) * sig0**2
-        H = np.hstack([l * np.eye(3), np.zeros((3, 3))])
+        Sigma = np.eye(6) * sig0**2
+        Cy_naive = np.hstack([l * np.eye(3), np.zeros((3, 3))])
         rec = dict(q=[q], om=[om])
         for k in range(len(t) - 1):
             F = np.zeros((6, 6))
@@ -891,11 +891,11 @@ def s2_filters(truth, seed, sig0=1.0, sig_y=np.sqrt(1e-3), q_proc=1e-5, l=1.0, w
             k3 = f(z + h / 2 * k2)
             k4 = f(z + h * k3)
             z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-            S = Fk @ S @ Fk.T + Qn
-            Kt = S @ H.T @ np.linalg.inv(H @ S @ H.T + Sy)
-            z = z - Kt @ (l * z[:3] - ys[k + 1])
-            IK = np.eye(6) - Kt @ H
-            S = IK @ S @ IK.T + Kt @ Sy @ Kt.T
+            Sigma = Fk @ Sigma @ Fk.T + Sigma_n
+            Ktilde = Sigma @ Cy_naive.T @ np.linalg.inv(Cy_naive @ Sigma @ Cy_naive.T + Sigma_y)
+            z = z - Ktilde @ (l * z[:3] - ys[k + 1])
+            IK = np.eye(6) - Ktilde @ Cy_naive
+            Sigma = IK @ Sigma @ IK.T + Ktilde @ Sigma_y @ Ktilde.T
             q, om = z[:3], z[3:]
             rec["q"].append(q), rec["om"].append(om)
         out["naive"] = {key: np.array(val) for key, val in rec.items()}
@@ -914,7 +914,7 @@ for name in ("var", "naive"):
 print("largest |C Sigma| with no constraint update:", r["var"]["cmax"])
 
 # %% [markdown]
-# ## 8. Starting points for the exercises
+# ## Starting points for the exercises
 #
 # - **Compass with large noise.** Call `compass_demo(sig_y=np.radians(60.0))` and look at the wrapped innovations.
 # - **Group-affine or not.** Add a drag term to the velocity column of `imu_f` and repeat the residual test above.
@@ -922,7 +922,7 @@ print("largest |C Sigma| with no constraint update:", r["var"]["cmax"])
 # - **Gravity leak.** `expm(A_right() * t) @ chi0` with a 1 degree tilt in `chi0[6:]` gives the position part `[3:6]`.
 # - **Noisy odometry.** `banana()` uses odometry noise and no initial uncertainty. Compare `np.cov(b["chi"][-1].T)` with `b["cov"][-1]`, then halve `sig_V` and `sig_Om`.
 # - **Two feet.** Extend `contact_demo` with a second contact column and compute the rank again.
-# - **The pancake.** Check `s2_C(q, om) @ s2_E(q, om)` and `s2_E @ s2_E - s2_E` at a random state.
+# - **The pancake.** Check `s2_C(q, om) @ s2_Pi(q, om)` and `s2_Pi @ s2_Pi - s2_Pi` at a random state.
 
 # %%
 # gravity leak: a tilt error of 1 degree, and the time until it has become 1 m of position error

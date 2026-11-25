@@ -262,26 +262,11 @@ def chain_flat(xn, psi, mass, l, J, g=G, attach=(0,), pulls=None):
 # =====================================================================
 def simulate(robot, state, u, h, n, t0=0.0, params=None, every=1, feedback=False):
     """Integrate a library model with the library's own fourth-order step, with the
-    input evaluated at each stage (times t, t + h/2, t + h/2, t + h) and not held.
-    u is u(t), or u(t, state) when feedback=True. Local helper: the library's
-    rollout holds the input over a step, which is first-order for a moving input."""
-    cls = type(robot)
-
-    class Staged(cls):
-        def dynamics(self, s, box, prm=None):
-            k = box["k"]
-            box["k"] = k + 1
-            t = box["t"] + (0.0, h / 2, h / 2, h)[min(k, 3)]
-            return cls.dynamics(self, s, u(t, s) if feedback else u(t), prm)
-
-    staged = Staged.__new__(Staged)
-    staged.__dict__.update(robot.__dict__)
-    states = [state]
-    for k in range(n):
-        state = staged.step(state, {"k": 0, "t": t0 + k * h}, h, params)
-        if (k + 1) % every == 0:
-            states.append(state)
-    return states
+    input evaluated at each stage (times t, t + h/2, t + h/2, t + h) and not held:
+    the library's rollout with hold=False. Holding a moving input over a step
+    would make the method first order. u is u(t), or u(t, state) when feedback=True."""
+    law = u if feedback else (lambda t, s: u(t))
+    return robot.rollout(state, law, h, n, params, hold=False, t0=t0)[::every]
 
 
 # =====================================================================
@@ -1024,6 +1009,22 @@ def main():
     ref, o = circle_flat(1.3, p)
     u_lib = rb.tracking_controller(quad_state(rb, dict(x=ref[0], v=ref[1], R=o["R"], Omega=o["Omega"])), ref)
     ck.close("on the reference, the library's cascade returns the flat inputs f_d and tau_d", np.concatenate([[u_lib[0] - o["f"]], u_lib[1] - o["tau"]]), 0.0, 1e-5)
+
+    # ------------------------------------------------- heading and yaw (sec10-quad, Appendix A)
+    # R = Rz(yaw) Ry(pitch) Rx(roll) of eq-zyx. The heading psi has R e2 perpendicular to
+    # Rz(psi) e1. Then tan(psi - yaw) = -sin(pitch) tan(roll).
+    from common import Rx, Ry, Rz
+    worst_h, worst_0 = 0.0, 0.0
+    for _ in range(50):
+        yaw, pitch, roll = rng.uniform(-1.2, 1.2, size=3)
+        for th, ph, zero in ((pitch, roll, False), (pitch, 0.0, True), (0.0, roll, True)):
+            b2 = (Rz(yaw) @ Ry(th) @ Rx(ph))[:, 1]
+            psi = math.atan2(-b2[0], b2[1])
+            worst_h = max(worst_h, abs(math.tan(psi - yaw) + math.sin(th) * math.tan(ph)))
+            if zero:
+                worst_0 = max(worst_0, abs(psi - yaw))
+    ck.close("heading and yaw: tan(psi - yaw) = -sin(pitch) tan(roll)", worst_h, 0.0, 1e-12)
+    ck.close("heading equals yaw when the roll or the pitch is zero", worst_0, 0.0, 1e-12)
 
     ck.finish()
 

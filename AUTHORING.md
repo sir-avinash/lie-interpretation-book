@@ -83,11 +83,11 @@ Rules that keep the build green:
 - Math is KaTeX. A LaTeX error fails the build. Use `\begin{bmatrix}`, `\begin{aligned}`, `\tfrac`, `\operatorname`. One `\label` per display.
 - Shared macros are in `book.toml`: `\R`, `\SO`, `\so`, `\SE`, `\se`, `\T` (transpose, as in `R\T`), `\tr`, `\quat`, `\Ad`, `\ad`, `\dd`, `\ddt`.
 
-Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-tracking` (6), `ch-linearization` (7), `ch-robust` (8), `ch-flatness` (10), `ch-integrators` (12), `ch-mpc` (13), `ch-filtering` (14), `ch-cases` (16), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
+Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics` (4), `ch-symbolic` (5), `ch-tracking` (6), `ch-linearization` (7), `ch-robust` (8), `ch-flatness` (10), `ch-integrators` (12), `ch-mpc` (13), `ch-filtering` (14), `ch-cases` (16), `ch-case-quadrotor` (17), `ch-case-load` (18), `ch-case-transport` (19), `ch-case-legged` (20), `app-notation` (Appendix A). Labels in the appendix use the prefix `A` (`secA-`, `tblA-`).
 
 ## Notation and terminology
 
-`chapters/appA_notation.md` is the single source of truth. It fixes every symbol, every convention (frames, signs, orderings, the direction of the cable vector) and every technical term, and it says which variants are not used. `terms.toml` holds the same decisions as machine-checkable rules, and `python tools/check_terms.py` enforces them on chapters, figure scripts, notebook sources and skills.
+`chapters/appA_notation.md` is the single source of truth. It fixes every symbol, every convention (frames, signs, orderings, the direction of the cable vector) and every technical term, and it says which variants are not used. `terms.toml` holds the same decisions as machine-checkable rules, and `python tools/check_terms.py` enforces them on chapters, figure scripts, notebook sources, skills and the robot model library in `case_studies/`.
 
 - Read the appendix before writing. Use its symbols and its terms. Do not introduce alternatives.
 - A new symbol or term is added to the appendix, and a rule for its variants to `terms.toml`, before it is used in a chapter.
@@ -95,7 +95,7 @@ Chapter ids: `ch-why` (1), `ch-manifolds` (2), `ch-variations` (3), `ch-dynamics
 - When a later chapter restates an equation from an earlier one, it uses the same form and cites it with `[](#label)`.
 - Point to a specific definition, equation, figure or section, not to a whole chapter, whenever one exists.
 - Notebooks and skills are read outside the book, where the macros of `book.toml` do not exist. They write the same notation in plain LaTeX: `R_d^\top R`, `\mathrm{SO}(3)`, `\mathbb{R}`, `\operatorname{tr}`.
-- Code uses the function names `hat`, `vee`, `expm_so3`, `log_so3`, `Psi_R`, `Psi_q`, `e_R`, `e_Omega`, `e_q`, `e_omega`, with the actual configuration before the desired one: `e_R(R, Rd)`. Desired quantities are `Rd`, `qd`, `Omegad`, `omegad`, and a time derivative in a code-style formula is `R_dot`, `Omega_dot`. Short local names for velocities inside a cell (`Om`, `om`) are tolerated.
+- Code uses the function names `hat`, `vee`, `expm_so3`, `log_so3`, `Psi_R`, `Psi_q`, `e_R`, `e_Omega`, `e_q`, `e_omega`, with the actual configuration before the desired one: `e_R(R, Rd)`. Desired quantities are `Rd`, `qd`, `Omegad`, `omegad`, and a time derivative in a code-style formula is `R_dot`, `Omega_dot`. Short local names for velocities inside a cell (`Om`, `om`) are tolerated. A hat, tilde or bar is appended without an underscore: `Rhat`, `qhat`, `omegahat`, `ytilde`, `Ktilde`, `Jbar`.
 
 ## Figures
 
@@ -105,7 +105,7 @@ Each chapter has one script, `figures/src/chNN.py`, with one function per figure
 - **One question per figure.** If the caption needs "and also", make two figures.
 - **Stroke tiers.** Silhouette thickest, vectors next, construction lines thin, hidden lines dashed. Use the kit's constants.
 - **Palette.** Ink for structure. Indigo for the main object or the "good" path. Terracotta for the contrasting object, error or failure. Teal for a third role. Pastel fills only. A quantity keeps its color across chapters: the trace error is indigo and the logarithm error is teal wherever they are plotted.
-- **The same object is drawn the same way in every chapter.** A reference next to a motion that tracks it is a thin dashed gray line with a hollow marker, and the motion is solid. The boundary of a constraint is ink and its forbidden side pale terracotta. A quadrotor is drawn with `figkit.quadrotor`. The appendix lists these conventions under "References, targets and constraints in figures".
+- **The same object is drawn the same way in every chapter.** A reference next to a motion that tracks it is a thin dashed gray line with a hollow marker, and the motion is solid. The boundary of a constraint is ink and its forbidden side pale terracotta. A true quantity next to its estimate is drawn like a reference next to a motion: dashed gray for the truth, solid for the estimate. A quadrotor is drawn with `figkit.quadrotor`. The appendix lists these conventions under "References, targets and constraints in figures".
 - **Labels use the book's symbols and terms exactly.** A label is checked by `tools/check_terms.py` like any sentence.
 - **Labels sit next to what they name**, with the halo the kit applies. Math in labels uses `$...$`. Words use `fontfamily="Source Sans 3"` at size 9 to 10.
 - Mathtext in labels cannot draw a postfix `^\wedge` or `\mathcal` well. Keep hats and calligraphic letters out of figure labels.
