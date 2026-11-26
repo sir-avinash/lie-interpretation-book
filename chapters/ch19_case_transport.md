@@ -27,7 +27,7 @@ Two vehicles must stay $r_{\min} = 0.8$ m apart, center to center, the value of 
 
 - **0 to 1 s.** Hover at $(0, 0, 1.6)$ m with the cables spread 20.5° from the vertical. The vehicles are 1.30 m apart.
 - **1 to 9 s.** The payload travels 6 m along the first axis, at up to 2.2 m/s. From 1.5 to 4.5 s it turns by 60° about the vertical.
-- **5 s.** The payload passes a gap 1.45 m wide. A rotor reaches 0.25 m from the center of its vehicle, so the cruise formation, 1.80 m across, does not fit. The planner was told about the walls and asked to keep 10 cm from them. It draws the team together until the vehicles are 0.76 m apart. Nobody told it about $r_{\min}$.
+- **5 s.** The payload passes a gap 1.45 m wide. A rotor reaches 0.25 m from the center of its vehicle, so the cruise formation, 1.80 m across, does not fit. The planner was told about the walls and asked to keep about 10 cm from them. It draws the team together until the vehicles are 0.76 m apart. Nobody told it about $r_{\min}$.
 - **7.5 to 11.5 s.** The payload descends 1 m and stops at the target $(6, 0, 0.6)$ m, level.
 
 What is new, compared with one vehicle and one load ([](#ch-case-load))? Three things. **Redundancy**: the tensions are not determined by the motion. **Internal constraints**: the vehicles can hit each other, and each cable can go slack by itself. **Scale**: every vehicle adds five dimensions, and something in each block grows with it.
@@ -40,7 +40,7 @@ $$
 x_i = x_L + R_L\,\rho_i - l_i\,q_i . \label{eq19-kin}
 $$
 
-The configuration manifold is $\SE(3)\times(S^2\times\SO(3))^n$, the last row but two of [](#tbl2-robots), with dimension $6 + 5n$: 21 for three vehicles. A configuration is stored as 48 numbers, because rotation matrices and unit vectors are stored whole. The inputs are a thrust and a torque per vehicle, $4n = 12$. Nine degrees of freedom have no input of their own.
+The configuration manifold is $\SE(3)\times(S^2\times\SO(3))^n$, listed in [](#tbl2-robots), with dimension $6 + 5n$: 21 for three vehicles. A configuration is stored as 48 numbers, because rotation matrices and unit vectors are stored whole. The inputs are a thrust and a torque per vehicle, $4n = 12$. Nine degrees of freedom have no input of their own.
 
 Each factor brings its error and its variation with it ([](#tbl3-summary)): $e_R$ and $\eta$ for the four attitudes, $e_q$ and $\xi_i$ for the three cables, a plain difference for $x_L$. Nothing is designed again.
 
@@ -88,21 +88,21 @@ The natural particular solution is the one of smallest norm, the pseudoinverse o
 
 ![Three answers to the same wrench, the weight of the payload in hover. Indigo arrows: the force of each cable on the payload. Teal arrows: its internal part, which sums to zero force and zero torque. Left: minimum norm. Every cable is vertical and the vehicles are closer than $r_{\min}$. Middle: the smallest internal force that keeps every pair 0.83 m apart. Right: the cruise formation of the mission.](figures/ch19-tensions.svg){#fig19-tensions}
 
-So we choose the internal force. Let $\bar T$ be the stack of tension vectors that the plan asks for at this instant. Given the wrench, the tension distribution is a small quadratic program in the manner of [](#eq8-qp):
+So we choose the internal force. Let $\bar T$ be the stack of tension vectors that the plan asks for at this instant. Given the wrench, the tension distribution is a small quadratic program in the manner of [](#eq8-qp). Its equality constraint is the wrench balance [](#eq19-grasp):
 
 $$
 \begin{aligned}
-\min\ & \Big\|\begin{bmatrix} T_1 q_1 \\ \vdots \\ T_n q_n \end{bmatrix} - \bar T\Big\|^2 \quad\text{subject to [](#eq19-grasp) and} \\
+\min\ & \Big\|\begin{bmatrix} T_1 q_1 \\ \vdots \\ T_n q_n \end{bmatrix} - \bar T\Big\|^2 \quad\text{subject to the wrench balance and} \\
 & -e_3\cdot R_L\T\,T_i q_i \ \ge\ T_{\min} \quad\text{for every cable,} \\
 & \|\rho_i - \rho_j\| + \frac{\rho_i - \rho_j}{\|\rho_i - \rho_j\|}\cdot R_L\T\big(l_j\,q_j - l_i\,q_i\big) \ \ge\ r_{\min} + 3\ \text{cm} \quad\text{for every pair.}
 \end{aligned} \label{eq19-qp}
 $$
 
-The first constraint keeps every cable pulling upward in the payload frame. The left side of the second is, by [](#eq19-kin), the distance between vehicles $i$ and $j$ measured along the line that joins their attachments, which is never more than their distance. With $q_i$ replaced by $T_i q_i$ over the tension of the unconstrained solution it is linear in the unknowns. Eliminate the equality by writing the unknown as a particular solution plus an internal force, and three unknowns and six inequalities remain. That is small enough for the solver of [](#ex8-cone), which tries active sets in turn.
+The first constraint keeps every cable pulling upward in the payload frame. The left side of the second is, by [](#eq19-kin), the distance between vehicles $i$ and $j$ measured along the line that joins their attachments, which is never more than their distance. With $q_i$ replaced by $T_i q_i$ over the tension of the unconstrained solution it is linear in the unknowns. Eliminate the equality by writing the unknown as a particular solution plus an internal force, and three unknowns and six inequalities remain. That is small enough for the solver that checks [](#ex8-cone), which tries active sets in turn.
 
 In hover the program adds an internal force of 0.21 N per cable. The cables lean 4.5° outward, the tensions rise from 2.616 to 2.624 N, and the vehicles are 0.83 m apart. The price of 14 cm of separation is 8 mN of tension. The cruise formation spends more, 0.98 N of internal force per cable for 1.30 m, because distance from a neighbor's downwash is worth something that this model does not price.
 
-One finding belongs here because it cost us a day. The solver of [](#ch-robust) returns the first active set that passes its test. When two active constraints are dependent, its linear system is singular, and it can return a point of size $10^{14}$ that passes. With three unknowns and six constraints that happens in flight. We skip dependent active sets, and check that the guarded solver agrees with the original on 200 well-posed problems.
+One finding belongs here. That solver returns the first active set that passes its test. When the active constraints are dependent, its linear system is singular, and it can return a point of size $10^{14}$ that passes. With three unknowns and six constraints this happens: on 2 of 200 random wrenches near hover. We skip dependent active sets, and check that the guarded solver agrees with the original on 200 well-posed problems.
 
 ## A plan in flat outputs {#sec19-plan}
 
@@ -118,7 +118,7 @@ Count as [](#sec10-chain) does. The pose is six functions, the headings are $n$,
 
 The mission's plan is built from smooth steps, polynomials of degree 13 with six vanishing derivatives at both ends. The internal force is the spreading one: $T_{\text{int}}$ newtons per cable along $R_L\,\rho_i/\|\rho_i\|$, with $T_{\text{int}} = 0.98$ N in cruise and 0.10 N in the gap.
 
-Now read the plan, as [](#ex10-waypoints) taught. The thrusts stay between 16.0 and 18.8 N, inside the limit. The tensions never fall below 2.59 N. The payload accelerates at up to 1.2 m/s². All feasible. And the vehicles come within 0.76 m of each other, 4 cm inside $r_{\min}$, for about two seconds. The flat map reports what the plan implies. It does not object.
+Now read the plan, as [](#ex10-waypoints) taught. The thrusts stay between 16.0 and 18.8 N, inside the limit. The tensions never fall below 2.59 N. The payload accelerates at up to 1.2 m/s². All feasible. And the vehicles come within 0.76 m of each other, 4 cm inside $r_{\min}$, and stay inside it for 2.6 s. The flat map reports what the plan implies. It does not object.
 
 ## The cascade {#sec19-cascade}
 
@@ -151,11 +151,11 @@ $$
 
 Substitute into the third line of [](#eq19-free) and the cable turns as asked. The new term is the acceleration of the attachment, which for a point-mass load lies along the cable and drops out. We use the acceleration that the wrench commands.
 
-**The vehicles.** [](#eq6-Rd) turns each thrust vector into $f_i$ and an attitude reference, tracked by [](#eq6-law) with $k_R = 10$ N·m and $k_\Omega = 1$ N·m·s. The slowest attitude pole of a vehicle is then near 16 s⁻¹.
+**The vehicles.** [](#eq6-Rd) turns each thrust vector into $f_i$ and an attitude reference, tracked by [](#eq6-law) with $k_R = 10$ N·m and $k_\Omega = 1$ N·m·s. The attitude loops of a vehicle then have natural frequencies between 16 and 22 rad/s.
 
 The feedforward, $\omega_{i,d}$, $\dot\omega_{i,d}$, $\Omega_d$ and $\dot\Omega_d$ for every body, comes from the flat map of [](#sec19-plan), as [](#sec10-feedforward) recommends. On the reference itself the cascade returns the flat inputs to $4\times10^{-14}$.
 
-Four loops are stacked: 2, 2, 7 and about 16 rad/s. [](#warn6-feedforward) and [](#sec10-feedforward) found that such a stack works only if each loop is clearly faster than the one outside it. [](#tbl19-order) tests that on a plan that respects $r_{\min}$, with no protection in the loop.
+Four loops are stacked: 2, 2, 7 and 16 to 22 rad/s. [](#warn6-feedforward) and [](#sec10-feedforward) found that such a stack works only if each loop is clearly faster than the one outside it. [](#tbl19-order) tests that on a plan that respects $r_{\min}$, with no protection in the loop.
 
 ::: {.table #tbl19-order}
 
@@ -175,7 +175,7 @@ Four loops are stacked: 2, 2, 7 and about 16 rad/s. [](#warn6-feedforward) and [
 
 :::
 
-A factor of two between the cable loop and the vehicles is not enough, and a factor of three between payload and cable is. Each failure is repaired by the $\kappa$ of [](#warn6-feedforward), which speeds up the innermost loop. The feedforward is worth a factor of 700 here, more than it was for one vehicle, because the plan moves the cables on purpose. Wu (2017, Prop. 5.3) proves exponential tracking for a controller of this shape when the vehicles' attitude loops are fast enough, for a team large enough that the tensions along fixed cable directions span every wrench, which takes at least six cables. Neither his proposition nor [](#thm6-cascade) covers three vehicles with flat feedforward. The table is what we have.
+A cable loop at 10 rad/s works under these vehicles and one at 14 rad/s does not. The payload's attitude loop needs more room: at 4 rad/s under a cable loop of 7 it is already marginal. Each failure is repaired by the $\kappa$ of [](#warn6-feedforward), which speeds up the innermost loop. The feedforward is worth a factor of 700 here, more than it was for one vehicle, because the plan moves the cables on purpose. Wu (2017, Prop. 5.3) proves exponential tracking for a controller of this shape when the vehicles' attitude loops are fast enough, for a team large enough that the tensions along fixed cable directions span every wrench, which takes at least six cables. Neither his proposition nor [](#thm6-cascade) covers three vehicles with flat feedforward. The table is what we have.
 
 ## Would an optimal controller do better? {#sec19-lqr}
 
@@ -187,7 +187,7 @@ The linear state collects one variation per factor and its rate: $\delta x_L$, $
 
 **Controllability.** Judge it on the constraint subspace ([](#def7-constrained)). In the cruise hover the reduced pair has rank 42 of 42 for three vehicles and 52 of 52 for four. For two vehicles it has rank 30 of 32. The two missing directions are the roll of the payload about the line through its attachments, and its rate: the broomstick of [](#thought19-stick), found by a rank test.
 
-**The gain.** Solve [](#eq7-riccati) on the reduced pair with weights of 60, 20 and 10 on positions, directions and attitudes, a quarter of those on their rates, and $R_u = \operatorname{diag}(0.05\,I_3,\ 20\,I_9)$. The gain is a $12\times48$ matrix with closed-loop poles between $-0.94$ and $-10.8$ s⁻¹. The feedback is [](#eq7-feedback) for every factor at once: the gain is fed $e_x$, $e_q$, $e_R$ and the velocity differences.
+**The gain.** Solve [](#eq7-riccati) on the reduced pair with weights of 60, 20 and 10 on positions, directions and attitudes, of 15, 2 and 1 on their rates, and $R_u = \operatorname{diag}(0.05\,I_3,\ 20\,I_9)$. The gain is a $12\times48$ matrix with closed-loop poles between $-0.94$ and $-10.8$ s⁻¹. The feedback is [](#eq7-feedback) for every factor at once: the gain is fed $e_x$, $e_q$, $e_R$ and the velocity differences.
 
 ::: {.table #tbl19-lqr}
 
@@ -203,7 +203,7 @@ The linear state collects one variation per factor and its rate: $\delta x_L$, $
 
 :::
 
-The LQR is as fast or faster in every row, with less thrust and more tension to spare. It coordinates the vehicles through its off-diagonal gains, where the cascade waits for one loop to finish before the next can act. A payload turned by 90° shows it best: the LQR turns it back with the payload's position within 2 cm of its place throughout, and the cascade lets it drift 4 s. From 3 m away both controllers drive a tension negative, so both leave the model.
+The LQR is as fast or faster in every row, with less thrust and more tension to spare. It coordinates the vehicles through its off-diagonal gains, where the cascade waits for one loop to finish before the next can act. A payload turned by 90° shows it best: with the LQR the payload is back within 2 cm of its place after 0.6 s, with the cascade after 4.0 s. From 3 m away both controllers drive a tension negative, so both leave the model.
 
 Why does the mission keep the cascade? The LQR has no place for $r_{\min}$ or $T_{\min}$, and its gain belongs to one reference: a time-varying gain of 576 entries along the mission, recomputed when the plan changes. The cascade exposes the tension vectors as an intermediate quantity, and [](#eq19-qp) constrains exactly those. The predictive controller of [](#def13-mpc) would give the linearization its constraints back. We did not build it for 42 states.
 
@@ -231,8 +231,8 @@ The first changes how the load is shared and the table does not notice. The seco
 
 | Protection | Closest pair | Smallest $H_{ij}$ | Payload error, RMS | Largest payload tilt | Filter active |
 | :-- | :-: | :-: | :-: | :-: | :-: |
-| None | 0.758 m | −0.066 | 0.04 cm | 0.01° | none |
-| Pair constraints in [](#eq19-qp) only | 0.785 m | −0.024 | 0.35 cm | 0.6° | none |
+| None | 0.758 m | −0.066 | 0.02 cm | 0.01° | none |
+| Pair constraints in [](#eq19-qp) only | 0.785 m | −0.024 | 0.33 cm | 0.6° | none |
 | Safety filter only | 0.800 m | 0.000 | 1.6 cm | 5.8° | 3.1 s |
 | Both | 0.819 m | 0.030 | 1.6 cm | 3.2° | 1.1 s |
 
@@ -244,11 +244,11 @@ The first changes how the load is shared and the table does not notice. The seco
 
 ![Four ways to keep three vehicles apart on the same mission. Left: the distance of the closest pair. The pair constraints alone overshoot when they first act. Right: the tilt of the payload, which the plan keeps at zero. The safety filter buys its guarantee with the payload's attitude.](figures/ch19-protect.svg){#fig19-protect}
 
-**Does the finding of [](#sec17-safety) bite here?** [](#warn17-order) is about a block that estimates and a block that overrides. This stack has no estimator, so nothing winds up, and we found no wire missing of that kind. What does carry over is the sentence under it in [](#sec8-limits): the barrier trusts the model. Push one vehicle toward its neighbor with 8 N for half a second while the team is in the gap, as Kotaru does by hand in his experiment. The filter is active and the vehicles close to 0.70 m. The push is not in the model, so the model's $\ddot H_{ij}$ contains the thrust with which the cable loop is already resisting and not the force it resists. To the filter the situation looks safe. Tell the filter the push, and the closest approach is 0.75 m: better, and still inside. The rest is the question [](#sec8-quad) ended on. The filter asks for a thrust vector, and a vehicle must first turn to deliver it, with 4 N of thrust to spare.
+**Does the finding of [](#sec17-safety) bite here?** [](#warn17-order) and [](#warn18-composition) are about a block that estimates and a block that overrides. This stack has no estimator, so nothing winds up, and we found no wire missing of that kind. What does carry over is the sentence under it in [](#sec8-limits): the barrier trusts the model. Push one vehicle toward its neighbor with 8 N for half a second while the team is in the gap, as Kotaru does by hand in his experiment. The filter is active and the vehicles close to 0.70 m. The push is not in the model, so the model's $\ddot H_{ij}$ contains the thrust with which the cable loop is already resisting and not the force it resists. To the filter the situation looks safe. Tell the filter the push, and the closest approach is 0.75 m: better, and still inside. The rest is the question [](#sec8-quad) ended on. The filter asks for a thrust vector, and a vehicle must first turn to deliver it, with less than 5 N of thrust to spare.
 
 ## A cable that sags {#sec19-cable}
 
-Now the same team carries a hose. Kotaru (2022, ch. 7) models it as a chain of links with a point mass at each joint and quadrotors at some of the joints, the library's `quadrotor_cable` ([](#sec16-teams)). We take five links of 0.2 m with 50 g at each inner joint and a vehicle at each end: $\R^3\times(S^2)^5\times\SO(3)^2$, 19 degrees of freedom, 8 inputs. `check_eom` returns $4\times10^{-7}$.
+Now the same team carries a hose. Kotaru (2022, ch. 7) models it as a chain of links with a point mass at each joint and quadrotors at some of the joints, the library's `quadrotor_cable` ([](#sec16-teams)). We take five links of 0.2 m with 50 g at each joint after the first and a vehicle at each end: $\R^3\times(S^2)^5\times\SO(3)^2$, 19 degrees of freedom, 8 inputs. `check_eom` returns $4\times10^{-7}$.
 
 **Plan.** [](#thm10-chain) names the flat output: the position of joint 5, the two headings, and the tension vector of the link that leaves the vehicle at joint 5. We prescribe a slow figure-eight for that joint and a constant tension vector, half the cable's weight upward and 0.6 N outward. The recursion [](#eq10-chain) returns the rest. In the hanging equilibrium the vehicles are 0.72 m apart, the cable sags 0.30 m, and the link tensions are 1.15, 0.77, 0.60, 0.77 and 1.15 N. Along the moving reference the state and the inputs satisfy the library's model to $8\times10^{-13}$, using fourteen derivatives of the curve.
 
@@ -269,13 +269,13 @@ Fly the mission with two, three and four vehicles on the same payload, each on a
 | | $n = 2$ | $n = 3$ | $n = 4$ |
 | :-- | :-: | :-: | :-: |
 | Degrees of freedom, inputs | 16, 8 | 21, 12 | 26, 16 |
-| Symbolic derivation and check | 0.4 s | 0.6 s | 1.5 s |
+| Symbolic derivation and check, about | 0.5 s | 0.9 s | 1.4 s |
 | Size of the derived equations, characters | 4261 | 6299 | 8337 |
 | Rank of $G_L$, internal forces | 5, 1 | 6, 3 | 6, 6 |
 | Controllable on the constraint subspace | 30 of 32 | 42 of 42 | 52 of 52 |
 | Tension program: unknowns, constraints | 1, 3 | 3, 6 | 6, 10 |
 | Safety filter: unknowns, constraints | 6, 3 | 9, 6 | 12, 10 |
-| One step of model and controller | 8.6 ms | 10.5 ms | 14.6 ms |
+| One step of model and controller, about | 9 ms | 11 ms | 14 ms |
 | Payload error, RMS | 1.8 mm | 1.6 mm | 0.2 mm |
 | Largest payload tilt | 1.9° | 0.25° | 0.01° |
 
@@ -285,9 +285,9 @@ Fly the mission with two, three and four vehicles on the same payload, each on a
 
 The model costs almost nothing: the equations grow by 2038 characters per vehicle, the same piece each time, and the hand-written model is one loop longer. The constraints are what grow fast, three per vehicle now and one more per pair, $n + n(n-1)/2$. Enumerating active sets is fine for six constraints and already slow for ten. A real solver ([](#sec13-ipm)) is the next purchase.
 
-The row to read twice is the first column. Two vehicles track the position as well as three. But the payload ends 1.9° from level and stays there, swinging about the line the controller cannot reach. Three is the first team that controls a pose.
+The row to read twice is the first column. Two vehicles track the position as well as three. But the payload ends 1.9° from level and stays there, swinging about the line the controller cannot reach. Three is the first team that controls a pose. The last column has a catch of its own: a plan that keeps four vehicles 0.97 m apart is 12 cm too wide for the gap. The table compares tracking, not passage.
 
-Four vehicles on the same circle of attachments sit closer than three, 0.57 m when the cables are vertical. Fly them on the mission's reference, with its internal force tuned for three, and they are asked to come within 0.64 m of each other. Both protections act, the closest pair is at 0.808 m, a tension falls to 0.80 N, the thrust saturates, and the payload is 4 cm off on average. It flies. It would not have with the unguarded solver of [](#sec19-tensions), which returned garbage on this run and lost the payload.
+Four vehicles on the same circle of attachments sit closer than three, 0.57 m when the cables are vertical. Fly them on the mission's reference, with its internal force tuned for three, and they are asked to come within 0.64 m of each other. Both protections act, the closest pair is at 0.808 m, a tension falls to 0.80 N, the thrust saturates, and the payload is 4 cm off on average. The team stays together, and its rotors overlap the walls by 5 cm. An internal force tuned for three is not tuned for four.
 
 ## Staying on the manifold {#sec19-integration}
 
@@ -299,7 +299,7 @@ Here is the mission with every block connected ([](#fig19-flight)).
 
 ![The mission. Dashed gray with hollow markers: the reference of the payload and of each vehicle. The bars are the three tensions, and the short line across them is $T_{\min}$. Watch the vehicles stop short of their hollow markers in the gap: the reference asks for 0.76 m and the team holds 0.82 m.](figures/ch19-flight-strip.png){#fig19-flight anim="figures/ch19-flight.gif"}
 
-The payload follows its reference to 1.6 cm RMS and 4.1 cm at worst, with the worst in the gap, where the reference is being refused. It tilts by at most 3.2°. It arrives 0.1 mm from the target, level to 0.01°. The tensions stay between 2.30 and 3.07 N. The closest pair of vehicles is 0.819 m apart with $H_{ij} \ge 0.030$, and the vehicles pass WALLCLEAR cm from the walls. The thrust peaks at 20.0 N of 22. Both programs are feasible at every step. The tension program has active constraints for 2.8 s and the safety filter changes the thrust for 1.1 s.
+The payload follows its reference to 1.6 cm RMS and 4.1 cm at worst, with the worst in the gap, where the reference is being refused. It tilts by at most 3.2°. It arrives 0.1 mm from the target, level to 0.01°. The tensions stay between 2.30 and 3.07 N. The closest pair of vehicles is 0.819 m apart with $H_{ij} \ge 0.030$, and the rotors pass 5 cm from the walls. The thrust peaks at 20.0 N of 22. Both programs are feasible at every step. The tension program has active constraints for 2.8 s and the safety filter changes the thrust for 1.1 s.
 
 [](#tbl19-ablation) repeats the mission with one thing changed.
 
@@ -310,8 +310,8 @@ The payload follows its reference to 1.6 cm RMS and 4.1 cm at worst, with the wo
 | Everything on | 1.6 cm | 3.2° | 2.30 N | 0.819 m | 0.030 | 20.0 N | flies |
 | Minimum-norm tensions | 5.8 cm | 27° | 2.38 N | 0.765 m | −0.056 | 22 N | too close, tilted |
 | No pair constraints | 1.6 cm | 5.8° | 2.53 N | 0.800 m | 0.000 | 18.8 N | flies |
-| No safety filter | 0.35 cm | 0.6° | 2.43 N | 0.785 m | −0.024 | 19.1 N | too close |
-| Neither | 0.04 cm | 0.01° | 2.59 N | 0.758 m | −0.066 | 18.8 N | too close |
+| No safety filter | 0.33 cm | 0.6° | 2.43 N | 0.785 m | −0.024 | 19.1 N | too close |
+| Neither | 0.02 cm | 0.01° | 2.59 N | 0.758 m | −0.066 | 18.8 N | too close |
 | No tension floor in the filter | 1.6 cm | 3.2° | 2.30 N | 0.819 m | 0.030 | 20.0 N | flies |
 | Filter rates 2 and 3 s⁻¹ | 3.7 cm | 8.2° | 2.40 N | 0.828 m | 0.046 | 19.8 N | flies |
 | No feedforward | 14 cm | 2.3° | 2.57 N | 0.827 m | 0.044 | 18.9 N | lags |
@@ -338,7 +338,7 @@ Read it as a bill.
 
 *A cable 10 cm too long* tilts the payload by 1.6° more and changes little else. The cascade measures the payload, so a geometric error upstream of it is corrected like any disturbance.
 
-*A weak vehicle* ends the flight. One vehicle delivering 85% of its thrust is 2.6 N short, as much as its whole cable tension. Its cable goes slack, the model's tension turns negative, and the payload hangs from two cables at 93°. Nothing in this stack estimates a thrust. The adaptation of [](#sec8-l1) estimates a torque on one body. An estimate of a force on a team is the block this chapter lacks most.
+*A weak vehicle* ends the flight. One vehicle delivering 85% of its thrust is 2.6 N short, as much as its whole cable tension. A tension turns negative, which a cable cannot do, and the payload tilts to 93°. Nothing in this stack estimates a thrust. The adaptation of [](#sec8-l1) estimates a torque on one body. An estimate of a force on a team is the block this chapter lacks most.
 
 *A push* defeats the filter, told or not, as [](#sec19-safety) explained.
 
@@ -354,7 +354,7 @@ Read it as a bill.
 
 **The state is given.** No estimator runs. A cable direction would be estimated on the sphere ([](#def14-vekf)), and the payload's pose on the group ([](#def14-inekf)).
 
-**The guarantees are per block.** [](#thm6-s2) is about one direction with its force applied directly. [](#thm8-rd2) keeps $H \ge 0$ for the model, in continuous time, with unlimited inputs. Wu's Prop. 5.3 needs at least six cables and an exact feedforward. Not one of them is a statement about the mission of [](#sec19-all), and this chapter has not added one. It has a simulation, twenty variants of it, and three tables.
+**The guarantees are per block.** [](#thm6-s2) is about one direction with its force applied directly. [](#thm8-rd2) keeps $H \ge 0$ for the model, in continuous time, with unlimited inputs. Wu's Prop. 5.3 needs at least six cables and attitude loops that are fast enough. Not one of them is a statement about the mission of [](#sec19-all), and this chapter has not added one. It has a simulation, twenty variants of it, and three tables.
 
 **What was flown.** Kotaru (2022, sec. 6.6) reports two quadrotors carrying a wooden plank of 1.82 m along a square of side 1 m with the pseudoinverse distribution, with tracking plots for position and attitude, and three quadrotors with a triangular payload under the pairwise safety filter, one of them pushed by hand. He notes that the second was less accurate because its payload position was not fed back. Wu (2017, ch. 5) reports a simulation with seven quadrotors and states that the experiments with a rigid payload could not be included. A tension program with pair constraints, and a model-based filter for tied vehicles, are ours and have flown only in this chapter's simulation.
 
@@ -390,7 +390,7 @@ In [](#sec19-cable), raise the number of links from 5 to 8 at the same total len
 
 ## Notes and sources {#sec19-notes .unnumbered}
 
-The model of several quadrotors carrying a rigid payload on cables, and the matrix that maps cable forces to the payload's wrench, are from Wu (2017, sec. 3.2), following Sreenath and Kumar (2013), who treat the dynamics, control and planning of the cooperative problem with a full dynamic model. Lee (2014) gives a geometric controller for the same system. The controller of Wu (2017, ch. 5) tracks the payload's pose and the cable directions, with a proof by singular perturbation, and needs enough vehicles that the tensions along given directions span every wrench. Kotaru (2022, sec. 6.4) distributes the wrench over three-dimensional contact forces through the grasp map, by a quadratic program with box bounds or by the pseudoinverse, and reports experiments with two and three vehicles. The pairwise safety filter is his (sec. 6.5), in the exponential form of Nguyen and Sreenath (2016), on barrier functions in the sense of Ames, Xu, Grizzle and Tabuada (2017). The flexible cable as a chain of links, its flat output and its variation-based linearization with a finite-horizon LQR are from Kotaru (2022, ch. 7 and Appendix B), following Kotaru, Wu and Sreenath (2018) and Kotaru and Sreenath (2019). Variation-based linearization and controllability on the constraint subspace are due to Wu and Sreenath (2015). The cascade of [](#sec19-cascade) follows Sreenath, Lee and Kumar (2013) for each cable. The tension program with pair constraints, the model-based form of the safety filter, the linearization by differences along variations, the account of the term that separates it from the symbolic one, and every number in this chapter are ours. All models were derived a second time with `geomech` (Kotaru, 2026).
+The model of several quadrotors carrying a rigid payload on cables, and the matrix that maps cable forces to the payload's wrench, are from Wu (2017, sec. 3.2), after Sreenath and Kumar (2013), who treat the dynamics, control and planning of the cooperative problem with a dynamic model where earlier work was quasi-static. Lee (2014) gives a geometric controller for a rigid payload, with the cables modeled as rigid links. The controller of Wu (2017, ch. 5) tracks the payload's pose and the cable directions, with a proof by singular perturbation, and needs enough vehicles that the tensions along given directions span every wrench. Kotaru (2022, sec. 6.4) distributes the wrench over three-dimensional contact forces through the grasp map, by a quadratic program with box bounds or by the pseudoinverse, and reports experiments with two and three vehicles. The pairwise safety filter is his (sec. 6.5), in the exponential form of Nguyen and Sreenath (2016), on barrier functions in the sense of Ames, Xu, Grizzle and Tabuada (2017). The flexible cable as a chain of links, its flat output and its variation-based linearization with a finite-horizon LQR are from Kotaru (2022, ch. 7 and Appendix B), following Kotaru, Wu and Sreenath (2018) and Kotaru and Sreenath (2019). Variation-based linearization and controllability on the constraint subspace are due to Wu and Sreenath (2015). The cascade of [](#sec19-cascade) follows Sreenath, Lee and Kumar (2013) for each cable. The tension program with pair constraints, the model-based form of the safety filter, the linearization by differences along variations, the account of the term that separates it from the symbolic one, and every number in this chapter are ours. All models were derived a second time with `geomech` (Kotaru, 2026).
 
 - A. D. Ames, X. Xu, J. W. Grizzle and P. Tabuada, ["Control barrier function based quadratic programs for safety critical systems"](https://arxiv.org/abs/1609.06408), *IEEE Transactions on Automatic Control* 62(8), 2017. arXiv:1609.06408.
 - P. Kotaru, [*Dynamics & Control for Collaborative Aerial Manipulation*](https://escholarship.org/uc/item/1qf6q0n5), PhD thesis, University of California, Berkeley, 2022.

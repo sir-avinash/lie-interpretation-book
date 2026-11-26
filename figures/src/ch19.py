@@ -91,7 +91,7 @@ def mission():
     s.label((6.0, 0, 2.05), "set down, level", dy=6, size=9.5, **SANS)
     s.label((1.55, 0, 1.6), "payload path", dy=-11, size=9, color=INDIGO, **SANS)
     s.dot((6.0, 0.0, 0.6), color=INK, size=4.5, zorder=90)
-    s.label((6.0, 0.0, 0.6), "target", dx=22, dy=-8, size=9.5, **SANS)
+    s.label((6.0, 0.0, 0.6), "target", dx=44, dy=-16, size=9.5, **SANS)
     s.save(OUT / "ch19-mission.svg", pad=0.05)
 
 
@@ -102,10 +102,10 @@ def tensions():
     lam_mn, _ = m.distribute(p.r, W)
     lam_qp, _ = m.distribute(p.r, W, l=p.l, d_min=m.D_PLAN, t_min=m.T_MIN)
     lam_wide = lam_mn + (m.S_WIDE * m.spread_direction(p.r)).reshape(3, 3)
-    s = Scene(width=7.0, height=3.3, azim=-58, elev=24, xlim=(-1.25, 4.55), ylim=(-0.62, 1.75))
+    s = Scene(width=7.0, height=3.0, azim=-58, elev=24, xlim=(-0.95, 4.75), ylim=(-0.62, 1.62))
     titles = ("minimum norm", "with the pair constraints", "cruise")
     for k, lam in enumerate((lam_mn, lam_qp, lam_wide)):
-        x_L = np.array([1.75 * k, -0.95 * k, 0.0])
+        x_L = 1.9 * k * s.right
         Rz = m.expm_so3(np.radians(90.0) * E3)
         q = -lam / np.linalg.norm(lam, axis=1)[:, None]
         x_Q = x_L + p.r @ Rz.T - q @ Rz.T
@@ -123,13 +123,13 @@ def tensions():
             s.curve(np.array([x_Q[i], x_Q[j]]), color=col, lw=0.8, alpha=1.0, zorder=28, linestyle=DASH)
         d = np.linalg.norm(x_Q[0] - x_Q[1])
         top = x_L + np.array([0.0, 0.0, 1.0])
-        s.label(top, f"{d:.2f} m apart", dy=24, size=9.5, color=TERRACOTTA if d < m.R_MIN else INK, **SANS)
+        s.label(top, f"{d:.2f} m apart", dy=34, size=9.5, color=TERRACOTTA if d < m.R_MIN else INK, **SANS)
         s.label(x_L, titles[k], dy=-27, size=9.5, **SANS)
         s.label(x_L, f"T = {np.linalg.norm(lam[0]):.2f} N each", dy=-40, size=9, color=MUTED, **SANS)
-    s.label((0.0, 0.0, 0.0) + np.array([0.0, 0.42, 0.33]), "force of a cable\non the payload", dx=-52, dy=6,
-            size=8.5, color=INDIGO, **SANS)
-    a = np.array([3.5, -1.9, 0.0]) + m.expm_so3(np.radians(90.0) * E3) @ p.r[0]
-    s.label(a + np.array([0.0, 0.5, 0.0]), "internal force", dx=34, dy=-14, size=8.5, color=TEAL, **SANS)
+    s.label(-0.62 * s.right + np.array([0.0, 0.0, 0.45]), "force of a cable\non the payload", size=8.5,
+            color=INDIGO, **SANS)
+    s.label(3.8 * s.right + 0.75 * s.right + np.array([0.0, 0.0, 0.1]), "internal\nforce", size=8.5, color=TEAL,
+            **SANS)
     s.save(OUT / "ch19-tensions.svg", pad=0.04)
 
 
@@ -199,18 +199,20 @@ def protect():
     S = data()["series"]
     fig, axes = new_plot(width=7.0, height=2.9, ncols=2)
     rows = (("unprotected", "no protection", MUTED, DASH), ("pairs_only", "pair constraints only", TEAL, "-"),
-            ("barrier_only", "barrier only", TERRACOTTA, "-"), ("all", "both", INDIGO, "-"))
+            ("barrier_only", "safety filter only", TERRACOTTA, "-"), ("all", "both", INDIGO, "-"))
     for key, name, col, ls in rows:
         o = S[key]
         axes[0].plot(o["t"], o["dist"].min(axis=1), color=col, lw=1.5 if ls == "-" else 1.0, linestyle=ls, label=name)
         axes[1].plot(o["t"], o["tilt"], color=col, lw=1.5 if ls == "-" else 1.0, linestyle=ls)
     axes[0].axhline(m.R_MIN, color=INK, lw=1.0)
     axes[0].axhspan(0.70, m.R_MIN, color=PEACH, alpha=0.45, lw=0)
-    axes[0].text(8.9, 0.79, "$r_{\\min}$", fontsize=10, va="top")
-    axes[0].set_xlim(2.5, 9.5), axes[0].set_ylim(0.70, 1.15), axes[1].set_xlim(2.5, 9.5)
+    axes[0].text(7.6, 0.79, "$r_{\\min}$", fontsize=10, va="top")
+    axes[0].set_xlim(3.0, 8.0), axes[0].set_ylim(0.70, 1.15), axes[1].set_xlim(3.0, 9.5)
     axes[0].set_xlabel("time (s)"), axes[1].set_xlabel("time (s)")
     axes[0].set_ylabel("closest pair of vehicles (m)"), axes[1].set_ylabel("payload tilt (deg)")
-    axes[0].legend(frameon=False, fontsize=8.5, loc="upper center")
+    fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=8.5, loc="upper right",
+               bbox_to_anchor=(0.97, 0.9))
+    fig.subplots_adjust(bottom=0.17, wspace=0.28)
     for ax in axes:
         style_axes(ax)
     save(fig, OUT / "ch19-protect.svg")
