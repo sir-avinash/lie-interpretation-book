@@ -42,11 +42,11 @@ Do the steps in order. Do not start a step before the check of the previous one 
 6. **Tracking cascade** (`ch06-geometric-tracking-control`). Payload wrench: `F_L = m_L (-k_x e_x - k_v e_v + g e3 + x_d_ddot)` and the attitude law for `(R_L, J_L)`. Then step 4, then `q_i,d = -R_L lam_i / |lam_i|`, the sphere law for each cable, the thrust vector
    `F_i = m_i (a_att,i + g e3 + l_i |omega_i|^2 q_i - l_i omega_i_dot x q_i) + (q_i q_i^T) R_L lam_i`
    with `a_att,i` the commanded acceleration of the attachment, and the attitude law for each vehicle with `Rd` from `F_i`.
-   Loop speeds: payload position and attitude slowest, cables about three times faster, vehicle attitudes about three times faster again.
+   Loop speeds: payload position and attitude slowest (2 rad/s in the chapter), cables faster (7 rad/s), vehicle attitudes fastest (16 to 22 rad/s).
    Check: on the reference the cascade returns the flat inputs; on a plan that respects every constraint the payload tracks to millimeters. If raising one gain loses tracking, speed up the loop inside it.
 
 7. **Linearize and compare** (`ch07-variation-lqr-design`). Linear state: `(dx_L, xi_i, eta_L, eta_i)` and their velocity variations, with two constraints per cable. Take differences of the model along variations in `ker C`, or use geomech's `linearize`.
-   Check: controllable on `ker C` (rank equals `2 (6 + 5n) `). Against geomech: equal at states at rest. At moving states compare tangent parts only, and allow one term `c (xi x q)` per direction: geomech varies the coefficient `E_xi`, whose component `c` along `q` is not zero in motion.
+   Check: controllable on `ker C` (rank equals `2 (6 + 5n) `). Against geomech: equal at states at rest. At moving states compare tangent parts only, and expect them to differ by one term `c (xi x q)` per direction, with one fitted number `c` each. Along a moving reference use the linearization you have tested against perturbed simulations.
 
 8. **Keep apart, keep taut** (`ch08-adaptive-safety-design`). After the cascade, filter the thrust vectors: smallest change such that `H_ij_ddot + (alpha_1 + alpha_2) H_ij_dot + alpha_1 alpha_2 H_ij >= 0` for `H_ij = |x_i - x_j|^2 - r_min^2`, and `T_i >= T_min`. Accelerations and tensions are affine in the thrust vectors: read both maps from the model.
    Use both layers. The pair constraint of step 4 moves the cables in `ker G_L` and costs the payload nothing, but it is kinematic and overshoots when it first becomes active. The barrier sees velocities and catches the overshoot, at the price of a wrench error.
@@ -61,7 +61,7 @@ Do the steps in order. Do not start a step before the check of the previous one 
 
 - **Rank 5.** With two cables one rotation of the payload is uncontrollable. Count before designing.
 - **Minimum norm.** It minimizes tension, not risk: in hover it hangs every vehicle straight above its attachment.
-- **Loop speeds.** A payload attitude loop as fast as the cable loop loses tracking. So does a cable loop within a factor two of the vehicle attitude loop.
+- **Loop speeds.** In the chapter's mission a payload attitude loop at 6 rad/s under a cable loop at 7 rad/s loses tracking, and 4 rad/s is marginal. A cable loop at 14 rad/s under vehicle loops at 16 to 22 rad/s loses tracking, and 10 rad/s works.
 - **A barrier cannot see what the model lacks.** An unknown push on a vehicle is invisible until the distance has changed. Telling the filter about the push helps and does not suffice: the thrust must first be aimed.
 - **Tuned for three is not tuned for four.** More vehicles on the same payload sit closer. Re-plan the spread for each `n`.
 - **Slack.** `T_i <= 0` anywhere invalidates the model, the flat map and the linearization at once.

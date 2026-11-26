@@ -4,11 +4,11 @@ The mission is assembled from blocks that the earlier chapters verified:
 
 * the team, the cable and their step: the robot model library (case_studies/robots);
 * jets, the attitude part of the flat map and the chain recursion: verify/ch10.py (imported);
-* the small QP solver and the pairwise filter: verify/ch08.py (imported);
+* the small QP solver: verify/ch08.py (imported), with a guarded copy checked against it;
 * the attitude law eq6-law: robots.core.attitude_tracking_torque;
 * the sphere law eq6-law-s2: written here and checked against verify/ch06.py;
-* the linearized spherical pendulum of thm7-s2: used to check the generic
-  variation-based linearization written here.
+* the variation-based linearization: written here for any robot of the library,
+  checked against geomech's and against perturbed simulations.
 
 Run:  python verify/ch19.py          (a few minutes; `--fresh` ignores the cache)
 """
@@ -1343,6 +1343,8 @@ def main():
     ck.true("n = 2: the grasp map has rank 5", scale[2]["grasp_rank"] == 5)
     ck.true("n = 3, 4: the grasp map has rank 6", scale[3]["grasp_rank"] == 6 and scale[4]["grasp_rank"] == 6)
     ck.true("internal forces: 3n - rank", [scale[n]["internal"] for n in (2, 3, 4)] == [1, 3, 6])
+    ck.true("n = 2: the payload is most tilted at the end of the flight",
+            abs(S["n2"]["tilt_end"] - S["n2"]["tilt_max"]) < 1e-6, f"{S['n2']['tilt_end']:.2f} deg")
     ck.true("n = 2: hover linearization is not controllable on ker C (30 of 32)",
             (scale[2]["reduced"], scale[2]["ctrb"]) == (32, 30))
     ck.true("n = 3: controllable on ker C (42 of 42)", (scale[3]["reduced"], scale[3]["ctrb"]) == (42, 42))
@@ -1354,20 +1356,21 @@ def main():
         worst = max(worst, max(np.abs(x - y).max() for x, y in zip(affine_maps(rb, st),
                                                                    affine_maps_probed(rb, st))))
     ck.close("the copy of the library's linear system equals probing the library", worst, 0, tol=1e-10)
-    st = rb.random_state(rng)
-    u = (rng.uniform(5, 20, 3), rng.normal(size=(3, 3)))
-    acc = rb.dynamics(st, u)
-    _, _, a = vehicle_kinematics(rb, st, acc)
-    T = tensions(rb, st, u)
-    newton = max(np.abs(p.m[i] * (a[i] + p.g * E3) - u[0][i] * st.R[i] @ E3 - T[i] * st.q[i]).max()
-                 for i in range(3))
-    ck.true("tension: each vehicle obeys m (a + g e3) = f R e3 + T q up to its part across q",
-            newton < 30, "T is the component along q")
-    payload = np.abs(p.m_L * (acc[0] + p.g * E3) + sum(T[i] * st.q[i] for i in range(3))).max()
-    ck.close("tension: the payload obeys m_L (a + g e3) = -sum T_i q_i", payload, 0, tol=1e-9)
-    torque = np.abs(p.J_L @ acc[1] + np.cross(st.Omega_L, p.J_L @ st.Omega_L)
-                    + sum(np.cross(p.r[i], st.R_L.T @ (T[i] * st.q[i])) for i in range(3))).max()
-    ck.close("tension: the payload obeys J_L Omega_dot + Omega x J_L Omega = -sum r_i x R_L^T T_i q_i",
+    newton = payload = torque = 0.0
+    for _ in range(20):
+        st = rb.random_state(rng)
+        u = (rng.uniform(5, 20, 3), rng.normal(size=(3, 3)))
+        acc = rb.dynamics(st, u)
+        _, _, a = vehicle_kinematics(rb, st, acc)
+        T = tensions(rb, st, u)
+        newton = max(newton, max(np.abs(p.m[i] * (a[i] + p.g * E3) - u[0][i] * st.R[i] @ E3
+                                        - T[i] * st.q[i]).max() for i in range(3)))
+        payload = max(payload, np.abs(p.m_L * (acc[0] + p.g * E3) + sum(T[i] * st.q[i] for i in range(3))).max())
+        torque = max(torque, np.abs(p.J_L @ acc[1] + np.cross(st.Omega_L, p.J_L @ st.Omega_L)
+                                    + sum(np.cross(p.r[i], st.R_L.T @ (T[i] * st.q[i])) for i in range(3))).max())
+    ck.close("20 states: each vehicle obeys m (a + g e3) = f R e3 + T q", newton, 0, tol=1e-9)
+    ck.close("20 states: the payload obeys m_L (a + g e3) = -sum T_i q_i", payload, 0, tol=1e-9)
+    ck.close("20 states: the payload obeys J_L Omega_dot + Omega x J_L Omega = -sum r_i x R_L^T T_i q_i",
              torque, 0, tol=1e-9)
 
     # ---------------------------------------------------------------- the redundancy
