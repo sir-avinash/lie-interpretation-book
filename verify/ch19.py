@@ -1417,6 +1417,15 @@ def main():
     ck.true("QP at 200 random wrenches: every cable pulls with at least T_MIN", worst_T >= T_MIN - 1e-8,
             f"{feas} feasible, smallest {worst_T:.3f} N")
     ck.record("qp_random_feasible", feas)
+    # the unguarded solver of verify/ch08.py on the same kind of problem
+    huge = 0
+    rng2 = np.random.default_rng(19)
+    for _ in range(200):
+        W = W_hover + np.r_[rng2.normal(size=3) * 2.0, rng2.normal(size=3) * 0.15]
+        lm, act = distribute(p.r, W, l=p.l, d_min=D_PLAN, t_min=T_MIN, solver=ch08.solve_qp)
+        huge += int(lm is not None and np.abs(lm).max() > 1e6)
+    ck.true("the unguarded solver returns a huge point on some of the same 200 wrenches", huge > 0, f"{huge} of 200")
+    ck.record("qp_unguarded_huge", huge)
 
     # ---------------------------------------------------------------- the plan (flat map)
     worst, fl, fh, Tl, dl = 0.0, np.inf, 0.0, np.inf, np.inf
@@ -1439,6 +1448,12 @@ def main():
     ck.true("the plan asks for thrusts within the limit and positive tensions", fh < F_MAX and Tl > T_MIN,
             f"f in [{fl:.1f}, {fh:.1f}] N, T >= {Tl:.2f} N")
     ck.true("the plan brings two vehicles closer than r_min", dl < R_MIN, f"{dl:.3f} m")
+    inside = [t for t in np.arange(0.0, T_END, 0.01)
+              if min(np.linalg.norm(a - b) for i, a in enumerate(plan_point(p, plan, t)["x_Q"])
+                     for b in plan_point(p, plan, t)["x_Q"][i + 1:]) < R_MIN]
+    ck.record("plan_inside", dict(t0=float(inside[0]), t1=float(inside[-1]), seconds=float(len(inside) * 0.01)))
+    ck.record("plan_wall_margin", float(GAP_W / 2 - ARM - 0.5 * dl))
+    ck.record("attitude_rates", [float(np.sqrt(GAINS["k_R"] / J)) for J in np.diag(p.J[0])])
     ends = []
     for h in (5e-3, 2.5e-3):
         ref0 = plan_point(p, plan, 2.0)
@@ -1532,7 +1547,9 @@ def main():
     ck.true("mission: vehicles never closer than r_min, every H_ij >= 0", A_["H_min"] >= 0,
             f"d {A_['d_min']:.3f} m, H {A_['H_min']:.3f}")
     ck.true("mission: thrust within the limit", A_["f_max"] < F_MAX, f"{A_['f_max']:.1f} N")
-    ck.true("mission: every vehicle clears the walls of the gap", A_["wall"] > 0, f"{A_['wall'] * 100:.1f} cm")
+    ck.true("mission: every vehicle clears the walls of the gap", A_["wall"] > 0.02, f"{A_['wall'] * 100:.1f} cm")
+    for k in ("unprotected", "pairs_only", "barrier_only", "push", "n4"):
+        ck.record(f"wall_{k}", S[k]["wall"])
     ck.true("mission: manifold residual at rounding level", A_["resid"] < 1e-12, f"{A_['resid']:.1e}")
     ck.true("unprotected: the vehicles follow the reference inside r_min", S["unprotected"]["H_min"] < 0,
             f"d {S['unprotected']['d_min']:.3f} m")
