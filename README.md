@@ -48,8 +48,8 @@ book.toml          title, chapter order, shared math macros
 chapters/          chapter sources (Pandoc Markdown)
 figures/src/       one script per chapter; writes figures/*.svg
 verify/            one script per chapter, and robots.py for the library; each must exit 0
-notebooks/src/     notebook sources; built to notebooks/*.ipynb (Chapters 1 to 14)
-skills/            one skill per chapter (Chapters 1 to 14)
+notebooks/src/     notebook sources; built to notebooks/*.ipynb
+skills/            one skill per chapter (all but Chapter 16)
 case_studies/      the robot model library (case_studies/robots) and its README, read by Chapter 16
 tools/             build script, terminology check, notebook builder, figure kit
 docs/              the built site (GitHub Pages serves this directory)
@@ -59,15 +59,23 @@ terms.toml         vocabulary and notation rules (python tools/check_terms.py)
 
 ## Build
 
-Requires Python 3.11+, Pandoc 3, and Node.js.
+Requires Python 3.11 or later (tested on 3.13), Pandoc 3 and Node.js.
 
 ```bash
-pip install numpy scipy matplotlib nbformat nbclient ipykernel geomech
+pip install numpy scipy sympy matplotlib nbformat nbclient ipykernel geomech
 ```
 
 ```bash
 npm install --prefix tools
 ```
+
+```bash
+npx --prefix tools playwright install chromium
+```
+
+Chromium is needed only for the PDF. `python tools/build.py --no-pdf` skips it and keeps the existing `docs/book.pdf`.
+
+The next two steps are slow: about half an hour each. The figure scripts for Chapters 12 and 17 to 20 cache simulation results (Chapter 12 in `$CH12_CACHE`, default `/tmp/shots`; the others in `verify/`, which git ignores), so later runs are faster.
 
 ```bash
 for f in figures/src/ch*.py; do python "$f"; done
