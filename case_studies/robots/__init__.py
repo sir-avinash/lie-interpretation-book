@@ -22,6 +22,9 @@ Where the book has them, a robot also has `tracking_controller(...)` (Chapter 6)
 and `linearize(...)` (Chapter 7). `params` may be omitted everywhere: the robot
 then uses its own `robot.params`.
 
+The Reaction Mass Biped also walks: `robots.biped_walking` holds its impact map,
+motion primitive, tracking laws, linearization and hybrid walking loop (Chapter 20).
+
 Conventions (Appendix A): world frame with e3 up, gravity along -e3;
 R_dot = R hat(Omega) with Omega in the body frame; q_dot = omega x q with omega
 in the world frame; a cable direction q points from the quadrotor to the load,
@@ -29,8 +32,8 @@ x_Q = x_L - l q; an input is u = (f, tau), thrust and body torque.
 
 Only NumPy is needed to run a model. geomech is imported inside `lagrangian()`.
 """
-from . import (cassie, flexible_cable, multi_quadrotor_payload, quadrotor, quadrotor_load,
-               reaction_mass_biped, rigid_body, spherical_pendulum)
+from . import (biped_walking, cassie, flexible_cable, multi_quadrotor_payload, quadrotor,
+               quadrotor_load, reaction_mass_biped, rigid_body, spherical_pendulum)
 from .core import (E1, E2, E3, Factor, Robot, Psi_q, Psi_R, e_omega, e_Omega, e_q, e_R, expm_so3,
                    hat, log_so3, tangent, unit, vee)
 

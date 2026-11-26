@@ -28,10 +28,13 @@ leg eq4-leg. The inputs are the leg force f, the ankle torque tau_1, the hip
 torques tau_P (stance leg on torso) and tau_2 (torso on swing leg), all in the
 body frame of the body they act on, and the forces f_s on the three pairs.
 
-What is included: the continuous stance dynamics, thirteen degrees of freedom,
-all actuated. What is not: the length of the swing leg (it does not enter the
-stance dynamics, because the swing leg's center of mass is at the hip), the
-floating-base model, the impact map and the walking controller of the thesis.
+What is included: the continuous stance dynamics (eq20-stance), thirteen degrees
+of freedom, all actuated. The class also gives `tracking_controller` (the two laws
+of sec20-walk), `linearize` (sec7-variation) and `impact` (eq20-impact); these and
+the motion primitive, the floating-base model and the walking loop `walk` are in
+`biped_walking.py`. What is not: the length of the swing leg (it does not enter the
+stance dynamics, because the swing leg's center of mass is at the hip), the floating
+base in flight, friction cones and an implicit integrator for the variable inertias.
 
 A sign differs from the thesis as printed: its eq. (5.14) has -L(s, Omega_P)
 where the Lagrangian gives +, a centrifugal force that pushes the reaction
@@ -152,10 +155,38 @@ class ReactionMassBiped(Robot):
                Factor("R", "slide", "slide_dot")]
     Params, State = Params, State
     labels = {"equations": "eq4-leg", "example": "ex4-leg", "manifold": "tbl2-robots",
-              "section": "sec4-products"}
+              "section": "sec4-products", "stance": "eq20-stance", "impact": "eq20-impact",
+              "controller": "eq20-law", "walking": "sec20-walk"}
 
     def zero_input(self):
         return 0.0, np.zeros(3), np.zeros(3), np.zeros(3), np.zeros(3)
+
+    def tracking_controller(self, state, d, gains=None, params=None):
+        """u = (f, tau_1, tau_P, tau_2, f_s) that tracks the desired state d, a dict from
+        `biped_walking.primitive` (eq20-primitive).
+
+        With `ThesisGains` (the default) this is the thesis's law: the error eq20-right
+        and the torque eq20-law on each body. With `BookGains` it is eq6-law on each
+        factor with the term -(1/2) J_dot e_Omega of sec20-walk. Both cancel gravity on
+        the stance leg and put PD laws with feedforward on the lengths."""
+        from . import biped_walking as bw
+        if isinstance(gains, bw.BookGains):
+            return bw.book_law(state, d, gains, params)
+        return bw.thesis_law(state, d, gains if gains is not None else bw.ThesisGains(), params)
+
+    def linearize(self, state, u, params=None):
+        """A (26 x 26) and B (26 x 13) of s_dot = A s + B du about a state and input, with
+        s = (dl, dr, eta_1, eta_P, eta_2, dl_dot, dr_dot, dOmega_1, dOmega_P, dOmega_2), the
+        variations of sec7-variation. Kinematic rows exact (eq3-delta-Omega), dynamic rows
+        by central differences of `dynamics`."""
+        from .biped_walking import linearize_stance
+        return linearize_stance(state, u, params)
+
+    def impact(self, state, l_0, params=None):
+        """The swing foot of length l_0 lands and sticks: eq20-impact, then eq20-relabel.
+        Returns (new stance state, impulse on the foot, step vector)."""
+        from .biped_walking import impact
+        return impact(state, l_0, params)
 
     def torso_inertia(self, slide, params=None):
         p = params or self.params

@@ -11,7 +11,7 @@ Three people carry a table through a doorway. You film them and measure the tabl
 
 You cannot tell. Two of them may be leaning away from each other, each pulling with twice the force the table needs, and the table moves exactly as it would if they were not. The motion fixes six numbers, a force and a torque. Three hands supply nine. The other three are a choice, and somebody has to make it.
 
-Replace the people by quadrotors and the arms by cables, and the choice has consequences. Choose the smallest tensions and each vehicle hangs straight above its attachment, 0.69 m from its neighbors. Choose larger ones and the cables spread, the vehicles separate, and every rotor works harder. A gap narrower than the team forces the choice to change in flight ([](#fig19-mission)).
+Replace the people by quadrotors and the arms by cables, and the choice has consequences. Choose the smallest tensions and each vehicle hangs straight above its attachment, 0.69 m from its neighbors. Choose larger ones and the cables spread, the vehicles separate, and every cable pulls harder. A gap narrower than the team forces the choice to change in flight ([](#fig19-mission)).
 
 ![The mission. Three quadrotors carry a rigid payload on cables. They cruise with the cables spread, draw together to pass a gap narrower than the cruise formation, and set the payload down level at the target. The dashed curve is the path planned for the payload.](figures/ch19-mission.svg){#fig19-mission}
 
@@ -46,7 +46,7 @@ Each factor brings its error and its variation with it ([](#tbl3-summary)): $e_R
 
 ## The model, and a second opinion {#sec19-model}
 
-[](#sec4-products) derived the team with a point-mass load, [](#eq4-multi), and stated the rigid payload in words. The library writes the rigid payload as the Lagrange-d'Alembert principle delivers it ([](#def4-dalembert)), one equation per variation, and solves the result as one linear system in the accelerations. The free-body form is shorter and is what the rest of the chapter uses. With $T_i$ the tension of cable $i$, positive when it pulls ([](#eq4-load-tension)),
+[](#sec4-products) derived the team with a point-mass load, [](#eq4-multi), and stated the rigid payload in words. The library writes the rigid payload as the Lagrange-d'Alembert principle delivers it ([](#def4-dalembert)), one equation per variation, and solves the result as one linear system in the accelerations. The free-body form is shorter and is what the rest of the chapter uses. With $T_i$ the tension of cable $i$, positive when it pulls as in [](#eq4-load-tension),
 
 $$
 \begin{aligned}
@@ -187,7 +187,7 @@ The linear state collects one variation per factor and its rate: $\delta x_L$, $
 
 **Controllability.** Judge it on the constraint subspace ([](#def7-constrained)). In the cruise hover the reduced pair has rank 42 of 42 for three vehicles and 52 of 52 for four. For two vehicles it has rank 30 of 32. The two missing directions are the roll of the payload about the line through its attachments, and its rate: the broomstick of [](#thought19-stick), found by a rank test.
 
-**The gain.** Solve [](#eq7-riccati) on the reduced pair with weights of 60, 20 and 10 on positions, directions and attitudes, of 15, 2 and 1 on their rates, and $R_u = \operatorname{diag}(0.05\,I_3,\ 20\,I_9)$. The gain is a $12\times48$ matrix with closed-loop poles between $-0.94$ and $-10.8$ s⁻¹. The feedback is [](#eq7-feedback) for every factor at once: the gain is fed $e_x$, $e_q$, $e_R$ and the velocity differences.
+**The gain.** Solve [](#eq7-riccati) on the reduced pair with weights of 60, 20 and 10 on positions, directions and attitudes, of 15, 2 and 1 on their rates, and $R_u = \operatorname{diag}(0.05\,I,\ 20\,I_9)$, thrusts first. The gain is a $12\times48$ matrix with closed-loop poles between $-0.94$ and $-10.8$ s⁻¹. The feedback is [](#eq7-feedback) for every factor at once: the gain is fed $e_x$, $e_q$, $e_R$ and the velocity differences.
 
 ::: {.table #tbl19-lqr}
 
@@ -269,21 +269,19 @@ Fly the mission with two, three and four vehicles on the same payload, each on a
 | | $n = 2$ | $n = 3$ | $n = 4$ |
 | :-- | :-: | :-: | :-: |
 | Degrees of freedom, inputs | 16, 8 | 21, 12 | 26, 16 |
-| Symbolic derivation and check, about | 0.5 s | 0.9 s | 1.4 s |
 | Size of the derived equations, characters | 4261 | 6299 | 8337 |
 | Rank of $G_L$, internal forces | 5, 1 | 6, 3 | 6, 6 |
 | Controllable on the constraint subspace | 30 of 32 | 42 of 42 | 52 of 52 |
 | Tension program: unknowns, constraints | 1, 3 | 3, 6 | 6, 10 |
 | Safety filter: unknowns, constraints | 6, 3 | 9, 6 | 12, 10 |
-| One step of model and controller, about | 9 ms | 11 ms | 14 ms |
 | Payload error, RMS | 1.8 mm | 1.6 mm | 0.2 mm |
 | Largest payload tilt | 1.9° | 0.25° | 0.01° |
 
-: The same mission with two, three and four vehicles. Times are for the scripts of this chapter on one processor core, and are there for their ratios.
+: The same mission with two, three and four vehicles.
 
 :::
 
-The model costs almost nothing: the equations grow by 2038 characters per vehicle, the same piece each time, and the hand-written model is one loop longer. The constraints are what grow fast, three per vehicle now and one more per pair, $n + n(n-1)/2$. Enumerating active sets is fine for six constraints and already slow for ten. A real solver ([](#sec13-ipm)) is the next purchase.
+The model costs almost nothing: the equations grow by 2038 characters per vehicle, the same piece each time, the symbolic derivation and its check take about two seconds or less for each size, and the hand-written model is one loop longer. The constraints are what grow fast, three per vehicle now and one more per pair, $n + n(n-1)/2$. Enumerating active sets is fine for six constraints and already slow for ten. A real solver ([](#sec13-ipm)) is the next purchase.
 
 The row to read twice is the first column. Two vehicles track the position as well as three. But the payload ends 1.9° from level and stays there, swinging about the line the controller cannot reach. Three is the first team that controls a pose. The last column has a catch of its own: a plan that keeps four vehicles 0.97 m apart is 12 cm too wide for the gap. The table compares tracking, not passage.
 
@@ -299,7 +297,7 @@ Here is the mission with every block connected ([](#fig19-flight)).
 
 ![The mission. Dashed gray with hollow markers: the reference of the payload and of each vehicle. The bars are the three tensions, and the short line across them is $T_{\min}$. Watch the vehicles stop short of their hollow markers in the gap: the reference asks for 0.76 m and the team holds 0.82 m.](figures/ch19-flight-strip.png){#fig19-flight anim="figures/ch19-flight.gif"}
 
-The payload follows its reference to 1.6 cm RMS and 4.1 cm at worst, with the worst in the gap, where the reference is being refused. It tilts by at most 3.2°. It arrives 0.1 mm from the target, level to 0.01°. The tensions stay between 2.30 and 3.07 N. The closest pair of vehicles is 0.819 m apart with $H_{ij} \ge 0.030$, and the rotors pass 5 cm from the walls. The thrust peaks at 20.0 N of 22. Both programs are feasible at every step. The tension program has active constraints for 2.8 s and the safety filter changes the thrust for 1.1 s.
+The payload follows its reference to 1.6 cm RMS and 4.1 cm at worst. It tilts by at most 3.2°. It arrives 0.1 mm from the target, level to 0.01°. The tensions stay between 2.30 and 3.07 N. The closest pair of vehicles is 0.819 m apart with $H_{ij} \ge 0.030$, and the rotors pass 5 cm from the walls. The thrust peaks at 20.0 N of 22. Both programs are feasible at every step. The tension program has active constraints for 2.8 s and the safety filter changes the thrust for 1.1 s.
 
 [](#tbl19-ablation) repeats the mission with one thing changed.
 
@@ -369,7 +367,7 @@ Put the three attachments on a line. Compute the rank of $G_L$, and fly the miss
 :::
 
 ::: {.exercise #exr19-cost}
-In hover, the thrust of each vehicle is $\|m_i g\,e_3 - T_i q_i\|$. Plot it against the distance between vehicles as $T_{\text{int}}$ grows from 0 to 2 N. At what separation does the spread cost 5% more thrust than vertical cables?
+In hover, the thrust of each vehicle is $\|m_i g\,e_3 - T_i q_i\|$. Plot it against the distance between vehicles as $T_{\text{int}}$ grows from 0 to 2 N. How much thrust does a meter of separation cost? Explain why so little, and find the payload mass at which it would cost 5%.
 :::
 
 ::: {.exercise #exr19-rates}

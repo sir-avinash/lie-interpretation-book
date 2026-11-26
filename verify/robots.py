@@ -822,6 +822,86 @@ two = pend.rollout(start, push, 1e-2, 1, hold=False, t0=0.3)[-1]
 ck.close("step(..., t=t) is one step of rollout(..., hold=False, t0=t)", one.q, two.q, tol=0.0)
 ck.record("rollout_order", {"held": order[True], "staged": order[False]})
 
+
+# =========================================================================
+# 8. Walking the Reaction Mass Biped (robots/biped_walking.py, Chapter 20)
+# =========================================================================
+# A generator of its own, so that the checks above keep their random states.
+import json  # noqa: E402
+
+from geomech import linearize as geomech_linearize  # noqa: E402
+
+from robots import biped_walking as bw  # noqa: E402
+
+rng_w = np.random.default_rng(20)
+biped = robots.get("reaction_mass_biped")
+p = biped.params
+worst = dict(kkt=0.0, stick=0.0, mom=0.0, carnot=0.0, loss=np.inf, relabel=0.0)
+for _ in range(50):
+    s, l_0 = biped.random_state(rng_w), 0.6 + rng_w.random()
+    new, imp, _ = biped.impact(s, l_0)
+    v, v_plus, imp_kkt, D, A = bw.impact_kkt(s, l_0)
+    v_new = np.concatenate([new.Omega1, new.OmegaP, new.slide_dot, new.Omega2,
+                            bw.hip_velocity(new.l, new.l_dot, new.R1, new.Omega1)])
+    # eq20-impact against eq20-kkt: same impulse, same velocities after eq20-relabel
+    worst["kkt"] = max(worst["kkt"], np.abs(imp - imp_kkt).max(), np.abs(bw.relabel(v_plus) - v_new).max())
+    worst["stick"] = max(worst["stick"], np.abs(A @ v_plus).max())
+    c = -l_0 * s.R2 @ E3                                # the landing foot, seen from the hip
+    H_minus = bw.angular_momentum_about(c, s, v[12:15], s.Omega1, s.OmegaP, s.Omega2)
+    H_plus = bw.angular_momentum_about(c, s, v_plus[12:15], v_plus[0:3], v_plus[3:6], v_plus[9:12])
+    worst["mom"] = max(worst["mom"], np.abs(H_plus - H_minus).max())
+    T_minus = bw.kinetic_floating(s, v[12:15], s.Omega1, s.OmegaP, s.Omega2, s.slide_dot)
+    T_plus = bw.kinetic_floating(s, v_plus[12:15], v_plus[0:3], v_plus[3:6], v_plus[9:12], v_plus[6:9])
+    dv = v_plus - v
+    worst["carnot"] = max(worst["carnot"], abs((T_minus - T_plus) - 0.5 * dv @ D @ dv))
+    worst["loss"] = min(worst["loss"], T_minus - T_plus)
+    worst["relabel"] = max(worst["relabel"], np.abs(bw.relabel(bw.relabel(v)) - v).max())
+ck.true("biped_walking: impact closed form eq20-impact equals the 18 x 18 system eq20-kkt (with eq20-relabel)",
+        worst["kkt"] < 1e-10, f"err {worst['kkt']:.1e}")
+ck.true("biped_walking: the landing foot is at rest after the impact", worst["stick"] < 1e-12, f"err {worst['stick']:.1e}")
+ck.true("biped_walking: angular momentum about the landing foot, summed mass by mass, is conserved by the impact",
+        worst["mom"] < 1e-11, f"err {worst['mom']:.1e}")
+ck.true("biped_walking: the kinetic energy lost is that of the velocity jump, and never negative",
+        worst["carnot"] < 1e-11 and worst["loss"] >= 0, f"err {worst['carnot']:.1e}, smallest loss {worst['loss']:.2e} J")
+ck.true("biped_walking: relabeling the legs twice is the identity", worst["relabel"] == 0.0)
+
+# linearize against the linearization that geomech derives from the robot's Lagrangian
+L, dW, variables, inputs = biped.lagrangian()
+eom = compute_eom(L, dW, variables)
+lay_b = StateLayout(variables, inputs, collect_params([L, dW], variables, inputs))
+gm_b = load_module(module_source(to_standard_form(eom, variables, inputs), lay_b, lagrangian=L), "biped_walking_stance")
+gl_b = load_module(module_source(geomech_linearize(eom, variables, inputs), lay_b), "biped_walking_lin")
+gm_p = {"m_leg": p.m_leg, "m_r": p.m_r, "J_0": p.J_0, "J_P": p.J_P, "g": p.g, "e1": E1, "e2": E2, "e3": E3}
+wA = wB = 0.0
+for _ in range(3):
+    s, u = biped.random_state(rng_w, speed=0.5), random_input(biped, 3.0)
+    x, _ = geomech_view(biped, lay_b, s, biped.dynamics(s, u), {"slide": ["s1", "s2", "s3"]})
+    uf = flat_input(u)
+    a = accelerations(gm_b, x, uf, gm_p)
+    Mg = np.asarray(gl_b.M_lin(x, a, uf, gm_p))
+    Ag = np.linalg.solve(Mg, np.asarray(gl_b.A_lin(x, a, uf, gm_p)))
+    Bg = np.linalg.solve(Mg, np.asarray(gl_b.B_lin(x, a, uf, gm_p)))
+    A, B = biped.linearize(s, u)
+    wA = max(wA, np.abs(Ag - A).max() / (1 + np.abs(Ag).max()))
+    wB = max(wB, np.abs(Bg - B).max())
+ck.true("reaction_mass_biped: linearize equals geomech linearize at random stance states, all 26 rows",
+        wA < 1e-7 and wB < 1e-9, f"A rel {wA:.1e}, B {wB:.1e}")
+
+# the tracking controller: thesis law by default, eq6-law per factor with BookGains; equal on the primitive
+gait = bw.Gait()
+s_d, d = bw.primitive_state(0.37, 0.4, gait), bw.primitive(0.37, 0.4, gait)
+ck.close("reaction_mass_biped: on the primitive the two tracking laws give the same input (eq20-law, eq6-law)",
+         bw.pack_u(biped.tracking_controller(s_d, d)), bw.pack_u(biped.tracking_controller(s_d, d, bw.BookGains())),
+         tol=1e-10)
+
+# a short walk reproduces the step lengths that verify/ch20.py records for the chapter
+quoted = json.loads((HERE / "ch20_values.json").read_text())["walk_straight"]
+_, walked = bw.walk([0.0] * 2, record=0)
+got = [st["step_length"] for st in walked]
+ck.true("biped_walking: two steps of walk reproduce the step lengths of ch20_values.json exactly",
+        got == quoted["step_lengths"][:2] and walked[0]["step_time"] == quoted["first_step_time"],
+        f"{got[0]:.6f} m, {got[1]:.6f} m")
+
 ck.record("summary", summary)
 print("\n  robot                              check_eom  vs geomech  vs chapter  manifold  energy drift (order)")
 for tag, row in summary.items():

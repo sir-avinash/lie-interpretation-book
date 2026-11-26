@@ -65,7 +65,7 @@ def draw_gap(s, z0=0.0, z1=2.9, depth=0.12):
 
 
 def floor(s, x0=-0.9, x1=7.0, y=1.5):
-    s.patch([(x0, -y, 0), (x1, -y, 0), (x1, y, 0), (x0, y, 0)], color="#f4f1e8", alpha=1.0, edge=MUTED,
+    s.patch([(x0, -y, 0), (x1, -y, 0), (x1, y, 0), (x0, y, 0)], color=SAND, alpha=0.4, edge=MUTED,
             lw=0.4, zorder=1)
 
 
@@ -147,7 +147,7 @@ def flight_frame(u):
     s.curve(o["x_L"][:k + 1], color=INDIGO, lw=1.6, alpha=1.0, zorder=22)
     s.dot(o["x_d"][k], color=MUTED, size=5, zorder=24, hollow=True)
     for i in range(3):
-        s.dot(o["x_Qd"][k][i], color=MUTED, size=3.6, zorder=25, hollow=True)
+        s.dot(o["x_Qd"][k][i], color=MUTED, size=4.6, zorder=99, hollow=True)
     front = o["x_L"][k][0] > m.GAP_X + 0.1
     draw_team(s, o["x_L"][k], o["R_L"][k], o["x_Q"][k], o["R"][k], p, tension=o["T"][k], zorder=70 if front else 30)
     active = bool(o["filtered"][k])
@@ -160,7 +160,7 @@ def flight_frame(u):
     s.text2d(-1.45, 3.5, f"t = {t:4.1f} s", fontsize=10, ha="left", **SANS)
     s.text2d(-1.45, 3.2, "shown at real speed", fontsize=8.5, ha="left", color=MUTED, **SANS)
     # live tension bars
-    x0, y0, scale = 5.35, 3.5, 0.42
+    x0, y0, scale = 4.75, 3.5, 0.42
     s.text2d(x0 - 0.1, y0, "tensions", fontsize=9, ha="right", **SANS)
     for i in range(3):
         y = y0 - 0.2 * i
@@ -191,7 +191,7 @@ def flight_frame(u):
 
 def flight():
     animate(flight_frame, OUT / "ch19-flight.gif", OUT / "ch19-flight-strip.png", n=132, fps=11,
-            width_px=700, stills=(0.08, 0.33, 0.44, 1.0), strip_px=900, strip_cols=2, colors=48)
+            width_px=700, stills=(0.08, 0.315, 0.44, 1.0), strip_px=900, strip_cols=2, colors=48)
 
 
 # ------------------------------------------------------------------ 4. what each protection does
@@ -223,7 +223,7 @@ def cable_frame(u):
     C = data()["series"]["chain"]["track"]
     k = min(int(round(u * (len(C["t"]) - 1))), len(C["t"]) - 1)
     t = float(C["t"][k])
-    s = Scene(width=6.6, height=3.6, azim=-72, elev=17, xlim=(-1.15, 1.45), ylim=(0.55, 2.0))
+    s = Scene(width=6.6, height=3.0, azim=-72, elev=17, xlim=(-1.15, 1.45), ylim=(0.78, 1.96))
     x, xd = C["x"][k], C["x_d"][k]
     tail = C["x_d"][:, -1]
     s.curve(tail, color=MUTED, lw=0.8, alpha=1.0, zorder=8, linestyle=DASH)
@@ -235,16 +235,16 @@ def cable_frame(u):
         s.dot(pt, color=INDIGO, size=3.2, zorder=31)
     for j, end in enumerate((0, -1)):
         quadrotor(s, x[end], C["R"][k][j], arm=0.16, lw=1.4, zorder=40)
-    s.text2d(-1.08, 1.93, f"t = {t:3.1f} s", fontsize=10, ha="left", **SANS)
-    s.text2d(-1.08, 1.86, "shown at real speed", fontsize=8.5, ha="left", color=MUTED, **SANS)
-    s.text2d(1.38, 1.93, f"largest joint error {100 * float(C['err'][k]):4.1f} cm", fontsize=10, ha="right", **SANS)
+    s.text2d(-1.08, 1.9, f"t = {t:3.1f} s", fontsize=10, ha="left", **SANS)
+    s.text2d(-1.08, 1.83, "shown at real speed", fontsize=8.5, ha="left", color=MUTED, **SANS)
+    s.text2d(1.38, 1.9, f"largest joint error {100 * float(C['err'][k]):4.1f} cm", fontsize=10, ha="right", **SANS)
     if t < 1.2:
         msg, col = "start: every link 12° off, one end 8 cm off", TERRACOTTA
     elif t < 3.0:
         msg, col = "the LQR about the flat reference pulls the cable onto it", INDIGO
     else:
         msg, col = "five links and two vehicles on a reference drawn for one joint", INDIGO
-    caption(s, msg, color=col, y=0.62)
+    caption(s, msg, color=col, y=0.84)
     return s
 
 

@@ -7,8 +7,10 @@ What is assembled here, and from where:
 * the stance dynamics of the Reaction Mass Biped: the robot model library
   (case_studies/robots/reaction_mass_biped.py), derived again with geomech;
 * the floating-base model, the impact map, the motion primitive, the two tracking
-  laws, the hybrid simulation, the linearization and the LQR: written here, each
-  checked below.
+  laws, the hybrid walking loop, the linearization and the thesis's explicit update:
+  the robot model library (case_studies/robots/biped_walking.py), each checked below;
+* the pendulum deadline, the skater, the turn plan, the LQR and the comparison table:
+  written here.
 
 Run:  python verify/ch20.py
 """
@@ -17,7 +19,7 @@ from __future__ import annotations
 import ast
 import sys
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -27,8 +29,14 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "case_studies"))
 
 import robots  # noqa: E402
-from common import Checker, Rx, Ry, Rz, expm_so3, hat, random_rotation, vee  # noqa: E402
-from robots.core import log_so3  # noqa: E402
+from common import Checker, expm_so3, hat, random_rotation, vee  # noqa: E402
+from robots.biped_walking import (BookGains, Gait, ThesisGains, angular_momentum_about,  # noqa: E402
+                                  book_e_R, book_law, book_V0, e_right, error_state,
+                                  explicit_update, floating_lagrangian, hip_velocity, impact,
+                                  impact_kkt, impact_matrices, kinetic_floating, pack_u, perturbed,
+                                  primitive, primitive_state, Psi_right, relabel, thesis_law,
+                                  thesis_V, thesis_V_rate, torso_inertia_rate, unpack_u, walk,
+                                  accel_vector, attitude_angle)
 
 E1, E2, E3 = np.eye(3)
 I3 = np.eye(3)
@@ -42,320 +50,7 @@ M_TOT = PRM.m                                        # 2 m_leg + 6 m_r
 
 
 # =====================================================================
-# 1. The floating-base model and the impact map
-# =====================================================================
-# Floating-base state: hip position x_P and velocity v_P, the three attitudes and
-# body rates, the slides. Both leg axes R1 e3 and R2 e3 point from foot to hip, so
-#     stance foot = x_P - l R1 e3,     swing foot = x_P - l_0 R2 e3.
-def hip_velocity(l, l_dot, R1, Omega1):
-    """Velocity of the hip x_P = l R1 e3 in stance."""
-    return l_dot * R1 @ E3 + l * R1 @ np.cross(Omega1, E3)
-
-
-def swing_foot(state, l_0):
-    """Position of the swing foot relative to the stance foot."""
-    return state.l * state.R1 @ E3 - l_0 * state.R2 @ E3
-
-
-def swing_foot_velocity(state, l_0):
-    return hip_velocity(state.l, state.l_dot, state.R1, state.Omega1) \
-        - l_0 * state.R2 @ np.cross(state.Omega2, E3)
-
-
-def impact(state, l_0, p=PRM):
-    """The swing foot lands and sticks: eq20-impact.
-
-    Returns (new stance state, impulse on the foot, step vector). Only the swing
-    leg and the hip velocity change:
-        J(l_0) Omega2+ = J_0 Omega2- + m l_0 e3 x R2^T v_P-,   J(l) = J_0 + m l^2 Pi,
-        v_P+ = l_0 R2 (Omega2+ x e3),      impulse = m (v_P+ - v_P-).
-    Then the legs trade names: the old swing leg is the new stance leg.
-    """
-    m = p.m
-    v_minus = hip_velocity(state.l, state.l_dot, state.R1, state.Omega1)
-    J_c = p.J_0 + m * l_0**2 * PI
-    Omega2_plus = np.linalg.solve(J_c, p.J_0 @ state.Omega2 + m * l_0 * np.cross(E3, state.R2.T @ v_minus))
-    v_plus = l_0 * state.R2 @ np.cross(Omega2_plus, E3)
-    new = replace(state, l=l_0, l_dot=0.0, R1=state.R2, Omega1=Omega2_plus,
-                  R2=state.R1, Omega2=state.Omega1)
-    return new, m * (v_plus - v_minus), swing_foot(state, l_0)
-
-
-def impact_matrices(R2, slide, l_0, p=PRM):
-    """D and A of the floating-base model in the velocity order
-    (Omega1, OmegaP, slide_dot, Omega2, v_P): D v+ - D v- = A^T impulse, A v+ = 0."""
-    D = np.zeros((15, 15))
-    D[0:3, 0:3] = p.J_0
-    D[3:6, 3:6] = biped.torso_inertia(slide, p)
-    D[6:9, 6:9] = 2 * p.m_r * I3
-    D[9:12, 9:12] = p.J_0
-    D[12:15, 12:15] = p.m * I3
-    A = np.zeros((3, 15))
-    A[:, 9:12] = l_0 * R2 @ hat(E3)          # d/dt(-l_0 R2 e3) = l_0 R2 hat(e3) Omega2
-    A[:, 12:15] = I3
-    return D, A
-
-
-def impact_kkt(state, l_0, p=PRM, rhs_sign=+1.0):
-    """The impact solved as the linear system of the thesis, eq. (5.20), with the right
-    side +D v- (rhs_sign=-1 gives the system as printed)."""
-    D, A = impact_matrices(state.R2, state.slide, l_0, p)
-    v = np.concatenate([state.Omega1, state.OmegaP, state.slide_dot, state.Omega2,
-                        hip_velocity(state.l, state.l_dot, state.R1, state.Omega1)])
-    K = np.block([[D, -A.T], [A, np.zeros((3, 3))]])
-    sol = np.linalg.solve(K, np.concatenate([rhs_sign * D @ v, np.zeros(3)]))
-    return v, sol[:15], sol[15:], D, A
-
-
-def relabel(v):
-    """Trade the names of the legs in the floating-base velocity."""
-    return np.concatenate([v[9:12], v[3:9], v[0:3], v[12:15]])
-
-
-def particles(state, v_P, p=PRM):
-    """The point masses of the floating-base model: (mass, position from the hip, velocity)."""
-    out = [(2 * p.m_leg, np.zeros(3), v_P)]
-    for i in range(3):
-        a = state.RP[:, i]
-        a_dot = state.RP @ np.cross(state.OmegaP, np.eye(3)[i])
-        for sign in (1.0, -1.0):
-            out.append((p.m_r, sign * state.slide[i] * a,
-                        v_P + sign * (state.slide_dot[i] * a + state.slide[i] * a_dot)))
-    return out
-
-
-def angular_momentum_about(point_from_hip, state, v_P, Omega1, OmegaP, Omega2, p=PRM):
-    """World-frame angular momentum about a point, built mass by mass."""
-    H = state.R1 @ p.J_0 @ Omega1 + state.RP @ p.J_P @ OmegaP + state.R2 @ p.J_0 @ Omega2
-    for mass, r, v in particles(replace(state, OmegaP=OmegaP), v_P, p):
-        H = H + mass * np.cross(r - point_from_hip, v)
-    return H
-
-
-def kinetic_floating(state, v_P, Omega1, OmegaP, Omega2, slide_dot, p=PRM):
-    """Kinetic energy of the floating-base model, built mass by mass."""
-    T = 0.5 * (Omega1 @ p.J_0 @ Omega1 + OmegaP @ p.J_P @ OmegaP + Omega2 @ p.J_0 @ Omega2)
-    for mass, _, v in particles(replace(state, OmegaP=OmegaP, slide_dot=slide_dot), v_P, p):
-        T += 0.5 * mass * v @ v
-    return T
-
-
-# =====================================================================
-# 2. The motion primitive (thesis eqs. 5.41 and 5.42, in the book's convention)
-# =====================================================================
-@dataclass
-class Gait:
-    l_0: float = 0.9                    # nominal leg length, m        (thesis rho_0)
-    l_bar: float = 0.1                  # leg extension in mid-stance  (thesis rho_bar)
-    r_0: float = 0.125                  # nominal slide, m             (thesis s)
-    r_bar: float = 0.025                # slide excursion, m           (thesis s_bar)
-    t_s: float = 1.0                    # duration of the primitive, s (thesis T)
-    theta_s: float = np.radians(15.0)   # legs swing from -15 to 15 degrees
-    lean: float = np.radians(10.0)      # torso pitch, forward (our choice)
-    roll: float = 0.0                   # torso roll into a turn
-
-
-def primitive(t, psi, gait):
-    """Desired stance state and accelerations at time t of a step with heading psi."""
-    w = np.pi / gait.t_s
-    th_s = gait.theta_s
-    th = -th_s + 2 * th_s * np.sin(w * t / 2)
-    th1 = th_s * w * np.cos(w * t / 2)
-    th2 = -0.5 * th_s * w**2 * np.sin(w * t / 2)
-    Rpsi = Rz(psi)
-    one = np.ones(3)
-    return dict(
-        l=gait.l_0 + gait.l_bar * np.sin(w * t), l_dot=gait.l_bar * w * np.cos(w * t),
-        l_ddot=-gait.l_bar * w**2 * np.sin(w * t),
-        R1=Rpsi @ Ry(th), Omega1=th1 * E2, Omega1_dot=th2 * E2,
-        R2=Rpsi @ Ry(-th), Omega2=-th1 * E2, Omega2_dot=-th2 * E2,
-        RP=Rpsi @ Rx(gait.roll) @ Ry(gait.lean), OmegaP=np.zeros(3), OmegaP_dot=np.zeros(3),
-        slide=(gait.r_0 + gait.r_bar * np.sin(w * t)) * one,
-        slide_dot=gait.r_bar * w * np.cos(w * t) * one,
-        slide_ddot=-gait.r_bar * w**2 * np.sin(w * t) * one)
-
-
-def primitive_state(t, psi, gait):
-    d = primitive(t, psi, gait)
-    return biped.State(l=d["l"], l_dot=d["l_dot"], R1=d["R1"], Omega1=d["Omega1"], RP=d["RP"],
-                       OmegaP=d["OmegaP"], R2=d["R2"], Omega2=d["Omega2"], slide=d["slide"],
-                       slide_dot=d["slide_dot"])
-
-
-# =====================================================================
-# 3. Two tracking laws
-# =====================================================================
-@dataclass
-class ThesisGains:
-    """Table 5.3 of the thesis with eps = 0.25. The table lists L and no D_P: we use
-    L as the torso damping."""
-    eps: float = 0.25
-
-    @property
-    def k_l(self):
-        return 16 / self.eps**2
-
-    @property
-    def k_ldot(self):
-        return 8 / self.eps
-
-    @property
-    def D(self):
-        return np.array([1.2, 1.5, 1.8]) / self.eps**2
-
-    @property
-    def k_Omega(self):
-        """Damping of the stance leg, the torso and the swing leg."""
-        return 2 / self.eps, 1.5 * 1.2, 0.5 / self.eps
-
-    @property
-    def k_r(self):
-        return 1.2 / self.eps**2
-
-    @property
-    def k_rdot(self):
-        return 1.5 / self.eps
-
-
-def Psi_right(R, Rd, D):
-    """tr(D (I - R Rd^T)): the weighted error function of the thesis."""
-    return float(np.sum(D * (1.0 - np.diag(R @ Rd.T))))
-
-
-def e_right(R, Rd, D):
-    """Slope of Psi_right under delta R = R hat(eta): sum_i d_i (R^T e_i) x (Rd^T e_i)."""
-    return sum(D[i] * np.cross(R[i, :], Rd[i, :]) for i in range(3))
-
-
-def torso_inertia_rate(slide, slide_dot, p=PRM):
-    return 4 * p.m_r * sum(s * sd * P for s, sd, P in zip(slide, slide_dot, PI_I))
-
-
-def _stack(n_1, n_P, n_2, state):
-    """Joint torques (tau_1, tau_P, tau_2) that put the net torques n on the bodies."""
-    tau_2 = n_2
-    tau_P = n_P + state.RP.T @ state.R2 @ tau_2
-    tau_1 = n_1 + state.R1.T @ state.RP @ tau_P
-    return tau_1, tau_P, tau_2
-
-
-def thesis_law(state, d, gains=ThesisGains(), p=PRM):
-    """Thesis eqs. (5.61) to (5.65) with Phi the identity, gravity along -e3."""
-    m, D = p.m, gains.D
-    k1, kP, k2 = gains.k_Omega
-    l, l_dot, R1, Om1 = state.l, state.l_dot, state.R1, state.Omega1
-    f = (m * d["l_ddot"] - m * l * Om1 @ PI @ Om1 + m * G * E3 @ (R1 @ E3)
-         - gains.k_l * (l - d["l"]) - gains.k_ldot * (l_dot - d["l_dot"]))
-    J1 = p.J_0 + m * l**2 * PI
-    n_1 = (J1 @ d["Omega1_dot"] + np.cross(d["Omega1"], J1 @ Om1)
-           - m * G * l * np.cross(R1.T @ E3, E3) + m * l * l_dot * PI @ (Om1 + d["Omega1"])
-           - e_right(R1, d["R1"], D) - k1 * (Om1 - d["Omega1"]))
-    JP = biped.torso_inertia(state.slide, p)
-    JP_dot = torso_inertia_rate(state.slide, state.slide_dot, p)
-    OmP = state.OmegaP
-    n_P = (np.cross(d["OmegaP"], JP @ OmP) + JP @ d["OmegaP_dot"] + 0.5 * JP_dot @ (OmP + d["OmegaP"])
-           - e_right(state.RP, d["RP"], D) - kP * (OmP - d["OmegaP"]))
-    Om2 = state.Omega2
-    n_2 = (np.cross(d["Omega2"], p.J_0 @ Om2) + p.J_0 @ d["Omega2_dot"]
-           - e_right(state.R2, d["R2"], D) - k2 * (Om2 - d["Omega2"]))
-    f_s = (2 * p.m_r * d["slide_ddot"]
-           - 2 * p.m_r * np.array([s * OmP @ P @ OmP for s, P in zip(state.slide, PI_I)])
-           - gains.k_r * (state.slide - d["slide"]) - gains.k_rdot * (state.slide_dot - d["slide_dot"]))
-    tau_1, tau_P, tau_2 = _stack(n_1, n_P, n_2, state)
-    return f, tau_1, tau_P, tau_2, f_s
-
-
-def thesis_V(state, d, gains=ThesisGains(), p=PRM):
-    """The Lyapunov function of the thesis, eq. (5.66), with Phi the identity."""
-    m, D = p.m, gains.D
-    J1 = p.J_0 + m * state.l**2 * PI
-    JP = biped.torso_inertia(state.slide, p)
-    w1, wP, w2 = state.Omega1 - d["Omega1"], state.OmegaP - d["OmegaP"], state.Omega2 - d["Omega2"]
-    rt, rt_dot = state.slide - d["slide"], state.slide_dot - d["slide_dot"]
-    return (0.5 * m * (state.l_dot - d["l_dot"])**2 + 0.5 * gains.k_l * (state.l - d["l"])**2
-            + 0.5 * w1 @ J1 @ w1 + Psi_right(state.R1, d["R1"], D)
-            + 0.5 * wP @ JP @ wP + p.m_r * rt_dot @ rt_dot + 0.5 * gains.k_r * rt @ rt
-            + Psi_right(state.RP, d["RP"], D)
-            + 0.5 * w2 @ p.J_0 @ w2 + Psi_right(state.R2, d["R2"], D))
-
-
-def thesis_V_rate(state, d, gains=ThesisGains()):
-    """Thesis eq. (5.70)."""
-    k1, kP, k2 = gains.k_Omega
-    w1, wP, w2 = state.Omega1 - d["Omega1"], state.OmegaP - d["OmegaP"], state.Omega2 - d["Omega2"]
-    rt_dot = state.slide_dot - d["slide_dot"]
-    return -(gains.k_ldot * (state.l_dot - d["l_dot"])**2 + k1 * w1 @ w1 + kP * wP @ wP
-             + k2 * w2 @ w2 + gains.k_rdot * rt_dot @ rt_dot)
-
-
-@dataclass
-class BookGains:
-    """Scalar gains for eq6-law on each factor, matched to the thesis gains near zero error."""
-    k_l: float = 256.0
-    k_ldot: float = 32.0
-    k_R: tuple = (48.0, 48.0, 48.0)          # stance leg, torso, swing leg
-    k_Omega: tuple = (8.0, 1.8, 2.0)
-    k_r: float = 19.2
-    k_rdot: float = 6.0
-    half_rate: bool = True                   # the term -(1/2) J_dot e_Omega
-    feedforward: bool = True
-
-
-def book_e_R(R, Rd):
-    return 0.5 * vee(Rd.T @ R - R.T @ Rd)
-
-
-def book_law(state, d, gains=BookGains(), p=PRM):
-    """eq6-law on each of the three factors, with the gravity torque canceled and the
-    two terms that a configuration-dependent inertia adds: + J_dot Omega - (1/2) J_dot e_Omega."""
-    m = p.m
-    ff = 1.0 if gains.feedforward else 0.0
-    l, l_dot, R1 = state.l, state.l_dot, state.R1
-    f = (ff * m * d["l_ddot"] - m * l * state.Omega1 @ PI @ state.Omega1 + m * G * E3 @ (R1 @ E3)
-         - gains.k_l * (l - d["l"]) - gains.k_ldot * (l_dot - ff * d["l_dot"]))
-    J1 = p.J_0 + m * l**2 * PI
-    J1_dot = 2 * m * l * l_dot * PI
-    JP = biped.torso_inertia(state.slide, p)
-    JP_dot = torso_inertia_rate(state.slide, state.slide_dot, p)
-    n = []
-    for i, (R, Om, J, J_dot, key) in enumerate(((R1, state.Omega1, J1, J1_dot, "1"),
-                                                 (state.RP, state.OmegaP, JP, JP_dot, "P"),
-                                                 (state.R2, state.Omega2, p.J_0, 0 * I3, "2"))):
-        Rd, Omd, Omd_dot = d["R" + key], ff * d["Omega" + key], ff * d["Omega" + key + "_dot"]
-        e_Omega = Om - R.T @ Rd @ Omd
-        tau = (-gains.k_R[i] * book_e_R(R, Rd) - gains.k_Omega[i] * e_Omega
-               + np.cross(Om, J @ Om) - J @ (np.cross(Om, R.T @ Rd @ Omd) - R.T @ Rd @ Omd_dot)
-               + J_dot @ Om - (0.5 * J_dot @ e_Omega if gains.half_rate else 0.0))
-        n.append(tau)
-    n[0] = n[0] - m * G * l * np.cross(R1.T @ E3, E3)
-    OmP = state.OmegaP
-    f_s = (ff * 2 * p.m_r * d["slide_ddot"]
-           - 2 * p.m_r * np.array([s * OmP @ P @ OmP for s, P in zip(state.slide, PI_I)])
-           - gains.k_r * (state.slide - d["slide"]) - gains.k_rdot * (state.slide_dot - ff * d["slide_dot"]))
-    tau_1, tau_P, tau_2 = _stack(n[0], n[1], n[2], state)
-    return f, tau_1, tau_P, tau_2, f_s
-
-
-def book_V0(state, d, gains=BookGains(), p=PRM):
-    """Sum over the factors of eq6-V0, plus the two PD energies of the lengths."""
-    m = p.m
-    J1 = p.J_0 + m * state.l**2 * PI
-    JP = biped.torso_inertia(state.slide, p)
-    V = 0.5 * m * (state.l_dot - d["l_dot"])**2 + 0.5 * gains.k_l * (state.l - d["l"])**2
-    rt, rt_dot = state.slide - d["slide"], state.slide_dot - d["slide_dot"]
-    V += p.m_r * rt_dot @ rt_dot + 0.5 * gains.k_r * rt @ rt
-    rate = -gains.k_ldot * (state.l_dot - d["l_dot"])**2 - gains.k_rdot * rt_dot @ rt_dot
-    for i, (R, Om, J, key) in enumerate(((state.R1, state.Omega1, J1, "1"), (state.RP, state.OmegaP, JP, "P"),
-                                         (state.R2, state.Omega2, p.J_0, "2"))):
-        Rd = d["R" + key]
-        e_Omega = Om - R.T @ Rd @ d["Omega" + key]
-        V += 0.5 * e_Omega @ J @ e_Omega + gains.k_R[i] * 0.5 * np.trace(I3 - Rd.T @ R)
-        rate += -gains.k_Omega[i] * e_Omega @ e_Omega
-    return V, rate
-
-
-# =====================================================================
-# 4. The hybrid simulation
+# 1. The step of the library, written out for the biped
 # =====================================================================
 def _dexpinv(x, y):
     return y + 0.5 * np.cross(x, y) + np.cross(x, np.cross(x, y)) / 12.0
@@ -364,7 +59,8 @@ def _dexpinv(x, y):
 def fast_step(state, u, h, p=PRM):
     """The step of the library (robots/core.py, Robot.step) written out for the biped:
     classical Runge-Kutta stages on one increment per factor, exponential update.
-    Checked against the step of the library in verify/ch20.py. It is faster, nothing else."""
+    Checked below to give the same states as the library's step, which the library's walk
+    uses. Kept because the notebook inlines it; it is no faster than ReactionMassBiped.step."""
     S = biped.State
     R1, RP, R2 = state.R1, state.RP, state.R2
     z = np.zeros(3)
@@ -392,177 +88,9 @@ def fast_step(state, u, h, p=PRM):
              slide=state.slide + inc[4], slide_dot=vel[4])
 
 
-def hip_acceleration(state, acc):
-    """Second derivative of x_P = l R1 e3 from the stance accelerations."""
-    l, ld, R, Om = state.l, state.l_dot, state.R1, state.Omega1
-    l_dd, Om_d = acc[0], acc[1]
-    return R @ (l_dd * E3 + 2 * ld * np.cross(Om, E3)
-                + l * (np.cross(Om_d, E3) + np.cross(Om, np.cross(Om, E3))))
-
-
-def attitude_angle(R, Rd):
-    return float(np.linalg.norm(log_so3(Rd.T @ R)))
-
-
-def walk(headings, gait=Gait(), law=thesis_law, gains=None, h=1e-3, state0=None, rolls=None,
-         max_step_time=3.0, p=PRM, record=5):
-    """Walk len(headings) steps. Step i tracks the primitive with heading headings[i]; it
-    ends when the swing foot comes down to the ground, where the impact map is applied.
-
-    The controller is sampled every h and held (the library step). Returns a dict of
-    arrays sampled every h and a list of per-step summaries."""
-    gains = gains if gains is not None else (ThesisGains() if law is thesis_law else BookGains())
-    state = state0 if state0 is not None else primitive_state(0.0, headings[0], gait)
-    foot = np.zeros(3)
-    log = {k: [] for k in ("t", "step", "hip", "foot", "swing", "R1", "RP", "R2", "l", "slide", "e_l", "e_r",
-                           "a1", "aP", "a2", "V", "F", "tau_1", "tau_P", "tau_2", "f", "E", "H_foot", "ts")}
-    steps, t0 = [], 0.0
-    peak = dict(tau_1=np.zeros(3), tau_P=np.zeros(3), tau_2=np.zeros(3))
-    for i, psi in enumerate(headings):
-        g_i = gait if rolls is None else replace(gait, roll=rolls[i])
-        ts, done, count = 0.0, False, 0
-        clearance, e_start = np.inf, None
-        while not done:
-            d = primitive(ts, psi, g_i)
-            u = law(state, d, gains, p)
-            for key, val in zip(("tau_1", "tau_P", "tau_2"), u[1:4]):
-                peak[key] = np.maximum(peak[key], np.abs(val))
-            count += 1
-            if record and (count - 1) % record == 0:
-                acc = biped.dynamics(state, u, p)
-                F = M_TOT * (hip_acceleration(state, acc) + G * E3)
-                hip = foot + state.l * state.R1 @ E3
-                vP = hip_velocity(state.l, state.l_dot, state.R1, state.Omega1)
-                for k, val in (("t", t0 + ts), ("step", i), ("hip", hip), ("foot", foot.copy()),
-                               ("swing", foot + swing_foot(state, gait.l_0)), ("R1", state.R1),
-                               ("RP", state.RP), ("R2", state.R2), ("l", state.l), ("slide", state.slide.copy()),
-                               ("e_l", state.l - d["l"]), ("e_r", np.linalg.norm(state.slide - d["slide"])),
-                               ("a1", attitude_angle(state.R1, d["R1"])), ("aP", attitude_angle(state.RP, d["RP"])),
-                               ("a2", attitude_angle(state.R2, d["R2"])),
-                               ("V", thesis_V(state, d, gains, p) if law is thesis_law else book_V0(state, d, gains, p)[0]),
-                               ("F", F), ("tau_1", u[1]), ("tau_P", u[2]), ("tau_2", u[3]), ("f", u[0]),
-                               ("E", biped.energy(state, p)),
-                               ("H_foot", angular_momentum_about(state.l * state.R1 @ E3, state, vP, state.Omega1,
-                                                                 state.OmegaP, state.Omega2, p)),
-                               ("ts", ts)):
-                    log[k].append(val)
-            if e_start is None:
-                e_start = (attitude_angle(state.R1, d["R1"]), attitude_angle(state.R2, d["R2"]))
-            new = fast_step(state, u, h, p)
-            z0, z1 = swing_foot(state, gait.l_0)[2], swing_foot(new, gait.l_0)[2]
-            if ts > 0.5 * gait.t_s and z1 <= 0.0 < z0:
-                lo, hi = 0.0, h                               # bisect for the touchdown time
-                for _ in range(50):
-                    mid = 0.5 * (lo + hi)
-                    if swing_foot(fast_step(state, u, mid, p), gait.l_0)[2] > 0.0:
-                        lo = mid
-                    else:
-                        hi = mid
-                state, ts, done = fast_step(state, u, hi, p), ts + hi, True
-            else:
-                if 0.1 * gait.t_s < ts < 0.9 * gait.t_s:
-                    clearance = min(clearance, z1)
-                state, ts = new, ts + h
-                if ts > max_step_time:
-                    raise RuntimeError(f"step {i}: no touchdown within {max_step_time} s")
-        d = primitive(ts, psi, g_i)
-        pre = state
-        E_minus = biped.energy(pre, p)
-        state, impulse, stride = impact(pre, gait.l_0, p)
-        steps.append(dict(step_time=ts, step_vector=stride, step_length=float(np.linalg.norm(stride[:2])),
-                          foot_height_error=float(stride[2]), impulse=impulse, clearance=clearance,
-                          e_start=e_start, e_end=(attitude_angle(pre.R1, d["R1"]), attitude_angle(pre.R2, d["R2"])),
-                          energy_lost=E_minus - biped.energy(state, p), pre=pre, post=state, foot=foot.copy()))
-        foot = foot + np.array([stride[0], stride[1], 0.0])
-        t0 += ts
-    out = {k: np.array(v) for k, v in log.items()}
-    out["final_state"], out["final_foot"], out["peak"] = state, foot, peak
-    return out, steps
-
-
 # =====================================================================
-# 5. The explicit update of the thesis (eqs. 5.36 to 5.40), for comparison
+# 2. The LQR along the primitive, and one stance phase under a given controller
 # =====================================================================
-def explicit_update(state, u, h, p=PRM):
-    """One step of the thesis's discrete equations, in the book's convention and with the
-    sign of the centrifugal term on the slides corrected. Inputs are held."""
-    f, tau_1, tau_P, tau_2, f_s = u
-    m = p.m
-    J1 = p.J_0 + m * state.l**2 * PI
-    JP = biped.torso_inertia(state.slide, p)
-    U1, UP, U2 = (expm_so3(h * w) for w in (state.Omega1, state.OmegaP, state.Omega2))
-    R1, RP, R2 = state.R1 @ U1, state.RP @ UP, state.R2 @ U2
-    l, slide = state.l + h * state.l_dot, state.slide + h * state.slide_dot
-    J1n, JPn = p.J_0 + m * l**2 * PI, biped.torso_inertia(slide, p)
-    Om1 = np.linalg.solve(J1n, U1.T @ J1 @ state.Omega1
-                          + h * (m * G * l * np.cross(R1.T @ E3, E3) + tau_1 - R1.T @ RP @ tau_P))
-    OmP = np.linalg.solve(JPn, UP.T @ JP @ state.OmegaP + h * (tau_P - RP.T @ R2 @ tau_2))
-    Om2 = np.linalg.solve(p.J_0, U2.T @ p.J_0 @ state.Omega2 + h * tau_2)
-    l_dot = state.l_dot + h * (l * Om1 @ PI @ Om1 - G * E3 @ (R1 @ E3) + f / m)
-    slide_dot = state.slide_dot + h * (np.array([s * OmP @ P @ OmP for s, P in zip(slide, PI_I)])
-                                       + np.asarray(f_s) / (2 * p.m_r))
-    return biped.State(l=l, l_dot=l_dot, R1=R1, Omega1=Om1, RP=RP, OmegaP=OmP, R2=R2, Omega2=Om2,
-                       slide=slide, slide_dot=slide_dot)
-
-
-# =====================================================================
-# 6. Linearization about the primitive and a time-varying LQR
-# =====================================================================
-# Linear state s = (dl, dr, eta_1, eta_P, eta_2, dl_dot, dr_dot, dOmega_1, dOmega_P, dOmega_2),
-# 26 numbers: the variations of sec7-variation, one block per factor.
-def perturbed(state, s):
-    return biped.State(l=state.l + s[0], slide=state.slide + s[1:4], R1=state.R1 @ expm_so3(s[4:7]),
-                       RP=state.RP @ expm_so3(s[7:10]), R2=state.R2 @ expm_so3(s[10:13]),
-                       l_dot=state.l_dot + s[13], slide_dot=state.slide_dot + s[14:17],
-                       Omega1=state.Omega1 + s[17:20], OmegaP=state.OmegaP + s[20:23],
-                       Omega2=state.Omega2 + s[23:26])
-
-
-def pack_u(u):
-    return np.concatenate([[u[0]], u[1], u[2], u[3], u[4]])
-
-
-def unpack_u(v):
-    return float(v[0]), v[1:4], v[4:7], v[7:10], v[10:13]
-
-
-def accel_vector(state, u, p=PRM):
-    a = biped.dynamics(state, u, p)
-    return np.concatenate([[a[0]], a[4], a[1], a[2], a[3]])       # l, slide, Omega1, OmegaP, Omega2
-
-
-def linearize_stance(state, u, p=PRM, d=1e-6):
-    """A (26 x 26) and B (26 x 13) of s_dot = A s + B du about a state and input.
-
-    The kinematic rows are exact: d(dl)/dt = dl_dot, d(eta)/dt = dOmega - Omega x eta
-    (eq3-delta-Omega). The dynamic rows are central differences of the library dynamics
-    along the variations."""
-    A, B = np.zeros((26, 26)), np.zeros((26, 13))
-    A[0:4, 13:17] = np.eye(4)
-    for k, Om in enumerate((state.Omega1, state.OmegaP, state.Omega2)):
-        A[4 + 3 * k:7 + 3 * k, 4 + 3 * k:7 + 3 * k] = -hat(Om)
-        A[4 + 3 * k:7 + 3 * k, 17 + 3 * k:20 + 3 * k] = I3
-    for j in range(26):
-        e = np.zeros(26)
-        e[j] = d
-        A[13:, j] = (accel_vector(perturbed(state, e), u, p) - accel_vector(perturbed(state, -e), u, p)) / (2 * d)
-    uv = pack_u(u)
-    for j in range(13):
-        e = np.zeros(13)
-        e[j] = 1.0
-        B[13:, j] = (accel_vector(state, unpack_u(uv + e), p) - accel_vector(state, unpack_u(uv - e), p)) / 2
-    return A, B
-
-
-def error_state(state, d):
-    """The error state of sec13-error on the product: logarithm errors and velocity deviations."""
-    return np.concatenate([[state.l - d["l"]], state.slide - d["slide"],
-                           log_so3(d["R1"].T @ state.R1), log_so3(d["RP"].T @ state.RP),
-                           log_so3(d["R2"].T @ state.R2),
-                           [state.l_dot - d["l_dot"]], state.slide_dot - d["slide_dot"],
-                           state.Omega1 - d["Omega1"], state.OmegaP - d["OmegaP"], state.Omega2 - d["Omega2"]])
-
-
 def nominal_input(t, psi, gait, p=PRM):
     """The input that keeps the biped on the primitive: the law evaluated with zero error."""
     return thesis_law(primitive_state(t, psi, gait), primitive(t, psi, gait), ThesisGains(), p)
@@ -575,7 +103,7 @@ def lqr_gains(psi, gait, Q, R_u, P_f, n=200, p=PRM):
     R_inv = np.linalg.inv(R_u)
 
     def AB(t):
-        return linearize_stance(primitive_state(t, psi, gait), nominal_input(t, psi, gait, p), p)
+        return biped.linearize(primitive_state(t, psi, gait), nominal_input(t, psi, gait, p), p)
 
     mats = {}
 
@@ -622,7 +150,7 @@ def stance_phase(state0, psi, gait, controller, h=1e-3, p=PRM):
 
 
 # =====================================================================
-# 7. The 3D pendulum of Chapter 6, taken from verify/ch06.py
+# 3. The 3D pendulum of Chapter 6, taken from verify/ch06.py
 # =====================================================================
 def chapter6_pendulum():
     """tau_geo, tau_euler and fl_run of verify/ch06.py, compiled from its source with the
@@ -668,31 +196,6 @@ def pendulum_deadline(ns, angle_deg, n, deadline, rng):
             row += [left, peak, sol.y[12, -1]]
         rows.append(row)
     return np.array(rows)
-
-
-# =====================================================================
-# 8. The floating-base model derived by geomech
-# =====================================================================
-def floating_lagrangian():
-    """The Lagrangian of the floating-base model, built mass by mass, with no inputs."""
-    from geomech import SO3, Dot, Matrix, Scalar, SystemVariables, Vector, getScalars
-    half = Scalar("0.5", value=0.5, attr=["Constant"])
-    m_leg, m_r, g = getScalars("m_leg m_r g", attr=["Constant"])
-    J_0 = Matrix("J_0", attr=["Constant", "SymmetricMatrix"])
-    J_P = Matrix("J_P", attr=["Constant", "SymmetricMatrix"])
-    e = [Vector(f"e{i}", attr=["Constant"]) for i in (1, 2, 3)]
-    x, R1, RP, R2 = Vector("x"), SO3("R1"), SO3("RP"), SO3("R2")
-    s = [Scalar(f"s{i}") for i in (1, 2, 3)]
-    Om1, OmP, Om2 = (R.get_tangent_vector() for R in (R1, RP, R2))
-    v = x.t_diff()
-    L = (m_leg * Dot(v, v) - (m_leg + m_leg) * g * Dot(e[2], x)
-         + half * Dot(Om1, J_0 * Om1) + half * Dot(OmP, J_P * OmP) + half * Dot(Om2, J_0 * Om2))
-    for si, ei in zip(s, e):
-        for sign in (1.0, -1.0):
-            side = Scalar(str(sign), value=sign, attr=["Constant"])
-            pt = x + (RP * ei) * si * side
-            L = L + half * m_r * Dot(pt.t_diff(), pt.t_diff()) - m_r * g * Dot(e[2], pt)
-    return L, SystemVariables(scalars=s, vectors=[x], matrices=[R1, RP, R2])
 
 
 def run_table_row(law, gains, gait, n_steps=8, psi=0.0, done=None):
@@ -1120,7 +623,7 @@ def main():
         st = primitive_state(t, 0.3, gait)
         st = perturbed(st, 0.05 * rng.normal(size=26))
         u = nominal_input(t, 0.3, gait)
-        A, B = linearize_stance(st, u)
+        A, B = biped.linearize(st, u)
         a = accelerations(gm, gm_pack(st), pack_u(u), gm_p)
         Mg = np.asarray(gl.M_lin(gm_pack(st), a, pack_u(u), gm_p))
         Ag = np.linalg.solve(Mg, np.asarray(gl.A_lin(gm_pack(st), a, pack_u(u), gm_p)))
@@ -1137,9 +640,9 @@ def main():
     for k in range(100):
         t = t0 + k * hh
         u = nominal_input(t, 0.0, gait)
-        A, _ = linearize_stance(primitive_state(t, 0.0, gait), u)
-        A2, _ = linearize_stance(primitive_state(t + hh / 2, 0.0, gait), nominal_input(t + hh / 2, 0.0, gait))
-        A3, _ = linearize_stance(primitive_state(t + hh, 0.0, gait), nominal_input(t + hh, 0.0, gait))
+        A, _ = biped.linearize(primitive_state(t, 0.0, gait), u)
+        A2, _ = biped.linearize(primitive_state(t + hh / 2, 0.0, gait), nominal_input(t + hh / 2, 0.0, gait))
+        A3, _ = biped.linearize(primitive_state(t + hh, 0.0, gait), nominal_input(t + hh, 0.0, gait))
         k1 = A @ s
         k2 = A2 @ (s + hh / 2 * k1)
         k3 = A2 @ (s + hh / 2 * k2)
@@ -1152,7 +655,7 @@ def main():
     ck.true("the linear model predicts a neighbor of the primitive over 0.2 s of open-loop motion to within 1%", rel < 0.01, f"rel err {rel:.1e}, growth x{np.linalg.norm(actual) / np.linalg.norm(s0):.1f}")
     ck.record("linear_prediction", {"rel_err": float(rel), "growth": float(np.linalg.norm(actual) / np.linalg.norm(s0))})
     # open loop, the stance phase is unstable: the leg is an inverted pendulum
-    A_mid, _ = linearize_stance(primitive_state(0.5, 0.0, gait), nominal_input(0.5, 0.0, gait))
+    A_mid, _ = biped.linearize(primitive_state(0.5, 0.0, gait), nominal_input(0.5, 0.0, gait))
     lam = float(np.linalg.eigvals(A_mid).real.max())
     ck.true("the linearization at mid-stance has an unstable eigenvalue near sqrt(m g l / J_2(l))",
             abs(lam - np.sqrt(p.m * G * 1.0 / (p.J_0[1, 1] + p.m * 1.0))) < 0.15, f"{lam:.2f} 1/s")

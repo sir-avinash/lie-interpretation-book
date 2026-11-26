@@ -151,7 +151,7 @@ $$
 
 and the torso and the slides carry over. The new stance leg starts with $\dot l = 0$, because $v_P^{+}$ is perpendicular to its axis. The stance foot moves to $x_c$.
 
-The library has no impact map, so [](#eq20-impact) is implemented in the script of this chapter, and checked five ways at 50 random states.
+The robot library implements [](#eq20-impact) next to the stance model, and the script of this chapter checks it five ways at 50 random states.
 
 1. *Against the full system.* Solving the 18 equations of [](#eq20-kkt) gives the same $\Omega_2^+$, $v_P^{+}$ and $p_c$ to $10^{-14}$, and leaves $\Omega_1$, $\Omega_P$ and $\dot r$ untouched.
 2. *Against a second derivation of $D$.* The symbolic library derives the floating-base model from a Lagrangian built mass by mass (`check_eom` $4.5\times10^{-8}$). Its mass matrix equals $D$ to rounding error.

@@ -41,7 +41,7 @@ Do the steps in order. Do not start a step before the check of the previous one 
 
 6. **Tracking cascade** (`ch06-geometric-tracking-control`). Payload wrench: `F_L = m_L (-k_x e_x - k_v e_v + g e3 + x_d_ddot)` and the attitude law for `(R_L, J_L)`. Then step 4, then `q_i,d = -R_L lam_i / |lam_i|`, the sphere law for each cable, the thrust vector
    `F_i = m_i (a_att,i + g e3 + l_i |omega_i|^2 q_i - l_i omega_i_dot x q_i) + (q_i q_i^T) R_L lam_i`
-   with `a_att,i` the commanded acceleration of the attachment, and the attitude law for each vehicle with `R_d` from `F_i`.
+   with `a_att,i` the commanded acceleration of the attachment, and the attitude law for each vehicle with `Rd` from `F_i`.
    Loop speeds: payload position and attitude slowest, cables about three times faster, vehicle attitudes about three times faster again.
    Check: on the reference the cascade returns the flat inputs; on a plan that respects every constraint the payload tracks to millimeters. If raising one gain loses tracking, speed up the loop inside it.
 

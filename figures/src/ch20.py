@@ -1,7 +1,9 @@
 """Figures for Chapter 20.  Run: python figures/src/ch20.py
 
-Every pose and every curve is a simulation from verify/ch20.py, the script that checks
-the chapter. The walks take some seconds each and are kept in verify/ch20_cache.pkl.
+Every pose and every curve is a simulation. The walks, the impact map and the motion
+primitive come from the robot model library (case_studies/robots/biped_walking.py); the
+turn plan, the skater and the pendulum experiment from verify/ch20.py, the script that
+checks the chapter. The runs take some seconds each and are kept in verify/ch20_cache.pkl.
 """
 import importlib.util
 import pickle
@@ -23,6 +25,7 @@ from figkit import (DASH, INDIGO, INK, MUTED, PEACH, PERIWINKLE, SAND, TEAL, TER
                     animate, axis_through_box, box, caption, halo, new_plot, save)
 
 import robots  # noqa: E402
+from robots import biped_walking as bw  # noqa: E402
 
 OUT = ROOT / "figures"
 E1, E2, E3 = np.eye(3)
@@ -32,8 +35,8 @@ FACES = {(0, 1): PERIWINKLE, (0, -1): PERIWINKLE, (1, 1): SAND, (1, -1): SAND, (
 LEG_FACES = {key: SAND for key in FACES}
 GHOST = "#9a9da6"
 GROUND = "#f4f1e8"
-GAIT = m.Gait()
-biped = m.biped
+GAIT = bw.Gait()
+biped = robots.get("reaction_mass_biped")
 _cache = {}
 _lims = {}
 KEEP = ("t", "step", "hip", "foot", "swing", "R1", "RP", "R2", "l", "slide", "a1", "aP", "a2", "V", "F", "tau_1",
@@ -42,18 +45,20 @@ KEEP = ("t", "step", "hip", "foot", "swing", "R1", "RP", "R2", "l", "slide", "a1
 
 def _runs():
     return {
-        "straight": lambda: m.walk([0.0] * 10),
-        "turn": lambda: m.walk(*[m.turn_plan()[0]], rolls=m.turn_plan()[1]),
-        "straight90": lambda: m.walk([np.pi / 2] * 8),
-        "book": lambda: m.walk([0.0] * 8, law=m.book_law, record=0),
-        "book90": lambda: m.walk([np.pi / 2] * 8, law=m.book_law, record=0),
+        "straight": lambda: bw.walk([0.0] * 10),
+        "turn": lambda: bw.walk(*[m.turn_plan()[0]], rolls=m.turn_plan()[1]),
+        "straight90": lambda: bw.walk([np.pi / 2] * 8),
+        "book": lambda: bw.walk([0.0] * 8, law=bw.book_law, record=0),
+        "book90": lambda: bw.walk([np.pi / 2] * 8, law=bw.book_law, record=0),
     }
 
 
 def run(name):
-    """One walk of verify/ch20.py, computed once and kept."""
+    """One run, computed once and kept until verify/ch20.py or the library's walking code changes."""
     path = ROOT / "verify" / "ch20_cache.pkl"
-    stamp = (ROOT / "verify" / "ch20.py").stat().st_mtime
+    stamp = tuple(f.stat().st_mtime for f in (ROOT / "verify" / "ch20.py", Path(bw.__file__),
+                                               ROOT / "case_studies" / "robots" / "reaction_mass_biped.py",
+                                               ROOT / "case_studies" / "robots" / "core.py"))
     if not _cache and path.exists():
         saved = pickle.loads(path.read_bytes())
         if saved.get("stamp") == stamp:
@@ -194,14 +199,14 @@ def impact_figure():
         ground(s, origin[0] - 0.5, origin[0] + 1.15, -0.5, 0.5)
         hip, toe = draw_biped(s, foot, pre.l, pre.R1, pre.RP, pre.R2, pre.slide)
         if side == "before":
-            v = m.hip_velocity(pre.l, pre.l_dot, pre.R1, pre.Omega1)
+            v = bw.hip_velocity(pre.l, pre.l_dot, pre.R1, pre.Omega1)
             s.arrow(hip - side_off, hip - side_off + sc_v * v, color=INDIGO, zorder=80)
             s.label(hip - side_off, f"hip velocity\n{np.linalg.norm(v):.2f} m/s", dx=-30, dy=16, size=9, color=INDIGO, **SANS)
             s.label(foot, "stance foot", dx=-26, dy=-13, size=9, **SANS)
             s.label(toe, "swing foot arrives", dx=34, dy=-13, size=9, **SANS)
             s.label(hip + 0.75 * E3, "just before", dx=0, dy=0, size=10, **SANS)
         else:
-            v = m.hip_velocity(post.l, post.l_dot, post.R1, post.Omega1)
+            v = bw.hip_velocity(post.l, post.l_dot, post.R1, post.Omega1)
             s.arrow(hip - side_off, hip - side_off + sc_v * v, color=INDIGO, zorder=80, head=0.05)
             s.label(hip - side_off, f"hip velocity\n{np.linalg.norm(v):.2f} m/s", dx=-30, dy=16, size=9, color=INDIGO, **SANS)
             s.arrow(toe, toe + sc_i * last["impulse"], color=TERRACOTTA, zorder=80)
@@ -237,7 +242,7 @@ def turn_frame(t):
             color=INDIGO, lw=0.9, alpha=1.0, zorder=7)
     pp = pose(o, k)
     hd = m.turn_plan()[0]
-    d = m.primitive(o["ts"][k], hd[n_done], GAIT)
+    d = bw.primitive(o["ts"][k], hd[n_done], GAIT)
     draw_biped(s, pp["foot"], d["l"], d["R1"], d["RP"], d["R2"], d["slide"], ghost=True)
     draw_biped(s, **pp)
     # readout: the Lyapunov function of the tracking law
@@ -367,7 +372,7 @@ def cassie_figure():
     s = Scene(width=5.6, height=4.0, azim=-62, elev=14)
     x = np.array([0.0, 0.0, 0.95])
     R = np.eye(3)
-    R_r, R_l = m.Rx(np.pi - 0.07) @ m.Ry(0.1), m.Rx(np.pi + 0.07) @ m.Ry(-0.1)      # leg axes point down from the hips
+    R_r, R_l = bw.Rx(np.pi - 0.07) @ bw.Ry(0.1), bw.Rx(np.pi + 0.07) @ bw.Ry(-0.1)      # leg axes point down from the hips
     ground(s, -0.55, 0.55, -0.55, 0.55)
     wide = 1.6                                   # the hips are drawn wider apart than they are
     for side, R_leg, l, name in ((-1.0, R_r, 0.97, "r"), (1.0, R_l, 0.96, "l")):

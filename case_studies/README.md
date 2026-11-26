@@ -44,11 +44,11 @@ L, dW, variables, inputs = robot.lagrangian()   # the geomech model it was check
 | `random_state(rng)` | A random state on the manifold |
 | `lagrangian()` | The geomech `(L, dW, variables, inputs)` used to derive the model a second time |
 | `labels` | The book labels that define the model |
-| `tracking_controller(...)`, `linearize(...)` | Where Chapters 6 and 7 have them, with the label each implements. The controller of `quadrotor` takes a moving reference with exact feedforward. The controller of `quadrotor_load` is the cascade eq6-load for a fixed target, with no feedforward, and is left that way: the library has no load controller for a moving reference. The feedforward experiment of Chapter 10 (sec10-feedforward) runs the quadrotor cascade with zero, flat and exact feedforward through a helper of its own, `cascade_run` in `verify/ch10.py`, which is not part of the library |
+| `tracking_controller(...)`, `linearize(...)` | Where Chapters 6, 7 and 20 have them, with the label each implements. The controller of `quadrotor` takes a moving reference with exact feedforward. The controller of `quadrotor_load` is the cascade eq6-load for a fixed target, with no feedforward, and is left that way: the library has no load controller for a moving reference. The feedforward experiment of Chapter 10 (sec10-feedforward) runs the quadrotor cascade with zero, flat and exact feedforward through a helper of its own, `cascade_run` in `verify/ch10.py`, which is not part of the library |
 
 `params` can be left out everywhere: the robot then uses `robot.params`. An input is a tuple in the book's order, `u = (f, tau)`. For several vehicles `f` has shape `(n,)` and `tau` shape `(n, 3)`, and their states are stacked the same way: `q` is `(n, 3)`, `R` is `(n, 3, 3)`.
 
-Only NumPy is needed to run a model. `geomech` is imported inside `lagrangian()` and by the verification script.
+Only NumPy is needed to run a model. `geomech` is imported inside `lagrangian()` (and `biped_walking.floating_lagrangian()`) and by the verification script.
 
 ## The robots
 
@@ -64,7 +64,7 @@ Only NumPy is needed to run a model. `geomech` is imported inside `lagrangian()`
 | `flexible_cable`, `n=` | Chain of n links hanging from a pivot | (S^2)^n | 2n | eq5-chain | sec5-scaling | verified, n = 1 to 5 |
 | `quadrotor_cable`, `n=`, `attach=` | Cable of n links carried by quadrotors at chosen joints | R^3 x (S^2)^n x SO(3)^n_Q | 3 + 2n + 3 n_Q | sec16-teams (stated in words), flat map in eq10-chain | Kotaru (2022, ch. 7) | verified for five layouts |
 | `telescoping_leg` | Telescoping stance leg | R x SO(3) | 4 | eq4-leg | ex4-leg | verified |
-| `reaction_mass_biped` | Reaction Mass Biped, stance phase | R x SO(3)^3 x R^3 | 13 | eq4-leg for the leg, tbl2-robots | Siravuru (2019, ch. 5) | verified (stance dynamics only) |
+| `reaction_mass_biped` | Reaction Mass Biped: stance dynamics, impact map, walking (`biped_walking`) | R x SO(3)^3 x R^3 | 13 | eq4-leg for the leg, tbl2-robots, eq20-stance, eq20-impact, eq20-law | Siravuru (2019, ch. 5) | verified, stance dynamics and walking |
 | `cassie` | Cassie, reduced geometric model | SE(3) x SO(3)^2 x R^2 | 14 | tbl2-robots | Siravuru (2019, ch. 6) | floating base verified; no ground contact |
 
 "Verified" means all of the following, in `verify/robots.py`:
@@ -74,11 +74,38 @@ Only NumPy is needed to run a model. `geomech` is imported inside `lagrangian()`
 3. `dynamics`, `tracking_controller` and `linearize` equal the functions that the chapters verified (taken from `verify/ch04.py` to `verify/ch08.py`) at the chapters' parameter values;
 4. a free simulation with `step` stays on the manifold to rounding error, conserves energy to fourth order in the step, and conserves the momentum that the model conserves;
 5. sized models pass for several sizes, and collapse to the smaller models when they should (one quadrotor, one link, attachment at the center of mass);
-6. `rollout` with `hold=False` is fourth order for a moving input, and first order with `hold=True`.
+6. `rollout` with `hold=False` is fourth order for a moving input, and first order with `hold=True`;
+7. for the walking biped: the impact map equals the linear system it solves, conserves angular momentum about the landing foot and never gains energy, relabeling the legs twice is the identity, `linearize` equals geomech's linearization, and a short walk reproduces the step lengths of `verify/ch20_values.json` exactly. `verify/ch20.py` checks the rest: the floating-base mass matrix against geomech, the closed loops and Lyapunov rates of both tracking laws, and the walks the chapter quotes.
+
+## Walking the biped
+
+`robots/biped_walking.py` adds to the stance model of `reaction_mass_biped` what Chapter 20 needs to make it walk. The robot itself reaches three of its pieces as methods.
+
+```python
+from robots import biped_walking as bw
+biped = robots.get("reaction_mass_biped")
+gait = bw.Gait()                                   # eq20-primitive: l_0, t_s, theta_s, ...
+d = bw.primitive(0.3, 0.0, gait)                   # desired state and accelerations, a dict
+state = bw.primitive_state(0.3, 0.0, gait)
+u = biped.tracking_controller(state, d)            # eq20-law; BookGains() gives eq6-law per factor
+A, B = biped.linearize(state, u)                   # 26 x 26 and 26 x 13, sec7-variation
+new, p_c, stride = biped.impact(state, gait.l_0)   # eq20-impact, then eq20-relabel
+log, steps = bw.walk([0.0] * 10)                   # sec20-walk: ten steps straight ahead
+```
+
+| Name | What it is |
+| :-- | :-- |
+| `impact`, `impact_matrices`, `impact_kkt`, `relabel` | The impact of a foot that lands and sticks: the closed form eq20-impact, the matrices `D`, `A` and the linear system eq20-kkt, the exchange of the legs eq20-relabel |
+| `hip_velocity`, `swing_foot`, `particles`, `angular_momentum_about`, `kinetic_floating`, `floating_lagrangian` | The floating-base model behind the impact, built mass by mass, and its geomech Lagrangian |
+| `Gait`, `primitive`, `primitive_state` | The motion primitive eq20-primitive |
+| `thesis_law`, `ThesisGains`, `thesis_V`; `book_law`, `BookGains`, `book_V0` | The thesis's law (eq20-right, eq20-law) and eq6-law on each factor with the term -(1/2) J_dot e_Omega, each with its Lyapunov function |
+| `linearize_stance`, `perturbed`, `error_state` | The linearization along the variations and the error state of sec13-error |
+| `walk` | The hybrid loop: step with `ReactionMassBiped.step`, find the touchdown by bisection, apply the impact, start the next primitive |
+| `explicit_update` | The thesis's explicit update (its eqs. 5.36 to 5.40), kept only to show, as Chapter 20 does, that its energy drifts in proportion to h. Simulate with `step` |
 
 What is not included, by robot:
 
-- `reaction_mass_biped`: the swing-leg length, the floating-base model, the impact map and the walking controller of Siravuru (2019). The configuration manifold of the biped has dimension 14 (tbl2-robots). The stance dynamics involve 13 of them: the swing leg is balanced about the hip, so its length does not enter. The library implements those 13, which is the number `robot.dim` reports.
+- `reaction_mass_biped`: the swing-leg length, the floating base in flight (a foot always sticks; there is no phase with both feet off the ground), friction cones (`walk` does not enforce unilateral contact or friction: read the ground force and the impulses it logs, warn20-impact), and an implicit integrator for the variable inertias, such as the variational scheme of sec12-biped. The configuration manifold of the biped has dimension 14 (tbl2-robots). The stance dynamics involve 13 of them: the swing leg is balanced about the hip, so its length does not enter. The library implements those 13, which is the number `robot.dim` reports.
 - `cassie`: the ground-contact constraints and the Hovershoes. Parameter values are placeholders.
 - `quadrotor_load`, `multi_quadrotor_*`, `quadrotor_cable`: every cable is assumed taut. The equations stay smooth when a tension goes negative. Check `tension(...)`.
 
