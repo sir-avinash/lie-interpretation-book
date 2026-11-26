@@ -9,7 +9,7 @@
 # 4. a cone on $S^2$, enforced by a quadratic program while the reference leaves it;
 # 5. a tilt limit on $\mathrm{SO}(3)$.
 #
-# Everything needs only NumPy and Matplotlib. The functions are the ones checked by `verify/ch08.py`.
+# Everything needs only NumPy and Matplotlib. The functions are the ones the book's verification script for this chapter checks.
 
 # %%
 from itertools import combinations

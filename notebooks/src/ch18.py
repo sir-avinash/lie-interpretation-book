@@ -277,7 +277,7 @@ print("after 500 steps with an arbitrary input: manifold residual %.1e" % RB.on_
 # truncated Taylor series ("jets").
 
 # %%
-# ---- copied from verify/ch10.py: jets, the flat map eq10-load-map, the curve through waypoints
+# ---- copied from the verification script of Chapter 10: jets, the flat map eq10-load-map, the curve through waypoints
 def jmul(a, b, op=None):
     """Product of two jets (Cauchy product). op is the pointwise product:
     scalar times anything by default, or np.dot, np.cross, np.matmul."""
@@ -467,7 +467,7 @@ def chord_times(waypoints, t_f):
     return np.concatenate([[0.0], np.cumsum(d)]) * t_f / np.sum(d)
 
 
-# ---- copied from verify/ch18.py
+# ---- copied from the verification script of Chapter 18
 class Plan:
     """A curve for the load, at rest before T_START and after T_START + T_TRAVEL,
     with the flat map thm10-load evaluated along it for the believed parameters."""
@@ -548,7 +548,7 @@ plt.show()
 # blocks of the later sections, switched by `Options`. They are defined first and explained as they are used.
 
 # %%
-# ---- copied from verify/ch18.py: control
+# ---- copied from the verification script of Chapter 18: control
 def gust(t, peak=2.0, t_on=GUST[0], t_off=GUST[1], direction=(0.25, -1.0, 0.0)):
     """The external force F_e on the quadrotor: a crosswind, a smooth pulse of `peak` newtons."""
     if not t_on < t < t_off:
@@ -594,7 +594,7 @@ def bare_quadrotor_thrust(state, ref, k, p=P0):
     return -k.k_x * (x_Q - (ref["x_L"] + p.l * E3)) - k.k_v * (v_Q - ref["v_L"]) + m * (ref["a_L"] + p.g * E3)
 
 
-# ---- copied from verify/ch08.py: a small quadratic program, and the projection eq8-proj
+# ---- copied from the verification script of Chapter 8: a small quadratic program, and the projection eq8-proj
 def solve_qp(Q, c, A, b, tol=1e-9):
     """min 0.5 z'Qz + c'z  subject to  A z <= b, for a handful of constraints.
 
@@ -630,7 +630,7 @@ def proj(theta, y, bound, eps=0.1):
     return y
 
 
-# ---- copied from verify/ch18.py: safety, adaptation
+# ---- copied from the verification script of Chapter 18: safety, adaptation
 def cone_terms(q, omega, p=P0, q_c=Q_C, theta_max=np.radians(CONE_DEG)):
     """H, H_dot and (a, b) with H_ddot = a + b . F for the thrust vector F.
     This is eq8-cone-ddot for the cable: mass m_Q, and F - m g e3 replaced by -F."""
@@ -730,7 +730,7 @@ def lumped_uncertainty(v_L_dot, d, p_true=P_TRUE, p=P0):
     return d - (p_true.m_L - p.m_L) * (v_L_dot + p.g * E3)
 
 # %%
-# ---- copied from verify/ch14.py: the map (+), the projector Pi_C, the constraint matrix C
+# ---- copied from the verification script of Chapter 14: the map (+), the projector Pi_C, the constraint matrix C
 def expm_series(M):
     """Matrix exponential to third order, for a small step."""
     M2 = M @ M
@@ -794,7 +794,7 @@ def body_linearize(Rd, Omegad, J):
     return A, np.vstack([np.zeros((3, 3)), Ji])
 
 
-# ---- copied from verify/ch18.py: the filter for the cable, the linear state, the closed loop
+# ---- copied from the verification script of Chapter 18: the filter for the cable, the linear state, the closed loop
 def cable_rhs(q, omega, F, p=P0):
     """q_dot and omega_dot of the cable under the thrust vector F (second line of eq4-load)."""
     return cross(omega, q), -cross(q, F) / (p.m_Q * p.l)
@@ -1084,7 +1084,7 @@ plt.show()
 # joins them.
 
 # %%
-# ---- copied from verify/ch18.py
+# ---- copied from the verification script of Chapter 18
 def linearize(state, u, p=P0):
     """Variation-based linearization of eq4-load along a solution.
 

@@ -13,7 +13,7 @@ except ImportError:
     import subprocess
     import sys
 
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "geomech"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "geomech==1.1.0"])
     import geomech
 
 import io

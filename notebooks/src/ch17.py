@@ -8,7 +8,7 @@
 #
 # This notebook is self-contained: NumPy, SciPy and Matplotlib only. The model and the controllers
 # are copied from the robot model library (`case_studies/robots`) and from the scripts that verified
-# the earlier chapters, and `verify/ch17.py` checks every copy against its original.
+# the earlier chapters, and the book's verification script checks every copy against its original.
 #
 # Notation. $R$ maps body to world, $\dot R = R\,\Omega^\wedge$, errors take the actual
 # configuration first: $e_R$ is built from $R_d^\top R$. An estimate carries a hat, in code `Rhat`,

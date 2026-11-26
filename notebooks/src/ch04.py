@@ -16,7 +16,7 @@ import sys
 try:
     import geomech
 except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "geomech"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "geomech==1.1.0"])
     import geomech
 
 import matplotlib.pyplot as plt
