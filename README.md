@@ -26,6 +26,7 @@ It consolidates a body of research on geometric mechanics and control into one e
 | 16 | How it all comes together | written |
 | 17 | Case study: a quadrotor, end to end | written |
 | 18 | Case study: a quadrotor with a cable-suspended load | written |
+| 20 | Case study: legged robots | written |
 | A | Notation and glossary | written |
 
 ## What each chapter comes with
