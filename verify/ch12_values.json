@@ -132,7 +132,6 @@
   },
   "opt_chart": {
     "iterations": 62,
-    "seconds": 4.6,
     "variables": 189,
     "cost": 0.16138395615661197,
     "constraint_residual": 1.2838757834643388e-12,
@@ -145,7 +144,6 @@
   },
   "opt_chart_first_order": {
     "iterations": 53,
-    "seconds": 1.6,
     "variables": 189,
     "cost": 0.20492106768024673,
     "constraint_residual": 2.427710810160022e-13,
@@ -158,7 +156,6 @@
   },
   "opt_entrywise": {
     "iterations": 188,
-    "seconds": 15.1,
     "variables": 315,
     "cost": 0.24302852529150562,
     "constraint_residual": 3.5388358909926865e-16,
@@ -171,7 +168,6 @@
   },
   "opt_variational": {
     "iterations": 60,
-    "seconds": 4.2,
     "variables": 123,
     "cost": 0.15720375939419273,
     "constraint_residual": 2.244170202800148e-12,

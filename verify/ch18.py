@@ -1352,7 +1352,7 @@ def main():
         R_residual=float(max(np.abs(Rm.T @ Rm - I3).max() for Rm in o["R"][::50])),
         q_residual=float(np.abs(np.linalg.norm(o["q"], axis=1) - 1).max()),
         T_max=float(o["T"].max()), tilt_max=float(np.degrees(np.arccos(o["R"][:, 2, 2].min()))),
-        active_percent=100 * F_["active_frac"], seconds=float(time.time() - t_all)))
+        active_percent=100 * F_["active_frac"]))
     ck.true("ablation: each of feedforward, adaptation and the cascade itself matters",
             min(S["no_ff"]["err_rms_cm"], S["no_adapt"]["err_rms_cm"], S["bare"]["err_rms_cm"]) > 3 * F_["err_rms_cm"])
     ck.true("ablation: the filter changes the mission's tracking error by less than 1 mm",

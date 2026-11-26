@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import ast
 import sys
-import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -216,7 +215,6 @@ def run_table_row(law, gains, gait, n_steps=8, psi=0.0, done=None):
 
 
 def main():
-    t_start = time.time()
     ck = Checker("ch20")
     rng = np.random.default_rng(20)
     p = PRM
@@ -722,7 +720,6 @@ def main():
     cassie = robots.get("cassie")
     ck.true("cassie in the library: 14 degrees of freedom, floating base, 8 inputs", cassie.dim == 14 and
             sum(np.size(x) for x in cassie.zero_input()) == 8)
-    ck.record("runtime_s", round(time.time() - t_start, 1))
     ck.finish()
 
 

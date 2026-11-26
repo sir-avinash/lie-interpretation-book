@@ -991,7 +991,7 @@ def fly(ms=None, plan=None, t_end=None, **blocks):
                  adds the filtered estimate Delta_f to the torque when there is one.
                  "blind": the filter exactly as in Chapter 8. False: no filter.
     feedforward  "flat": Omegad and its rate from the flat map of the reference.
-                 "zero": both zero. "exact": differentiated along the closed loop,
+                 "zero": both zero. "exact": the closed-loop feedforward, differentiated along the closed loop,
                  as the library's controller does.
     attitude     "geometric" or "euler" (an Euler-angle law with the same linear gains).
     """
@@ -1195,7 +1195,7 @@ print("in flight: mean NEES %.2f, largest attitude error %.2f deg, largest posit
 rows = {
     "everything on": {},
     "truth instead of estimate": dict(estimate=False),
-    "no feedforward": dict(feedforward="zero"),
+    "no flat feedforward": dict(feedforward="zero"),
     "no adaptation": dict(adapt=False),
     "no safety filter": dict(safety=False),
     "predictor not told": dict(adapt="untold"),

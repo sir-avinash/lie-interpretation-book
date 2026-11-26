@@ -18,7 +18,6 @@ from __future__ import annotations
 import ast
 import importlib.util
 import sys
-import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -646,7 +645,6 @@ def main():
     p0, k = believed(ms), gains(ms)
     p_true, rho = true_params(ms)
     h = ms.h
-    t_all = time.time()
 
     # ------------------------------------------------------------ the vehicle
     p = QUAD.params
@@ -964,7 +962,6 @@ def main():
     mpc = AttitudeMPC(p0.J, h_mpc, N_mpc, Q, Ru, ms.tau_max)
     lqr = AttitudeMPC(p0.J, h_mpc, N_mpc, Q, Ru, ms.tau_max, bounded=False)
     loc = dict(K_R=np.diag(K7[:, :3]).tolist(), K_Omega=np.diag(K7[:, 3:]).tolist(), Q=[1240.0, 20.0], N=N_mpc, h=h_mpc)
-    t0 = time.time()
     for name, law, hold in (("pd", pd, 1), ("lqr", lqr, 4), ("mpc", mpc, 4)):
         ang, taus = attitude_run(law, R_rel, Om_rel, p0.J, hold=hold)
         loc[name] = dict(settle=settle(ang, 0.005), peak=float(np.degrees(ang.max())),
@@ -1094,7 +1091,6 @@ def main():
     ck.true("the naive update of sec2-integration would have left the manifold", naive > 1e-3, f"residual {naive:.2f}")
 
     notebook_checks(ck, rng)
-    ck.record("runtime", round(time.time() - t_all, 1))
     ck.finish()
 
 

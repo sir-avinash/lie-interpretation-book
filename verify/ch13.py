@@ -1209,8 +1209,6 @@ def main():
         c = runs[w]["ctrl"]
         ck.record(f"flip_{w}_qp_iters_mean", float(np.mean(c.iters)))
         ck.record(f"flip_{w}_qp_iters_max", int(max(c.iters)))
-        ck.record(f"flip_{w}_solve_ms_median", float(1e3 * np.median(c.times)))
-        ck.record(f"flip_{w}_solve_ms_max", float(1e3 * max(c.times)))
     sat_l = np.nonzero(np.abs(runs["lqr"]["tau"]).max(axis=1) >= 0.6 - 1e-9)[0]
     ck.record("flip_lqr_last_saturated_s", float((sat_l[-1] + 1) * H_MPC))
     sat_m = np.nonzero(np.abs(runs["mpc"]["tau"]).max(axis=1) >= 0.6 - 1e-9)[0]

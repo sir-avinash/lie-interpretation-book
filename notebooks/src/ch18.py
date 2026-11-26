@@ -905,7 +905,7 @@ class Options:
     feedforward: bool = True         # the flat feedforward: omegad, Omegad and their rates
     feedforward_attitude: bool | None = None   # None: the same as `feedforward`
     adapt: bool = True
-    safe: bool = True                # cone and tension filter
+    safe: bool = True                # safety filter (cone and tension)
     estimate: bool = True            # run the filter on the readings of the cable
     use_estimate: bool = True        # and let the controller see its estimate, not the truth
     gust: bool = True
@@ -1325,7 +1325,7 @@ plt.show()
 ablation = [("Everything on", Options()),
             ("No flat feedforward", Options(feedforward=False)),
             ("No adaptation", Options(adapt=False)),
-            ("No cone and tension filter", Options(safe=False)),
+            ("No safety filter", Options(safe=False)),
             ("Truth in place of the estimate", Options(use_estimate=False)),
             ("Load treated as a disturbance", Options(controller="bare", adapt=False, safe=False))]
 flights = {}

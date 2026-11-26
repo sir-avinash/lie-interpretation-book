@@ -508,9 +508,9 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 ## Glossary {#secA-glossary}
 
-**Action sum.** The sum $S_h$ of the discrete Lagrangians along a discrete path. It replaces the action integral. [](#def12-discrete).
-
 **Action.** The integral of the Lagrangian along a path. [](#sec4-hamilton).
+
+**Action sum.** The sum $S_h$ of the discrete Lagrangians along a discrete path. It replaces the action integral. [](#def12-discrete).
 
 **Adaptation gain.** The gain $k_\Delta$ of the adaptation law. It sets how closely the vehicle follows the state predictor. [](#eq8-adapt).
 
@@ -538,13 +538,13 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Cascade.** A controller built as nested loops, each of which supplies the desired value for the next one in: position, then direction, then attitude. [](#sec6-cascade).
 
-**Closed-loop feedforward.** The desired velocities and accelerations of an inner loop, differentiated along the closed loop of the loops outside it. It is what [](#thm6-cascade) assumes. [](#sec10-feedforward), [](#sec17-cascade).
-
 **CBF-CLF-QP.** A quadratic program solved at every instant, with a barrier condition as a hard constraint and the decrease of a Lyapunov function as a constraint with a slack. [](#eq8-qp).
 
 **Center of oscillation.** The point of a body swung from a pivot that accelerates, measured against free fall, only along the line to the pivot. It is the flat output of that body. [](#ex10-stick).
 
 **Central path.** The curve of minimizers of a problem with a logarithmic barrier, as the barrier parameter decreases to zero. [](#sec13-ipm).
+
+**Closed-loop feedforward.** The desired velocities and accelerations of an inner loop, differentiated along the closed loop of the loops outside it. It is what [](#thm6-cascade) assumes. [](#sec10-feedforward), [](#sec17-cascade).
 
 **Collocation.** A transcription that joins neighboring knots by a polynomial and demands that the polynomial obey the model at chosen points. Trapezoidal collocation uses a parabola and is second order. Hermite-Simpson collocation uses a cubic and is fourth order. [](#sec12-collocation).
 
@@ -590,9 +590,9 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Error state.** The pair $(\chi, \delta\Omega)$: the logarithm of the left-invariant error and the deviation of the velocity from the reference. It is the linear state in a form a controller can compute. [](#sec13-error).
 
-**Error vector.** The slope of the error function under a variation: $e_R$, $e_q$. [](#def3-error-vector).
-
 **Error-state MPC.** Model predictive control whose model is the linearized dynamics of the error state. Its optimization problem is a quadratic program. [](#def13-mpc).
+
+**Error vector.** The slope of the error function under a variation: $e_R$, $e_q$. [](#def3-error-vector).
 
 **Estimate.** What a filter believes about a quantity, marked with a hat. The quantity itself is called the truth. [](#sec14-gaussian).
 
@@ -634,15 +634,15 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Homogeneous space.** A manifold on which a group acts so that any point can be moved to any other. The sphere is one, under rotations. [](#sec2-sphere).
 
-**IMU.** Inertial measurement unit: a gyroscope and an accelerometer in one package. [](#sec14-autonomous).
-
 **Impulse.** The integral of a force over an instant, $p_c$: the change of momentum at an impact. [](#eq20-kkt).
+
+**IMU.** Inertial measurement unit: a gyroscope and an accelerometer in one package. [](#sec14-autonomous).
 
 **Innovation.** The predicted reading minus the actual one, $\tilde y$. [](#sec14-circle), [](#eq14-innovation).
 
-**Internal force.** A stack of cable forces in the null space of the grasp map. The cables pull against each other and the payload feels nothing. [](#sec19-tensions).
-
 **Interior-point method.** A method for inequality constraints that follows the central path to the solution from inside the constraints. [](#sec13-ipm).
+
+**Internal force.** A stack of cable forces in the null space of the grasp map. The cables pull against each other and the payload feels nothing. [](#sec19-tensions).
 
 **Invariant error.** The left- or right-invariant error between an estimate and the truth, $E_\ell = X^{-1}\hat X$ or $E_r = \hat X X^{-1}$. [](#eq14-errors).
 
@@ -668,9 +668,9 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Lie bracket.** The operation on the Lie algebra that records the failure of the group to commute. On $\so(3)$ it is the cross product. [](#sec2-bracket).
 
-**Lie group variational integrator.** A variational integrator whose discrete path is a list of group elements, joined by step rotations. [](#thm12-lgvi).
-
 **Lie group.** A manifold that is also a group, with smooth multiplication and inversion. [](#def2-lie-group).
+
+**Lie group variational integrator.** A variational integrator whose discrete path is a list of group elements, joined by step rotations. [](#thm12-lgvi).
 
 **Linear state.** The state of a variation-based linearization: a variation and the variation of the velocity. [](#sec7-variation).
 
@@ -692,9 +692,9 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Mission.** One simulated flight or walk of a case study, with every block of [](#fig16-pipeline) connected. [](#sec17-mission).
 
-**Motion primitive.** A reference for every factor of a legged robot over one step, in closed form. [](#eq20-primitive).
-
 **Model predictive control.** Control by solving an optimization problem over a receding horizon at every sample. Abbreviated MPC. [](#def13-mpc).
+
+**Motion primitive.** A reference for every factor of a legged robot over one step, in closed form. [](#eq20-primitive).
 
 **Multicopter.** A vehicle lifted by several rotors. A quadrotor is a multicopter with four.
 
@@ -774,9 +774,9 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Unwinding.** A rotation the long way round, caused by a controller that treats $\quat$ and $-\quat$ as different attitudes. [](#sec-quaternions).
 
-**Variation-based extended Kalman filter.** An extended Kalman filter on the sphere whose error is the linear state $s = (\xi, \delta\omega)$ of the variation-based linearization. [](#def14-vekf).
-
 **Variation.** The first-order gap between a curve and its neighbors in a family of curves that stay on the manifold. The text also calls it a nudge. [](#def3-variation).
+
+**Variation-based extended Kalman filter.** An extended Kalman filter on the sphere whose error is the linear state $s = (\xi, \delta\omega)$ of the variation-based linearization. [](#def14-vekf).
 
 **Variational integrator.** An integrator obtained from a discrete Hamilton's principle and not from the equations of motion. [](#sec12-discrete).
 
@@ -885,7 +885,6 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 | step duration | step time (the time step is $h$) |
 | flat feedforward, closed-loop feedforward | feedforward from the plan, exact feedforward as names |
 | safety filter | cone filter, tension filter, as the name of the program |
-| The guarantees are per block | other headings for the same limit |
 | $M_f$, $C_c$ | $D$, $A$ for the floating-base mass matrix and the contact constraint matrix |
 | $T_d$ | $\bar T$ for the tension vectors of a plan |
 | $m_{L,0}$ | another mark for a believed mass |

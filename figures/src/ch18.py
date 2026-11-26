@@ -265,7 +265,7 @@ def cone_frame(t):
     edge = small_circle(-E3, ang)[np.argmax(s.project(small_circle(-E3, ang))[:, 0])]
     s.label(edge, r"$H = 0$", dx=0, dy=0, size=11)
     s.text2d(-1.2, 0.56, "no filter", fontsize=9.5, color=TERRACOTTA, ha="left", **SANS)
-    s.text2d(-1.2, 0.46, "cone and tension filter", fontsize=9.5, color=INDIGO, ha="left", **SANS)
+    s.text2d(-1.2, 0.46, "safety filter", fontsize=9.5, color=INDIGO, ha="left", **SANS)
     s.text2d(-1.2, 0.36, "cable of the reference", fontsize=9.5, color=MUTED, ha="left", **SANS)
     s.text2d(1.2, 0.56, "must never be here:", fontsize=9.5, color=TERRACOTTA, ha="right", **SANS)
     s.text2d(1.2, 0.46, "the shaded ring", fontsize=9.5, color=TERRACOTTA, ha="right", **SANS)

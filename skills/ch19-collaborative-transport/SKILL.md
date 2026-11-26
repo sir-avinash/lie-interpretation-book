@@ -55,7 +55,7 @@ Do the steps in order. Do not start a step before the check of the previous one 
 9. **Integrate on the manifold** (`ch12-variational-integrator-design` for long runs). Use the library's `step`.
    Check: manifold residual at rounding level; with the motors off, energy drift falling like `h^4`.
 
-10. **Ablate.** Fly the mission with everything on. Then remove one block at a time: minimum-norm tensions, no pair constraint, no barrier, no feedforward, a weak vehicle, a cable of the wrong length, an unknown push. Tabulate payload error, payload tilt, smallest tension, smallest distance, smallest `H_ij`, peak thrust.
+10. **Ablate.** Fly the mission with everything on. Then remove one block at a time: minimum-norm tensions, no pair constraint, no barrier, no flat feedforward, a weak vehicle, a cable of the wrong length, an unknown push. Tabulate payload error, payload tilt, smallest tension, smallest distance, smallest `H_ij`, peak thrust.
 
 ## Failure modes
 

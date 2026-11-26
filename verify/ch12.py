@@ -988,7 +988,7 @@ solutions["chart"]["energy_gap_J"] = float(np.abs(E_ch - 0.5 * np.einsum("ij,ij-
 ck.record("opt", {"N": N_o, "h": h_o, "tf": tf_o, "tau_max": TAU_MAX, "angle_deg": 150.0, "peak_energy_J": float(E_rep.max()),
                   "peak_rate_rad_s": float(np.linalg.norm(Or, axis=1).max())})
 for name, s in solutions.items():
-    ck.record(f"opt_{name}", {"iterations": int(s["res"].nit), "seconds": round(s["time"], 1), "variables": int(s["res"].x.size), "cost": float(s["res"].fun),
+    ck.record(f"opt_{name}", {"iterations": int(s["res"].nit), "variables": int(s["res"].x.size), "cost": float(s["res"].fun),
                               "constraint_residual": s["cons"], "orth_knots": s["orth"], "end_angle_deg": s["end_angle_deg"], "end_rate_rad_s": s["end_rate"],
                               "knot_mismatch_deg": s["knot_mismatch_deg"], "bound_active_components": s["bound_active"],
                               "energy_gap_J": s.get("energy_gap_J")})

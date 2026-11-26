@@ -73,13 +73,13 @@ The module of a robot contains its parameters, its state and its equations of mo
 | Robot | Manifold | Dynamics | Symbolic check | Tracking | Linearization | Uncertainty, safety |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
 | Spherical pendulum | [](#eq2-s2-kinematics), [](#def-error-s2) | [](#eq4-sph), [](#eq4-tension) | [](#sec5-pipeline) | [](#eq6-law-s2), [](#thm6-s2) | [](#thm7-s2), [](#ex7-upright) | [](#sec8-cone), [](#ex8-cone) |
-| Rigid body, 3D pendulum | [](#def-so3), [](#def-error-so3) | [](#eq4-euler-free), [](#eq4-pendulum) | [](#exr5-rigid-pendulum) | [](#eq6-law), [](#thm6-exp) | [](#thm7-so3), [](#ex7-flip) | [](#sec8-l1), [](#eq8-tilt) |
-| Quadrotor | [](#sec2-se3) | [](#eq4-quadrotor) |  | [](#thm6-cascade), [](#ex6-inverted) | [](#thm7-so3) (attitude) | [](#sec8-quad), [](#ex8-obstacle) |
-| Quadrotor with a cable-suspended load | [](#fig2-quadload), [](#ex2-quadload) | [](#eq4-load), [](#eq4-load-tension) | [](#eq5-wu), [](#ex5-sign), [](#ex5-conservation) | [](#eq6-load) |  |  |
-| Several quadrotors, one load or payload | [](#tbl2-robots) | [](#eq4-multi) | [](#sec5-scaling) |  |  | [](#sec8-quad) |
-| Flexible cable |  | [](#eq5-chain) | [](#sec5-scaling), [](#fig5-chain) |  |  |  |
-| Reaction Mass Biped | [](#tbl2-robots) | [](#ex4-leg) |  | [](#sec6-legs) |  |  |
-| Cassie | [](#tbl2-robots) |  |  |  |  |  |
+| Rigid body, 3D pendulum | [](#def-so3), [](#def-error-so3) | [](#eq4-euler-free), [](#eq4-pendulum) | [](#exr5-rigid-pendulum) | [](#eq6-law), [](#thm6-exp), [](#tbl20-deadline) | [](#thm7-so3), [](#ex7-flip) | [](#sec8-l1), [](#eq8-tilt) |
+| Quadrotor | [](#sec2-se3) | [](#eq4-quadrotor) | [](#sec17-model) | [](#thm6-cascade), [](#ex6-inverted), [](#sec17-cascade) | [](#thm7-so3) (attitude), [](#sec17-local) | [](#sec8-quad), [](#ex8-obstacle), [](#sec17-safety) |
+| Quadrotor with a cable-suspended load | [](#fig2-quadload), [](#ex2-quadload) | [](#eq4-load), [](#eq4-load-tension) | [](#eq5-wu), [](#ex5-sign), [](#ex5-conservation) | [](#eq6-load), [](#sec18-track) | [](#eq18-linear), [](#eq18-constraint), [](#eq18-lqr) | [](#eq18-adapt), [](#eq18-cone), [](#eq18-floor) |
+| Several quadrotors, one load or payload | [](#tbl2-robots), [](#sec19-manifold), [](#eq19-kin) | [](#eq4-multi), [](#eq19-free) | [](#sec5-scaling), [](#sec19-model) | [](#sec19-cascade), [](#eq19-thrust), [](#tbl19-order) | [](#sec19-lqr), [](#tbl19-lqr) | [](#sec8-quad), [](#sec19-safety), [](#eq19-qp) |
+| Flexible cable |  | [](#eq5-chain) | [](#sec5-scaling), [](#fig5-chain) | [](#sec19-cable), [](#fig19-cable) | [](#sec19-cable) |  |
+| Reaction Mass Biped | [](#tbl2-robots) | [](#ex4-leg), [](#eq20-stance), [](#eq20-impact) | [](#sec20-model), [](#sec20-impact) | [](#sec6-legs), [](#sec20-walk), [](#tbl20-compare) | [](#sec20-recipe) |  |
+| Cassie | [](#tbl2-robots), [](#sec20-cassie) |  |  |  |  |  |
 
 : Where the book treats each robot: model and control.
 
@@ -91,18 +91,18 @@ The module of a robot contains its parameters, its state and its equations of mo
 | :-- | :-- | :-- |
 | Spherical pendulum | [](#eq12-s2) | [](#def14-vekf), [](#ex14-pendulum) |
 | Rigid body, 3D pendulum | [](#thm13-so3), [](#ex13-flip), [](#thm12-lgvi), [](#ex12-opt) | [](#ex3-dead-reckoning), [](#thm14-loglinear) |
-| Quadrotor | [](#thm13-se3), [](#thm10-quad), [](#ex10-waypoints) | [](#def14-inekf), [](#sec14-worked) |
-| Quadrotor with a cable-suspended load | [](#thm10-load), [](#ex10-eight), [](#sec12-collocation) |  |
-| Several quadrotors, one load or payload |  |  |
-| Flexible cable | [](#thm10-chain), [](#eq10-chain) |  |
-| Reaction Mass Biped | [](#sec12-biped), [](#eq12-rmb) |  |
+| Quadrotor | [](#thm13-se3), [](#thm10-quad), [](#ex10-waypoints) | [](#def14-inekf), [](#sec14-worked), [](#sec17-estimation) |
+| Quadrotor with a cable-suspended load | [](#thm10-load), [](#ex10-eight), [](#sec12-collocation) | [](#sec18-estimate) |
+| Several quadrotors, one load or payload | [](#sec19-plan), [](#eq19-flat), [](#sec19-integration) |  |
+| Flexible cable | [](#thm10-chain), [](#eq10-chain), [](#sec19-cable) |  |
+| Reaction Mass Biped | [](#sec12-biped), [](#eq12-rmb), [](#eq20-primitive) |  |
 | Cassie |  | [](#sec14-legged) |
 
 : Where the book treats each robot: planning, integration and estimation.
 
 :::
 
-The upper rows are full and the lower rows are not, and that is the honest state of things. The pendulums and the rigid body are where each technique is first shown, because one factor is enough to show it. The large systems inherit the technique factor by factor, and the sections below say what has to be added for each.
+The pendulums and the rigid body filled their rows first. They are where each technique is first shown, because one factor is enough to show it. The large systems inherit the technique factor by factor. The sections below say what has to be added for each, and the case studies of [](#ch-case-quadrotor) to [](#ch-case-legged) fill most of the lower rows. The cells still empty are the honest state of things. No estimator is built for a team, a sagging cable or a walking biped. Nothing protects the biped or the cable against uncertainty. Of Cassie the book has only the manifold and the filter that was tested on it.
 
 ## Pendulums {#sec16-pendulums}
 

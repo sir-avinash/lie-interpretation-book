@@ -703,7 +703,7 @@ def turn_plan():
 # %%
 o, steps = walk([0.0] * 6)
 for k, s in enumerate(steps):
-    print(f"step {k + 1}: length {100 * s['step_length']:.2f} cm, time {s['step_time']:.3f} s, "
+    print(f"step {k + 1}: length {100 * s['step_length']:.2f} cm, duration {s['step_time']:.3f} s, "
           f"impulse {np.round(s['impulse'], 3)} N·s, energy lost {s['energy_lost']:.3f} J")
 
 fig, ax = plt.subplots(3, 1, figsize=(8, 6.5), sharex=True)

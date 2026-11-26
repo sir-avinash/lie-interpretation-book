@@ -1316,7 +1316,7 @@ def main():
     scale = {}
     for n in (2, 3, 4):
         rbn = team(n)
-        mod, layout, err, took, size = geomech_linear(rbn, f"ch19_team{n}")
+        mod, layout, err, _, size = geomech_linear(rbn, f"ch19_team{n}")
         ck.true(f"n = {n}: geomech check_eom below 1e-5", err < 1e-5, f"{err:.1e}")
         worst_rest, worst_move, worst_raw, worst_B, worst_c, worst_qE_rest = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         for trial in range(4):
@@ -1343,15 +1343,11 @@ def main():
         s0, u0 = state_of(rbn, ref), (ref["f"], ref["tau"])
         A, B, Z = linearize_fd(rbn, s0, u0)
         Ar, Br = Z.T @ A @ Z, Z.T @ B
-        t0 = time.time()
-        for _ in range(20):
-            affine_maps(rbn, s0)
-        scale[n] = dict(dim=rbn.dim, inputs=4 * n, check_eom=err, derive_time=took, eom_chars=size,
+        scale[n] = dict(dim=rbn.dim, inputs=4 * n, check_eom=err, eom_chars=size,
                         grasp_rank=rank, internal=N.shape[1], reduced=Ar.shape[0],
                         ctrb=ctrb_rank(Ar, Br), pairs=n * (n - 1) // 2,
                         qp_vars=N.shape[1], qp_cons=n + n * (n - 1) // 2, filter_vars=3 * n,
-                        lin_rest=worst_rest, lin_move=worst_move, lin_raw=worst_raw, lin_c=worst_c,
-                        model_ms=(time.time() - t0) / 20 * 1e3)
+                        lin_rest=worst_rest, lin_move=worst_move, lin_raw=worst_raw, lin_c=worst_c)
     ck.true("n = 2: the grasp map has rank 5", scale[2]["grasp_rank"] == 5)
     ck.true("n = 3, 4: the grasp map has rank 6", scale[3]["grasp_rank"] == 6 and scale[4]["grasp_rank"] == 6)
     ck.true("internal forces: 3n - rank", [scale[n]["internal"] for n in (2, 3, 4)] == [1, 3, 6])
@@ -1564,7 +1560,7 @@ def main():
 
     # ---------------------------------------------------------------- the mission and its ablation
     A_ = S["all"]
-    ck.record("mission", S)
+    ck.record("mission", {k: {q: v for q, v in s.items() if q != "seconds"} for k, s in S.items()})   # no wall-clock times
     ck.true("mission: completed, QP feasible at every step", A_["done"] and A_["infeasible"] == 0)
     ck.true("mission: payload within 5 cm of its reference throughout", A_["peak"] < 0.05, f"{A_['peak'] * 100:.1f} cm")
     ck.true("mission: every tension above T_MIN", A_["T_min"] > T_MIN, f"{A_['T_min']:.2f} N")
@@ -1596,7 +1592,6 @@ def main():
     for n, key in ((2, "n2"), (3, "n3_safe"), (4, "n4_safe")):
         scale[n].update({q: S[key][q] for q in ("rms", "peak", "T_min", "d_min", "H_min", "f_max", "tilt_max",
                                                  "done", "wall", "steps", "infeasible", "filtered")})
-        scale[n]["ms_per_step"] = S[key]["seconds"] / S[key]["steps"] * 1e3
         scale[n]["plan_d_min"] = S[key]["plan_d_min"]
         ck.true(f"n = {n}: a plan that respects r_min is flown to millimeters with every block on",
                 S[key]["done"] and S[key]["rms"] < 5e-3 and S[key]["H_min"] > 0 and S[key]["T_min"] > T_MIN,
@@ -1650,7 +1645,6 @@ def main():
     ck.true("motors off for 1 s: energy drift falls like h^4", drift[0] < 1e-7 and 8 < drift[0] / drift[1] < 32,
             f"{drift[0]:.1e}, ratio {drift[0] / drift[1]:.1f}")
     ck.record("energy", dict(drift=drift[0], ratio=drift[0] / drift[1]))
-    ck.record("wall", R["wall"])
     ck.record("constants", dict(F_MAX=F_MAX, R_MIN=R_MIN, T_MIN=T_MIN, D_PLAN=D_PLAN, ALPHA=[ALPHA1, ALPHA2],
                                 S_WIDE=S_WIDE, S_GAP=S_GAP, GAP_W=GAP_W, ARM=ARM, GAINS=GAINS,
                                 lean_wide=float(np.degrees(np.arctan(S_WIDE / (p.m_L * p.g / 3)))),

@@ -63,7 +63,7 @@ Do the steps in order. Do not start a step before the check of the previous one 
 11. **Integration** (`ch04-manifold-dynamics-modeling`, `ch12-variational-integrator-design` for long runs). One step = Runge-Kutta stages on increments, then `R_{k+1} = R_k expm_so3(h Omega_k)`. Same update for the estimate and the predictor.
     Check: manifold residual at rounding level over the whole mission; with the motors off, energy constant and its drift falling by 16 when `h` is halved.
 
-12. **Ablation.** Fly the mission with everything on, then with one block changed at a time: truth for estimate, no feedforward, no adaptation, no safety filter, each wire removed, both removed, slower attitude gains. Report tracking error outside the detour, hover error, closest approach, smallest `H`, peak inputs against limits.
+12. **Ablation.** Fly the mission with everything on, then with one block changed at a time: truth for estimate, no flat feedforward, no adaptation, no safety filter, each wire removed, both removed, slower attitude gains. Report tracking error outside the detour, hover error, closest approach, smallest `H`, peak inputs against limits.
     Check: every row is either explained or investigated. A block that changes nothing is a finding. Report it.
 
 ## Failure modes
