@@ -108,33 +108,35 @@ def impact(state, l_0, p=None):
 
 
 def impact_matrices(R2, slide, l_0, p=None):
-    """D and A of eq20-kkt for the floating-base model, in the velocity order
-    (Omega1, OmegaP, slide_dot, Omega2, v_P): D v+ - D v- = A^T p_c, A v+ = 0."""
+    """M_f and C_c of eq20-kkt for the floating-base model, in the velocity order
+    (Omega1, OmegaP, slide_dot, Omega2, v_P): M_f (v+ - v-) = C_c^T p_c, C_c v+ = 0.
+    M_f is the mass matrix (kinetic energy v . M_f v / 2) and C_c the contact constraint
+    matrix: C_c v is the velocity of the swing foot."""
     p = _params(p)
-    D = np.zeros((15, 15))
-    D[0:3, 0:3] = p.J_0
-    D[3:6, 3:6] = _ROBOT.torso_inertia(slide, p)
-    D[6:9, 6:9] = 2 * p.m_r * I3
-    D[9:12, 9:12] = p.J_0
-    D[12:15, 12:15] = p.m * I3
-    A = np.zeros((3, 15))
-    A[:, 9:12] = l_0 * R2 @ hat(E3)          # d/dt(-l_0 R2 e3) = l_0 R2 hat(e3) Omega2
-    A[:, 12:15] = I3
-    return D, A
+    M_f = np.zeros((15, 15))
+    M_f[0:3, 0:3] = p.J_0
+    M_f[3:6, 3:6] = _ROBOT.torso_inertia(slide, p)
+    M_f[6:9, 6:9] = 2 * p.m_r * I3
+    M_f[9:12, 9:12] = p.J_0
+    M_f[12:15, 12:15] = p.m * I3
+    C_c = np.zeros((3, 15))
+    C_c[:, 9:12] = l_0 * R2 @ hat(E3)          # d/dt(-l_0 R2 e3) = l_0 R2 hat(e3) Omega2
+    C_c[:, 12:15] = I3
+    return M_f, C_c
 
 
 def impact_kkt(state, l_0, p=None):
     """The impact solved as the 18 x 18 linear system eq20-kkt (thesis eq. 5.20 with the
-    right side +D v-, as the relation above it requires).
+    right side +M_f v-, as the relation above it requires).
 
-    Returns (v-, v+, p_c, D, A), velocities in the order of `impact_matrices`."""
+    Returns (v-, v+, p_c, M_f, C_c), velocities in the order of `impact_matrices`."""
     p = _params(p)
-    D, A = impact_matrices(state.R2, state.slide, l_0, p)
+    M_f, C_c = impact_matrices(state.R2, state.slide, l_0, p)
     v = np.concatenate([state.Omega1, state.OmegaP, state.slide_dot, state.Omega2,
                         hip_velocity(state.l, state.l_dot, state.R1, state.Omega1)])
-    K = np.block([[D, -A.T], [A, np.zeros((3, 3))]])
-    sol = np.linalg.solve(K, np.concatenate([D @ v, np.zeros(3)]))
-    return v, sol[:15], sol[15:], D, A
+    K = np.block([[M_f, -C_c.T], [C_c, np.zeros((3, 3))]])
+    sol = np.linalg.solve(K, np.concatenate([M_f @ v, np.zeros(3)]))
+    return v, sol[:15], sol[15:], M_f, C_c
 
 
 def relabel(v):

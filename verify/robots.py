@@ -840,12 +840,12 @@ worst = dict(kkt=0.0, stick=0.0, mom=0.0, carnot=0.0, loss=np.inf, relabel=0.0)
 for _ in range(50):
     s, l_0 = biped.random_state(rng_w), 0.6 + rng_w.random()
     new, imp, _ = biped.impact(s, l_0)
-    v, v_plus, imp_kkt, D, A = bw.impact_kkt(s, l_0)
+    v, v_plus, imp_kkt, M_f, C_c = bw.impact_kkt(s, l_0)
     v_new = np.concatenate([new.Omega1, new.OmegaP, new.slide_dot, new.Omega2,
                             bw.hip_velocity(new.l, new.l_dot, new.R1, new.Omega1)])
     # eq20-impact against eq20-kkt: same impulse, same velocities after eq20-relabel
     worst["kkt"] = max(worst["kkt"], np.abs(imp - imp_kkt).max(), np.abs(bw.relabel(v_plus) - v_new).max())
-    worst["stick"] = max(worst["stick"], np.abs(A @ v_plus).max())
+    worst["stick"] = max(worst["stick"], np.abs(C_c @ v_plus).max())
     c = -l_0 * s.R2 @ E3                                # the landing foot, seen from the hip
     H_minus = bw.angular_momentum_about(c, s, v[12:15], s.Omega1, s.OmegaP, s.Omega2)
     H_plus = bw.angular_momentum_about(c, s, v_plus[12:15], v_plus[0:3], v_plus[3:6], v_plus[9:12])
@@ -853,7 +853,7 @@ for _ in range(50):
     T_minus = bw.kinetic_floating(s, v[12:15], s.Omega1, s.OmegaP, s.Omega2, s.slide_dot)
     T_plus = bw.kinetic_floating(s, v_plus[12:15], v_plus[0:3], v_plus[3:6], v_plus[9:12], v_plus[6:9])
     dv = v_plus - v
-    worst["carnot"] = max(worst["carnot"], abs((T_minus - T_plus) - 0.5 * dv @ D @ dv))
+    worst["carnot"] = max(worst["carnot"], abs((T_minus - T_plus) - 0.5 * dv @ M_f @ dv))
     worst["loss"] = min(worst["loss"], T_minus - T_plus)
     worst["relabel"] = max(worst["relabel"], np.abs(bw.relabel(bw.relabel(v)) - v).max())
 ck.true("biped_walking: impact closed form eq20-impact equals the 18 x 18 system eq20-kkt (with eq20-relabel)",

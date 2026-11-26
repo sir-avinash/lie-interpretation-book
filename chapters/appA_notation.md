@@ -9,7 +9,7 @@ epigraph_source: "Alfred North Whitehead, *An Introduction to Mathematics* (1911
 
 This appendix is the reference for the whole book. Each symbol means one thing, each term has one name, and every chapter, figure, notebook and skill follows the tables below. Read [](#secA-conventions) once. Use [](#secA-symbols) to look up a symbol and [](#secA-glossary) to look up a word. The last column of each table points to the place where the entry is introduced.
 
-A subscript makes a new symbol. $E$, $E_\xi$ and $E_\ell$ are three different things, and so are $f$ and $f_\Delta$, or $P$, $P_f$ and $P_{UU}$. The subscripts $\min$ and $\max$ always mark a bound or an extreme value: $\tau_{\max}$, $\theta_{\max}$, $\Delta_{\max}$, $\Psi_{\max}$, $\omega_{\max}$, $J_{\min}$. A hat marks an estimate, on any letter: $\hat R$, $\hat q$, $\hat\omega$, $\hat X$, $\hat\Delta$, $\hat b_g$. It never stands for the hat map, which is always written after its argument, $x^\wedge$. A tilde marks a prediction or estimation error ($\tilde e_R$, $\tilde\Delta$), the innovation $\tilde y$ of a filter, and a gain that multiplies one of these ($\tilde k_R$, $\tilde K$). A bar has no general meaning: $\bar J$ and $\bar p_k$ are two symbols of [](#ch-integrators). A superscript in parentheses counts time derivatives: $x^{(4)}$ is the fourth.
+A subscript makes a new symbol. $E$, $E_\xi$ and $E_\ell$ are three different things, and so are $f$ and $f_\Delta$, or $P$, $P_f$ and $P_{UU}$. The subscripts $\min$ and $\max$ always mark a bound or an extreme value: $\tau_{\max}$, $\theta_{\max}$, $\Delta_{\max}$, $\Psi_{\max}$, $\omega_{\max}$, $J_{\min}$. A hat marks an estimate, on any letter: $\hat R$, $\hat q$, $\hat\omega$, $\hat X$, $\hat\Delta$, $\hat b_g$. It never stands for the hat map, which is always written after its argument, $x^\wedge$. A tilde marks a prediction or estimation error ($\tilde e_R$, $\tilde\Delta$), the innovation $\tilde y$ of a filter, and a gain that multiplies one of these ($\tilde k_R$, $\tilde K$). A bar has no general meaning: $\bar J$ and $\bar p_k$ are two symbols of [](#ch-integrators). A superscript in parentheses counts time derivatives: $x^{(4)}$ is the fourth. The superscripts $-$ and $+$ mark a quantity just before and just after an instantaneous event: $\hat X^+$ after a measurement in [](#ch-filtering), $v^-$ and $v^+$ on the two sides of an impact in [](#sec20-impact). The subscript 0 on a mass or an inertia marks the value a controller believes: $J_0$, $m_{L,0}$. An index $i$ counts the members of a family: the links of a chain, the vehicles of a team with their cables ($R_i$, $q_i$, $f_i$, $\tau_i$, $T_i$), the pairs of reaction masses of the biped ($r_i$).
 
 A few letters are local and are not listed in the tables: $x, y, z$ for arbitrary vectors in an identity, $A$ for an arbitrary matrix, $i, j, k$ for indices, $n$ and $N$ for counts. So are $\Pi$ for a projection, $\beta$ and $\sigma$ in two exercises of [](#ch-variations), $\Phi$ for a transition matrix in one exercise of [](#ch-linearization), and $c_i$ for the entries of a matrix or the coefficients of a polynomial. They are named where they are used and mean nothing beyond that sentence. [](#secA-local) lists the letters that keep a second, local meaning inside one section because the alphabet ran out.
 
@@ -67,6 +67,8 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 
 **Names in code.** Notebooks, skills and scripts use `hat`, `vee`, `expm_so3`, `log_so3`, `Psi_R`, `Psi_q`, `e_R`, `e_Omega`, `e_q`, `e_omega`, and write desired quantities as `Rd`, `qd`, `Omegad`, `omegad`. A symbol with a Greek subscript is spelled out: `k_R`, `k_Omega`, `k_Delta`, `k_f`, `tau_fb`, `P_UU`, `nu_r`. A time derivative is `R_dot`, `x_L_ddot`. A hat, a tilde or a bar is appended without an underscore, like the `d` of a desired quantity: `Rhat`, `qhat`, `omegahat`, `Xhat`, `ytilde`, `Ktilde`, `Jbar`, `pbar`. Greek capitals are spelled out: `Sigma`, `Upsilon_k`, `Pi_C`. Outside the book the same notation is written in plain LaTeX, for example `R_d^\top R`. The robot library of [](#sec16-library) uses the same names for its parameters, states and inputs, and [](#tblA-code) lists the ones that have no symbol in the chapters.
 
+**Case studies.** [](#ch-case-quadrotor) to [](#ch-case-legged) share a vocabulary. A **mission** is one simulated flight or walk with every block connected, and an ablation table repeats it with one thing changed at a time. For the three aerial missions its first row is "Everything on". An actuator limit or a tension floor that we chose ($f_{\max}$, $\tau_{\max}$, $T_{\min}$) is stated once, with its value, and flagged as our assumption. The **flat feedforward** is the set of velocities and accelerations of a reference taken from the flat map ([](#sec10-feedforward)), and the **closed-loop feedforward** is the same set differentiated along the closed loop ([](#thm6-cascade)). The program that enforces a barrier condition is always called the safety filter, whatever it protects. What a safety filter or a limit did to an input is the **override**, $\delta\tau = \tau - \tau_d$ in [](#eq17-dtau). To "tell the predictor" is to add the override to the input of the state predictor, and to "inform the barrier" is to add the filtered estimate $\Delta_f$ to the barrier's model ([](#sec17-safety)). The limits section of each case study says "The guarantees are per block": each theorem covers one block, and none covers the composition.
+
 **Colors in figures.** Ink is structure. Indigo is the main object or the method that works. Terracotta is the contrasting object, the error or the method that fails. Teal is a third role. The trace error is always indigo and the logarithm error always teal.
 
 **References, targets and constraints in figures.** A target is an ink dot labeled "target". A reference drawn alone is the main object and is indigo. A reference drawn next to a motion that tracks it steps back: a thin dashed gray line with a hollow marker, terracotta on the stretch where it violates a constraint. The motion that tracks it is a solid line with a filled marker, indigo for the controller that works and terracotta for the one that fails, and a plan or prediction is teal. The boundary of a constraint is ink, and the forbidden side is filled in a pale terracotta where it can be filled. The axis of a cone is ink and labeled $q_c$. A quadrotor is two ink arms along $R\,e_1$ and $R\,e_2$ with four rotor rings. A true quantity drawn next to its estimate is treated like a reference next to a motion: the truth is the thin dashed gray line with a hollow marker, the estimate of the filter that works is solid indigo, and that of the filter it is compared with is solid terracotta. A curve prescribed for a flat output, drawn next to the simulated motion, is dashed gray in the same way.
@@ -107,7 +109,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $q$ | Direction in $S^2$. The letter $q$ alone is always a direction | [](#eq2-s2-kinematics) |
 | $\omega$ | World-frame angular velocity: of a direction ($\dot q = \omega\times q$, $\omega\cdot q = 0$) or of a body ($\omega = R\,\Omega$) | [](#eq2-s2-kinematics), [](#eq2-spatial) |
 | $x$, $v$ | Position and velocity $v = \dot x$ in the world frame. In [](#eq5-standard), $v$ is the stack of all velocities | [](#sec2-se3) |
-| $x_L$, $x_Q$, $v_L$ | Load position, quadrotor position, load velocity | [](#sec2-products) |
+| $x_L$, $x_Q$, $v_L$ | Load position, quadrotor position, load velocity. For a rigid payload $x_L$ is its center of mass | [](#sec2-products), [](#sec19-manifold) |
 | $\zeta = (V, \Omega)$ | Twist, or body velocity on a matrix Lie group, $\dot X = X\,\zeta^\wedge$ | [](#eq2-se3-kin) |
 | $\quat = (q_0, q_v)$ | Unit quaternion, scalar part first | [](#eq-quat-to-R) |
 | $\Theta = (\psi, \theta, \phi)$ | Yaw, pitch and roll angles | [](#eq-zyx) |
@@ -118,7 +120,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $\Lambda$ | Quarter turn of the plane. $\Lambda_n$ is its counterpart for $n$ degrees of freedom, the block matrix with $I$ and $-I$ off the diagonal | [](#sec2-tangent), [](#sec12-three) |
 | $t$, $t_f$, $h$ | Time, final time, time step. $h$ is also the sampling period of a controller | [](#sec4-hamilton), [](#sec2-integration), [](#eq13-sampled) |
 | $N$, $k$ | Number of steps in a horizon or a discrete path, and the stage index $k = 0, \dots, N$ | [](#eq13-sampled), [](#def12-discrete) |
-| $l$ | A length: cable, rod or leg. $l_i$ is the length of link $i$ | [](#sec2-products), [](#sec10-chain) |
+| $l$ | A length: cable, rod or leg. $l_i$ is the length of link $i$, or of the cable of vehicle $i$. $l_0$ is the nominal length of a leg of the biped, which its swing leg keeps | [](#sec2-products), [](#sec10-chain), [](#eq19-kin), [](#eq20-primitive) |
 | $x_i$, $q_i$, $m_i$, $T_i$ | Position and mass of joint $i$ of a chain, direction and tension of link $i$, counted from the quadrotor | [](#sec10-chain) |
 | $n_Q$ | Number of quadrotors on a chain | [](#thm10-chain) |
 
@@ -158,7 +160,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $e_\omega$, $e_{\dot q}$ | Velocity errors on $S^2$, $e_\omega = \omega - (I - q q\T)\,\omega_d$ | [](#eq3-e-omega), [](#eq3-transport-s2) |
 | $e_x$, $e_v$ | Position error $x - x_d$ and velocity error $v - \dot x_d$ | [](#def3-error-vector), [](#eq6-Fd) |
 | $e_F$ | Force error $f R\,e_3 - F_d$ of a vehicle that can only push along its thrust axis | [](#eq6-Delta) |
-| $D = \operatorname{diag}(d_1, d_2, d_3)$ | Weight of the attitude error function | [](#eq3-weighted-psi) |
+| $D = \operatorname{diag}(d_1, d_2, d_3)$ | Weight of the attitude error function, on $R_d\T R$ in [](#eq3-weighted-psi) and on $R\,R_d\T$ in [](#eq20-right) | [](#eq3-weighted-psi), [](#eq20-right) |
 | $C_R$ | Matrix in $\dot e_R = C_R\,e_\Omega$ | [](#eq3-eR-dot) |
 | $\mathcal{T}$ | Transport map | [](#def3-transport) |
 | $E_\ell$, $E_r$ | Left- and right-invariant error, $X_d^{-1}X$ and $X X_d^{-1}$. For an estimate, $X^{-1}\hat X$ and $\hat X X^{-1}$ | [](#def3-invariant-errors), [](#eq14-errors) |
@@ -176,18 +178,20 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 
 | Symbol | Meaning | Defined in |
 | :-- | :-- | :-- |
-| $m$, $m_Q$, $m_L$ | Mass, quadrotor mass, load mass | [](#sec4-products) |
-| $J$ | Inertia matrix in the body frame. $J_0$ is the inertia a controller believes, and in [](#eq4-leg) the inertia of a leg without its point mass | [](#sec3-velocity), [](#sec8-baseline), [](#ex4-leg) |
+| $m$, $m_Q$, $m_L$ | Mass, quadrotor mass, load mass. $m_{L,0}$ is the load mass a controller believes. $m_i$ is also the mass of vehicle $i$ of a team, and $m_r$ one reaction mass of the biped | [](#sec4-products), [](#sec18-mission), [](#sec19-mission), [](#eq20-stance) |
+| $J$ | Inertia matrix in the body frame. $J_0$ is the inertia a controller believes, and in [](#eq4-leg) the inertia of a leg without its point mass. $J_L$ is the inertia of a payload, $J(l)$ and $J_P(r)$ those of the stance leg and the torso of the biped | [](#sec3-velocity), [](#sec8-baseline), [](#ex4-leg), [](#eq19-free), [](#eq20-stance) |
 | $J_{\min}$, $J_{\max}$ | Smallest and largest eigenvalues of the inertia matrix in a Lyapunov function | [](#sec6-lyapunov) |
 | $g$ | Gravitational acceleration, 9.81 m/s² | [](#sec4-hamilton) |
-| $\rho$ | Body-frame vector from the pivot to the center of mass | [](#eq4-pendulum) |
+| $\rho$ | Body-frame vector from a reference point of a body to its center of mass: from the pivot of a pendulum, and from the point where the thrust acts on a quadrotor with a package | [](#eq4-pendulum), [](#sec17-mission) |
+| $\rho_i$ | Body-frame vector from the center of mass of a payload to the point where cable $i$ is attached | [](#sec19-mission) |
 | $L$, $S$ | Lagrangian and action | [](#sec4-hamilton) |
 | $\delta W$ | Virtual work | [](#def4-dalembert) |
-| $\tau$ | Torque in the body frame | [](#sec4-forces) |
-| $f$ | Thrust, a scalar, acting along $R\,e_3$ | [](#eq4-quadrotor) |
-| $F$ | Force in the world frame. $F_d$ is the force a position loop asks for, $F_L$ the one asked for a load. Along a motion, $F = f R\,e_3$ is the thrust vector | [](#eq4-virtual-work), [](#eq6-Fd), [](#eq6-load), [](#eq10-quad-force) |
+| $\tau$ | Torque in the body frame. $\tau_L$ is the torque part of the wrench on a payload, $\tau_1$, $\tau_P$, $\tau_2$ the ankle torque and the two hip torques of the biped | [](#sec4-forces), [](#eq19-grasp), [](#eq20-stance) |
+| $f$ | Thrust, a scalar, acting along $R\,e_3$. For a leg, the force along it. $f_s = (f_{s,1}, f_{s,2}, f_{s,3})$ are the forces on the three pairs of reaction masses | [](#eq4-quadrotor), [](#eq4-leg), [](#eq20-stance) |
+| $f_{\max}$, $T_{\min}$, $r_{\min}$ | Largest thrust of a vehicle, smallest tension a cable must keep, smallest distance between the centers of two vehicles. $f_{\max}$, $\tau_{\max}$ and $T_{\min}$ are assumptions of the case studies, and $r_{\min}$ is the value of [](#sec8-quad) | [](#sec17-mission), [](#sec18-mission), [](#sec19-mission) |
+| $F$ | Force in the world frame. $F_d$ is the force a position loop asks for, the thrust vector a cascade asks for, or the thrust vector of a reference. $F_L$ is the force asked for a load or a payload. $F_e$ is an external force on a quadrotor. Along a motion, $F = f R\,e_3$ is the thrust vector | [](#eq4-virtual-work), [](#eq6-Fd), [](#eq6-load), [](#eq10-quad-force) |
 | $u$ | Generic input, for example $u = (f, \tau)$. $u_d$, $\tau_d$ are the input of a reference, or the input a tracker proposes | [](#eq5-standard), [](#def7-feedback), [](#eq8-safety-filter) |
-| $T$ | Tension of a cable or rod. $T\,q$ is the tension vector | [](#eq4-tension), [](#eq10-chain) |
+| $T$ | Tension of a cable or rod. $T\,q$ is the tension vector. $T_d$ is the stack of the tension vectors of a plan, and $T_{\text{int}}$ the size of the internal force on each cable | [](#eq4-tension), [](#eq10-chain), [](#eq19-qp), [](#sec19-plan) |
 | $E_\xi$, $E_\eta$, $E_{\delta x}$ | Coefficient of a variation in $\delta S$. The equation of motion is $E_\xi = 0$ | [](#eq5-pendulum) |
 | $M$, $b$, $G$ | Mass matrix, velocity and gravity terms, input matrix of $M\,\dot v + b + G\,u = 0$ | [](#eq5-standard) |
 | $\lambda$ | An eigenvalue. Alone, the growth rate of an instability. $\lambda_{\min}(\cdot)$, $\lambda_{\max}(\cdot)$ are the smallest and largest eigenvalues of a symmetric matrix | [](#eq4-growth), [](#thm6-exp) |
@@ -232,7 +236,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $\gamma$ | Guaranteed exponential rate, $\dot V \le -\gamma V$ | [](#thm6-exp) |
 | $\Psi_{\max}$ | Size of a sublevel set: the largest value the error function can reach from it | [](#sec6-lyapunov) |
 | $\omega_{\max}$ | Bound on the angular velocity of a reference direction | [](#thm6-s2) |
-| $\kappa$ | Factor by which an inner loop is made faster, with gains scaled by $(\kappa^2, \kappa)$ | [](#warn6-feedforward) |
+| $\kappa$ | Factor by which a loop is made faster, with gains scaled by $(\kappa^2, \kappa)$. In a cascade it is the innermost loop | [](#warn6-feedforward), [](#tbl20-compare) |
 
 : Tracking and stability.
 
@@ -245,13 +249,14 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | Symbol | Meaning | Defined in |
 | :-- | :-- | :-- |
 | $\tau_{\text{fb}}$ | Feedback part of the torque, the part left to design. $F_{\text{fb}}$, $F_{\text{ff}}$ are the feedback and feedforward parts of a force | [](#eq8-pd), [](#eq8-qp) |
-| $\Delta$ | Lumped uncertainty, a torque in the body frame | [](#eq8-lumped) |
+| $\Delta$ | Lumped uncertainty: one vector that enters where the input enters. A torque in the body frame in [](#eq8-lumped). A force in the world frame, added to the thrust vector, in [](#eq18-lumped). $\hat\Delta$, $\Delta_f$, $\Delta_{\max}$, $k_\Delta$ and $y$ follow it | [](#eq8-lumped), [](#eq18-lumped) |
 | $\Delta_e$, $\Delta_m$ | Unknown external torque, and the part of the feedforward that used the wrong inertia | [](#eq8-lumped) |
 | $\Delta_{\max}$ | Bound on $\|\Delta\|$, and radius of the projection ball | [](#thm8-bound), [](#eq8-proj) |
 | $R_p$, $\Omega_p$, $\tau_p$ | Attitude, body angular velocity and torque of the state predictor | [](#sec8-l1) |
 | $e_R^p$, $e_\Omega^p$, $\tau_{\text{fb}}^p$ | Tracking errors and feedback torque of the state predictor | [](#sec8-l1) |
 | $\tilde\Psi$, $\tilde e_R$, $\tilde e_\Omega$ | Prediction error: error function, error vector and velocity error between predictor and vehicle | [](#eq8-pred-error) |
 | $\tilde k_R$, $\tilde k_\Omega$ | Gains on the prediction error | [](#eq8-l1-law) |
+| $v_p$, $\omega_p$, $\tilde e_v$, $\tilde e_\omega$, $\tilde k_v$, $\tilde k_\omega$ | State predictor of a load and its cable: predicted velocities, prediction errors $v_p - v_L$ and $\omega_p - \omega$, and the gains on them | [](#eq18-predictor) |
 | $\hat\Delta$, $\tilde\Delta$, $\Delta_f$ | Estimate of the lumped uncertainty, its estimation error, and the filtered estimate | [](#sec8-l1), [](#eq8-filter) |
 | $\Xi$ | The matrix $J_0\,R_p\T R\,J_0^{-1}R\T R_p$, which is the identity when predictor and vehicle agree | [](#eq8-l1-law) |
 | $k_\Delta$ | Adaptation gain | [](#eq8-adapt) |
@@ -259,7 +264,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $\operatorname{Proj}$, $f_\Delta$ | Projection operator and the function that defines its ball | [](#eq8-proj) |
 | $k_f$ | Cutoff of the low-pass filter | [](#eq8-filter) |
 | $V_\infty$ | Level below which a Lyapunov function with a persistent disturbance ends up | [](#thm8-l1) |
-| $H$ | Barrier function. The safe set is $\{H \ge 0\}$ | [](#sec8-barrier) |
+| $H$ | Barrier function. The safe set is $\{H \ge 0\}$. $H_{ij}$ is the one that keeps vehicles $i$ and $j$ apart | [](#sec8-barrier), [](#sec19-safety) |
 | $\alpha$, $\alpha_1$, $\alpha_2$ | Rates of the barrier condition | [](#thm8-comparison), [](#eq8-rd2) |
 | $H_1$ | $\dot H + \alpha_1 H$, for a barrier function of relative degree two | [](#eq8-rd2) |
 | $q_c$, $\theta_{\max}$ | Axis and half-angle of a cone on the sphere. $\omega_c$ is the angular velocity of a moving axis | [](#eq8-cone), [](#eq13-dto) |
@@ -279,7 +284,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | Symbol | Meaning | Defined in |
 | :-- | :-- | :-- |
 | $\Phi$ | Cost of an optimization problem | [](#sec13-newton) |
-| $\delta\Omega$, $\delta\tau$, $\delta\zeta$, $\delta u$ | Deviation from the reference, $\Omega - \Omega_d$ and so on. It equals the variation to first order | [](#sec13-error), [](#tbl7-dictionary) |
+| $\delta\Omega$, $\delta\tau$, $\delta\zeta$, $\delta u$ | Deviation from the reference, $\Omega - \Omega_d$ and so on. It equals the variation to first order. With $\tau_d$ the torque a tracker proposes, $\delta\tau = \tau - \tau_d$ is the override of a safety filter and of the limits | [](#sec13-error), [](#tbl7-dictionary), [](#eq17-dtau) |
 | $\tau_{\max}$ | Bound on each component of the torque | [](#sec13-qp) |
 | $U$ | Input corrections of all stages, stacked. $U_{\min}$, $U_{\max}$ are its bounds | [](#eq13-qp) |
 | $P_{UU}$, $P_{Us}$ | Blocks of the cost of the horizon, a quadratic form in $(s_0, U)$ | [](#eq13-qp) |
@@ -360,7 +365,7 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $y$ | A reading of a sensor | [](#eq14-obs) |
 | $d$ | The known vector of a measurement $X^{-1}d$ or $X d$. A local letter | [](#eq14-obs) |
 | $x_m$ | Position of a landmark | [](#eq14-obs) |
-| $x_c$ | Position of a foot in contact | [](#eq14-contact) |
+| $x_c$ | Position of a foot in contact. At a touchdown, the foot that lands | [](#eq14-contact), [](#sec20-impact) |
 | $\tilde y$, $\Sigma_{\tilde y}$ | Innovation, predicted minus measured, and its covariance | [](#eq14-innovation), [](#eq14-gain) |
 | $C_y$ | Measurement matrix, $\tilde y = C_y\,\chi_r$ to first order | [](#eq14-innovation) |
 | $\tilde K$ | Kalman gain | [](#eq14-gain) |
@@ -370,6 +375,33 @@ A few letters are local and are not listed in the tables: $x, y, z$ for arbitrar
 | $\delta\theta$ | Attitude error of a conventional filter, $\hat R = R\exp(\delta\theta^\wedge)$. Used once | [](#sec14-autonomous) |
 
 : Estimation.
+
+:::
+
+### Teams and legs
+
+::: {.table #tblA-cases}
+
+| Symbol | Meaning | Defined in |
+| :-- | :-- | :-- |
+| $R_L$, $\Omega_L$ | Attitude and body angular velocity of a payload | [](#sec19-manifold) |
+| $x_i$, $R_i$, $\Omega_i$, $q_i$, $\omega_i$, $f_i$, $\tau_i$, $T_i$ | Vehicle $i$ of a team and its cable: position, attitude, body angular velocity, cable direction and its angular velocity, thrust, torque, tension. A desired one is $q_{i,d}$, $\omega_{i,d}$ | [](#eq19-kin), [](#eq19-free) |
+| $(F_L, \tau_L)$ | Wrench on a payload: the force in the world frame and the torque in the payload frame | [](#eq19-grasp) |
+| $G_L$ | Grasp map: the matrix that takes the stack of tension vectors to the wrench. Not the input matrix $G$ | [](#eq19-grasp) |
+| $R_1$, $R_P$, $R_2$, $\Omega_1$, $\Omega_P$, $\Omega_2$ | Attitudes and body angular velocities of the stance leg, the torso and the swing leg of the biped. The subscript $P$ marks the torso and the hip | [](#sec20-model) |
+| $r = (r_1, r_2, r_3)$ | Distances of the three pairs of reaction masses from the hip | [](#sec20-model) |
+| $\Pi_i$ | The projection $I - e_i e_i\T$ | [](#eq20-stance) |
+| $x_P$, $v_P$ | Position and velocity of the hip | [](#sec20-impact) |
+| $M_f$ | Mass matrix of the floating-base model, positive definite: the kinetic energy is $\tfrac12 v\cdot M_f\,v$. It equals the $M$ of [](#eq5-standard) for the same model up to the overall sign that the symbolic library carries | [](#eq20-kkt) |
+| $C_c$ | Contact constraint matrix: $C_c\,v$ is the velocity of the foot that lands | [](#eq20-kkt) |
+| $p_c$ | Impulse of the ground on the foot that lands | [](#eq20-kkt) |
+| $v^-$, $v^+$ | Stack of the velocities just before and just after an impact | [](#eq20-kkt) |
+| $t_s$, $\theta_s$ | Duration of a step of a motion primitive, and half the angle a leg swings through | [](#eq20-primitive) |
+| $\theta_d$, $l_d$, $r_{i,d}$ | Desired pitch of the stance leg, desired leg length and desired distances of the reaction masses | [](#eq20-primitive) |
+| $k_l$, $k_{\dot l}$, $k_r$, $k_{\dot r}$ | Gains on the errors of the leg length and of the reaction masses, and on their rates | [](#sec20-walk) |
+| $e$ | Error vector of the weighted right-invariant error function of [](#eq20-right). Used there only | [](#eq20-right) |
+
+: Symbols of the case studies with several vehicles and with legs.
 
 :::
 
@@ -416,13 +448,15 @@ The book has more quantities than letters. Each letter below keeps its meaning f
 | $V$ | Lyapunov function | Linear part of a twist $\zeta = (V, \Omega)$, always inside the pair |
 | $\theta$ | Angle of a rotation or between two directions | Pitch, inside Euler-angle formulas |
 | $v$ | Velocity | Stack of all velocities in [](#eq5-standard) |
-| $c$ | Coefficient of the cross term | Inequality constraints $c(x) \le 0$ in [](#sec13-ipm) |
-| $r$ | A radius when it carries a subscript ($r_o$, $r_{\min}$) | Equality constraints $r(x) = 0$ and their value $r_k$ in [](#sec13-plan) and [](#sec13-ipm) |
+| $c$ | Coefficient of the cross term | Inequality constraints $c(x) \le 0$ in [](#sec13-ipm). The bracket $q_d\cdot F_d - m_Q l\,\|\omega_d\|^2$ in [](#eq18-linear). As a subscript, a contact ($x_c$, $p_c$, $C_c$, $\chi_c$) or a cone ($q_c$) |
+| $r$ | A radius when it carries a subscript ($r_o$, $r_{\min}$) | Equality constraints $r(x) = 0$ and their value $r_k$ in [](#sec13-plan) and [](#sec13-ipm). In [](#ch-case-legged), $r_i$ is the distance of a pair of reaction masses from the hip, the radius at which it adds to the inertia of the torso, and $r$ is the list of the three |
 | $x$ | Position | The point that collects all unknowns of an optimization problem in [](#sec13-ipm) |
 | $n$, $d$ | A count, and the subscript for "desired" | Unit normal and distance of the wall in [](#sec8-barrier) |
 | $p$ | A momentum, and the discrete momentum $p_k$. As a sub- or superscript, the state predictor | The scalar $(x - x_o)\cdot R\,e_3$ in [](#sec8-quad) |
 | $q_i$, $R_i$ | A direction or attitude with an index is the $i$-th reading or stage | $q_0$ and $q_v$ are the parts of a quaternion, inside $\quat = (q_0, q_v)$ |
-| $f$ as a subscript | Final ($t_f$, $P_f$) | Filtered ($\Delta_f$, $k_f$) |
+| $f$ as a subscript | Final ($t_f$, $P_f$) | Filtered ($\Delta_f$, $k_f$). Floating base, in $M_f$ of [](#eq20-kkt) |
+| $s$ as a subscript | Specific ($a_s$) | A step of a gait ($t_s$, $\theta_s$) and a slide ($f_s$) in [](#ch-case-legged) |
+| $\Psi$ without a subscript | The error function in general | The weighted error function on $R\,R_d\T$ in [](#eq20-right) |
 | $\psi$ | Heading of a vehicle | Yaw, inside Euler-angle formulas. The two agree when the roll or the pitch is zero |
 | $\theta$ with an index | Angle of a rotation | $\theta_k$ is also the angle of the planar pendulum at stage $k$ in [](#sec12-three) and [](#sec12-discrete), and the angle of the step rotation in [](#thm12-lgvi). $\hat\theta$ is the estimate of a planar heading in [](#sec14-circle) |
 | $c$ with an index | Entries of a matrix | Coefficients $c_0, \dots, c_7$ of a polynomial in [](#sec10-trajectories), a drag constant $c_1$ in [](#exr14-affine), and the constant in $e^{c/h}$ in [](#sec12-conserve) |
@@ -459,11 +493,13 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 | `m_leg`, `m_r`, `J_0`, `J_P` | Mass of one leg, one reaction mass, inertia of a leg, inertia of the torso | `reaction_mass_biped` |
 | `tau_1`, `tau_P`, `tau_2`, `f`, `f_s` | Ankle torque, hip torque between stance leg and torso, hip torque between torso and swing leg, leg force, forces on the three pairs of reaction masses | `reaction_mass_biped` |
 | `l_0`, `l_bar`, `r_0`, `r_bar`, `t_s`, `theta_s`, `lean`, `roll` | Fields of `Gait`, the motion primitive [](#eq20-primitive): length of the swing leg and extension of the stance leg in mid-step, nominal slide and its excursion, duration of a step, swing angle of the legs, forward pitch and roll of the torso | `biped_walking` |
+| `M_f`, `C_c`, `p_c` | $M_f$, $C_c$ and $p_c$ of [](#eq20-kkt), returned by `impact_matrices` and `impact_kkt` | `biped_walking` |
 | `d` | The desired state of a primitive: a dict keyed by the names of the stance state and of their accelerations, `l_ddot`, `Omega1_dot`, ... | `biped_walking` |
 | `k_l`, `k_ldot`, `k_r`, `k_rdot`, `D` | $k_l$, $k_{\dot l}$, $k_r$, $k_{\dot r}$, and the weights $d_i$ of [](#eq20-right) | `biped_walking` |
 | `R_r`, `R_l`, `Omega_r`, `Omega_l`, `l_r`, `l_l` | Attitude, body angular velocity and length of the right and the left leg | `cassie` |
 | `m_b`, `m_h`, `m_k`, `J_b`, `J_leg`, `d` | Masses of the pelvis, of a hip and of a knee, inertias of the pelvis and of a leg, half the hip width | `cassie` |
 | `tau_r`, `f_r`, `tau_l`, `f_l` | Hip torque and leg force of the right and the left leg | `cassie` |
+| `rho`, `r_add`, `m_add`, `F_e`, `tau_e` | Not in the library: names in the scripts of [](#ch-case-quadrotor). $\rho$, the position and the mass of the package, the force of the gust in the world frame and its torque in the body frame (the $\Delta_e$ of [](#eq8-lumped)) | quadrotor with a package |
 | `E1`, `E2`, `E3` | $e_1$, $e_2$, $e_3$ | all |
 
 : Names in the robot library that have no symbol in the chapters.
@@ -501,6 +537,8 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 **Cable-suspended load.** A point mass hanging from a quadrotor on a massless cable. A rigid body carried by several quadrotors is a payload. The cable direction $q$ points from the quadrotor to the load. [](#sec2-products).
 
 **Cascade.** A controller built as nested loops, each of which supplies the desired value for the next one in: position, then direction, then attitude. [](#sec6-cascade).
+
+**Closed-loop feedforward.** The desired velocities and accelerations of an inner loop, differentiated along the closed loop of the loops outside it. It is what [](#thm6-cascade) assumes. [](#sec10-feedforward), [](#sec17-cascade).
 
 **CBF-CLF-QP.** A quadratic program solved at every instant, with a barrier condition as a hard constraint and the decrease of a Lyapunov function as a constraint with a slack. [](#eq8-qp).
 
@@ -566,17 +604,23 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Feedforward.** The part of a control law computed from the model and the reference and not from the error. One word, no hyphen. [](#eq6-law), [](#sec10-feedforward).
 
+**Flat feedforward.** The desired velocities and accelerations of every loop of a cascade, taken from the flat map of the reference. [](#sec10-feedforward), [](#sec17-cascade).
+
 **Flat map.** The functions that give the state and the inputs from a flat output and its derivatives. [](#def10-flat).
 
 **Flat output.** A set of as many functions as there are inputs, written $\varphi$, from which the state and the inputs follow without integration. [](#def10-flat).
 
 **Force error.** The difference $e_F = f R\,e_3 - F_d$ between the force a thrust axis delivers and the force the position loop asked for. [](#eq6-Delta).
 
+**Force ratio.** The horizontal part of the force of the ground on a foot over its vertical part. The foot slips when it exceeds the friction coefficient. The same ratio of an impulse is the impulse ratio. [](#sec20-walk).
+
 **Forward invariant.** A set is forward invariant when solutions that start in it stay in it. [](#sec8-barrier).
 
 **Gimbal lock.** The loss of one direction of rotation in an Euler-angle description, at 90° of pitch for yaw, pitch and roll. [](#sec-euler).
 
 **Gradient, Hessian.** The first- and second-order coefficients of a function along a step that stays on the manifold. [](#def13-newton).
+
+**Grasp map.** The matrix $G_L$ that takes the tension vectors of the cables to the wrench on the payload. [](#eq19-grasp).
 
 **Group-affine.** Dynamics on a group that satisfy [](#eq14-affine). For such dynamics the invariant errors obey equations that involve neither the state nor the estimate. [](#def14-affine).
 
@@ -592,7 +636,11 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **IMU.** Inertial measurement unit: a gyroscope and an accelerometer in one package. [](#sec14-autonomous).
 
+**Impulse.** The integral of a force over an instant, $p_c$: the change of momentum at an impact. [](#eq20-kkt).
+
 **Innovation.** The predicted reading minus the actual one, $\tilde y$. [](#sec14-circle), [](#eq14-innovation).
+
+**Internal force.** A stack of cable forces in the null space of the grasp map. The cables pull against each other and the payload feels nothing. [](#sec19-tensions).
 
 **Interior-point method.** A method for inequality constraints that follows the central path to the solution from inside the constraints. [](#sec13-ipm).
 
@@ -642,11 +690,17 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Missing force.** The force a body's motion needs beyond what gravity gives, $m(\ddot x + g\,e_3)$. A cable lies along the missing force of what it carries. [](#thought10-hand).
 
+**Mission.** One simulated flight or walk of a case study, with every block of [](#fig16-pipeline) connected. [](#sec17-mission).
+
+**Motion primitive.** A reference for every factor of a legged robot over one step, in closed form. [](#eq20-primitive).
+
 **Model predictive control.** Control by solving an optimization problem over a receding horizon at every sample. Abbreviated MPC. [](#def13-mpc).
 
 **Multicopter.** A vehicle lifted by several rotors. A quadrotor is a multicopter with four.
 
 **NEES.** Normalized estimation error squared: the squared error weighted by the inverse covariance and divided by the dimension. It is 1 on average for a filter whose covariance tells the truth. [](#tbl14-mc).
+
+**Override.** What a safety filter or a limit of the actuator changed in an input, $\delta\tau = \tau - \tau_d$. A state predictor must be told of it. [](#eq17-dtau), [](#warn17-order).
 
 **Payload.** A rigid body carried by several quadrotors. A point mass on a cable is a cable-suspended load. [](#sec4-products).
 
@@ -659,6 +713,8 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 **Product manifold.** The set of lists of points, one from each factor. [](#sec2-products).
 
 **Quadratic program.** The minimization of a quadratic cost under linear constraints. Abbreviated QP. [](#eq8-safety-filter), [](#eq13-qp).
+
+**Reaction masses.** The three pairs of masses that slide along the body axes of the torso of the Reaction Mass Biped, at the distances $r_i$ from the hip. [](#sec20-model).
 
 **Reading.** One output of a sensor, $y$. [](#eq14-obs).
 
@@ -684,7 +740,11 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Specific force.** What an accelerometer reads: the acceleration minus gravity, in the body frame, $a_s$. [](#eq14-imu).
 
+**Stance leg, swing leg.** The leg whose foot is on the ground, and the other one. They exchange names at a touchdown. [](#sec20-model), [](#eq20-relabel).
+
 **State predictor.** A copy of the believed dynamics, driven by the estimate of the uncertainty and run alongside the vehicle. The L1 literature calls it the reference model. [](#sec8-l1).
+
+**Step length, step duration.** The distance between two successive footholds, and the time between two successive touchdowns. The duration of the reference step is $t_s$. Not the time step $h$. [](#sec20-walk).
 
 **Step rotation, step velocity.** The rotation $\Upsilon_k = R_k\T R_{k+1}$ over one time step, and its rotation vector divided by $h$. [](#def12-step).
 
@@ -698,9 +758,13 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 
 **Target.** A desired configuration that does not move, marked by the subscript $d$. [](#sec-error).
 
+**Tension distribution.** The choice of the tension vectors that produce a given wrench: a particular solution plus an internal force, here by the quadratic program [](#eq19-qp). [](#sec19-tensions).
+
 **Tension vector.** The tension of a link times its direction, $T_i\,q_i$. [](#eq10-chain).
 
 **Thrust vector.** The force $F = f R\,e_3$ of the rotors, in the world frame. [](#eq10-quad-force).
+
+**Touchdown.** The instant at which the swing foot reaches the ground. The impact map acts there. [](#sec20-impact).
 
 **Trace error.** The attitude error function $\tfrac12\tr(I - R_d\T R)$ and its error vector $e_R$. [](#sec3-errors).
 
@@ -727,6 +791,8 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 **World frame.** The frame that does not move, with $e_3$ up. [](#sec-rotation-space).
 
 **World-frame angular velocity.** The angular velocity expressed in the world frame, $\omega$. [](#sec2-body-spatial).
+
+**Wrench.** A force and a torque on one rigid body, $(F_L, \tau_L)$ for a payload. [](#eq19-grasp).
 
 **Yaw.** The first Euler angle of $\Theta = (\psi, \theta, \phi)$. Not the heading, unless the roll or the pitch is zero. [](#eq-zyx).
 
@@ -816,6 +882,13 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 | minimum-snap | min-snap, minimum snap as an adjective |
 | waypoint | way-point, via point |
 | robot model library | model zoo, robot zoo |
+| step duration | step time (the time step is $h$) |
+| flat feedforward, closed-loop feedforward | feedforward from the plan, exact feedforward as names |
+| safety filter | cone filter, tension filter, as the name of the program |
+| The guarantees are per block | other headings for the same limit |
+| $M_f$, $C_c$ | $D$, $A$ for the floating-base mass matrix and the contact constraint matrix |
+| $T_d$ | $\bar T$ for the tension vectors of a plan |
+| $m_{L,0}$ | another mark for a believed mass |
 
 : Preferred terms and forms.
 

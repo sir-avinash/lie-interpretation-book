@@ -27,12 +27,12 @@ Do the steps in order. Do not start a step before the check of the previous one 
 2. **Stance dynamics** (`ch04-manifold-dynamics-modeling`, `ch05-geomech-symbolic-derivation`). Build the Lagrangian mass by mass, not from a reduced kinetic energy. For a configuration-dependent inertia `J(l) = J_0 + m l^2 Pi`, `Pi = I - e3 e3^T`, expect the term `J_dot Omega` on the left:
    `J(l) Omega_dot + Omega x J(l) Omega + J_dot Omega = m g l (R^T e3) x e3 + tau`.
    Check: `check_eom < 1e-5`, and hand-written accelerations equal the symbolic model at random states to `1e-9`.
-3. **Floating base.** Add the hip position `x_P`. Write the inertia `D` of the velocity `(Omega_1, Omega_P, r_dot, Omega_2, v_P)` and the Jacobian `A` of the swing foot, `A = [0 0 0  l_0 R2 hat(e3)  I]`.
-   Check: `D` equals the mass matrix of a second symbolic derivation.
-4. **Impact map.** Solve `D (v+ - v-) = A^T p_c`, `A v+ = 0`. If every body has its center of mass at the hip, only the landing leg and the hip change:
+3. **Floating base.** Add the hip position `x_P`. Write the mass matrix `M_f` of the velocity `(Omega_1, Omega_P, r_dot, Omega_2, v_P)` and the contact constraint matrix `C_c` of the swing foot, `C_c = [0 0 0  l_0 R2 hat(e3)  I]`. (`D` is kept for the weights of the error function, `A` for a linearization.)
+   Check: `M_f` equals the mass matrix of a second symbolic derivation, up to its overall sign.
+4. **Impact map.** Solve `M_f (v+ - v-) = C_c^T p_c`, `C_c v+ = 0`. If every body has its center of mass at the hip, only the landing leg and the hip change:
    `J(l_0) Omega_2+ = J_0 Omega_2- + m l_0 e3 x R2^T v_P-`,  `v_P+ = l_0 R2 (Omega_2+ x e3)`,  `p_c = m (v_P+ - v_P-)`.
    Then trade the names of the legs: `(l, l_dot, R1, Omega1, R2, Omega2) -> (l_0, 0, R2, Omega_2+, R1, Omega_1-)`.
-   Checks, at random states: closed form equals the linear system; angular momentum about the landing foot, summed mass by mass, is conserved; energy lost equals `(v+ - v-) . D (v+ - v-) / 2 >= 0`; the relabeled stance state reproduces `v_P+`; a second landing changes nothing; trading names twice is the identity.
+   Checks, at random states: closed form equals the linear system; angular momentum about the landing foot, summed mass by mass, is conserved; energy lost equals `(v+ - v-) . M_f (v+ - v-) / 2 >= 0`; the relabeled stance state reproduces `v_P+`; a second landing changes nothing; trading names twice is the identity.
 5. **Motion primitive.** One closed-form reference per factor over a step of duration `t_s`: leg angles, leg length (lengthen in mid-step for foot clearance), torso attitude, slides. Give velocities and accelerations in closed form.
    Check: the reference swing foot is above the ground for `0 < t < t_s` and on it at `t_s`.
 6. **Tracking law** (`ch06-geometric-tracking-control`). Per body, a net torque, then stack: `tau_2 = n_2`, `tau_P = n_P + RP^T R2 tau_2`, `tau_1 = n_1 + R1^T RP tau_P`. Two equivalent forms:
@@ -42,7 +42,7 @@ Do the steps in order. Do not start a step before the check of the previous one 
    Check: the rate of the Lyapunov function along the closed loop equals `-sum k_Omega |velocity error|^2` minus the damping of the lengths, by finite differences.
 7. **Integrate** (`ch12-variational-integrator-design`). Exponential update per factor. Test energy on an uncontrolled run first: constant leg force `f`, conserved quantity `energy - f l`.
 8. **Hybrid loop.** Step the stance dynamics, detect the swing foot crossing the ground from above (only after mid-step), bisect for the touchdown time, apply the impact map, move the stance foot, restart the primitive.
-9. **Test over many steps.** Record per step: step length, step time, errors at start and at touchdown, foot clearance, impulse. Record along the motion: ground force `m (x_P_ddot + g e3)`, its ratio horizontal over vertical, joint torques.
+9. **Test over many steps.** Record per step: step length, step duration, errors at start and at touchdown, foot clearance, impulse. Record along the motion: ground force `m (x_P_ddot + g e3)`, its ratio horizontal over vertical, joint torques.
    Checks: vertical force and vertical impulse positive; force and impulse ratios below the friction coefficient; step-to-step change shrinking to a tolerance; `R^T R = I` to rounding error; results stable when `h` is halved.
 10. **Local optimal control** (`ch07-variation-lqr-design`), optional. Linear state `(dl, dr, eta_1, eta_P, eta_2)` and velocity variations. Kinematic rows `eta_dot = dOmega - Omega x eta`. Validate against the symbolic linearization, then integrate the Riccati equation backward over one stance phase.
 
@@ -50,7 +50,7 @@ Do the steps in order. Do not start a step before the check of the previous one 
 
 - **Gravity sign.** A source with `e3` down, mixed with figures that draw it up. Symptom: the leg falls upward. Flip every gravity term.
 - **Foot on the wrong side.** `x_P + l_0 R2 e3` with a plain exchange of the legs gives a new stance leg whose kinematics imply minus the hip velocity. Use `x_P - l_0 R2 e3`.
-- **Right side of the impact system.** It is `+D v-`. With `-D v-` a velocity that satisfies the constraint comes back reversed.
+- **Right side of the impact system.** It is `+M_f v-`. With `-M_f v-` a velocity that satisfies the constraint comes back reversed.
 - **Missing half-rate term.** eq6-law alone on a body with varying inertia: the Lyapunov rate gains `e_Omega . J_dot e_Omega / 2`.
 - **Weights on world axes.** `tr(D (I - R Rd^T))` with unequal `d_i` resists rotation about world axes with `d_2 + d_3`, `d_1 + d_3`, `d_1 + d_2`. The gait then depends on the heading. Test at two headings.
 - **Reference that stops at touchdown.** Every step starts with a velocity error. Expect a sawtooth in the Lyapunov function.

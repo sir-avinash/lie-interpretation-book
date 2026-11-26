@@ -19,7 +19,7 @@ This chapter flies one mission, on one vehicle, in one simulation, with every bl
 
 The vehicle is the quadrotor of the library ([](#sec16-quadrotor)), with the default parameters that [](#ch-tracking) and [](#ch-flatness) used: mass 4.34 kg and inertia $J_0 = \operatorname{diag}(0.0820,\ 0.0845,\ 0.1377)$ kg·m². We give its rotors a total thrust of at most $f_{\max} = 100$ N and a torque of at most $\tau_{\max} = 8$ N·m about each axis. These two limits are our assumption, not Lee's.
 
-A package of 0.8 kg is strapped on at $(0.20,\ -0.12,\ -0.05)$ m in the body frame. Its weight is known, so the controller uses the total mass $m = 5.14$ kg and a hover thrust of 50.4 N. Its position is not known. The center of mass moves by $\rho = (31,\ -19,\ -8)$ mm, the thrust no longer passes through it, and the principal inertias rise by 14%, 34% and 27%. The controller still believes $J_0$.
+A package of 0.8 kg is strapped on at $(0.20,\ -0.12,\ -0.05)$ m in the body frame. Its weight is known, so the controller uses the total mass $m = 5.14$ kg and a hover thrust of 50.4 N. Its position is not known. The center of mass moves. Write $\rho$ for the body-frame vector from the geometric center, where the thrust acts, to the new center of mass, as [](#eq4-pendulum) does from a pivot: $\rho = (31,\ -19,\ -8)$ mm. The thrust no longer passes through the center of mass, and the principal inertias rise by 14%, 34% and 27%. The controller still believes $J_0$.
 
 Time runs from the moment the filter is switched on, with the time step $h = 5$ ms for the simulation, the IMU and the controller alike.
 
@@ -111,7 +111,7 @@ First the cascade alone, with nothing unknown: no package offset, no gust, no ba
 
 :::
 
-The table is [](#sec10-feedforward) again, on a different curve. With Lee's gains only the exact feedforward of [](#thm6-cascade) works. With the faster attitude loop the flat feedforward is ten times better than none. The closed-loop feedforward is better still here. [](#sec17-all) shows what is left of that advantage once the model is wrong and the state is an estimate.
+The table is [](#sec10-feedforward) again, on a different curve. Call the second row the flat feedforward and the third the closed-loop feedforward. With Lee's gains only the closed-loop feedforward, which is what [](#thm6-cascade) assumes, works. With the faster attitude loop the flat feedforward is ten times better than none. The closed-loop feedforward is better still here. [](#sec17-all) shows what is left of that advantage once the model is wrong and the state is an estimate.
 
 ## Would an optimal controller do better? {#sec17-local}
 
@@ -139,7 +139,7 @@ Fly the mission without the ball, with and without adaptation ([](#fig17-adapt))
 
 ![The package and the gust, without the ball. Left: attitude error for the plain controller and with adaptation. Right: two components of the filtered estimate $\Delta_f$, and the torque of the thrust about the center of mass (dashed). The estimate is found during the recovery, within a second of the release. During the gust it also carries the gust torque.](figures/ch17-adapt.svg){#fig17-adapt}
 
-Adaptation did not fix everything, and it could not. Over the course the position error is 2.8 cm RMS with adaptation and 4.8 cm without. A steady force of 3 N against a stiffness of $k_x = 69.4$ N/m is $4.3$ cm, and that is what remains. $\Delta$ is a torque. Nothing in the book estimates a force on the position loop ([](#exr17-force)).
+Adaptation did not fix everything, and it could not. Over the course the position error is 2.8 cm RMS with adaptation and 4.8 cm without. A steady force of 3 N against a stiffness of $k_x = 69.4$ N/m is $4.3$ cm, and that is what remains. Here $\Delta$ is a torque, and nothing in this mission estimates a force on the position loop. [](#sec18-uncertain) builds that estimate for a quadrotor with a load, where the lumped uncertainty [](#eq18-lumped) is a force, and [](#exr17-force) asks for it here.
 
 ## The obstacle {#sec17-safety}
 
@@ -157,7 +157,7 @@ $$
 \delta\tau = \tau - \tau_d \label{eq17-dtau}
 $$
 
-for everything that happened to the torque on its way to the rotors. The controller knows both terms.
+for everything that happened to the torque on its way to the rotors, and call it the override. The controller knows both terms.
 
 **As the chapters leave them.** Put this filter after the adaptive cascade of [](#sec17-uncertainty) and fly ([](#fig17-compose)). The program is feasible at every step, and the vehicle passes 0.40 m from the center, well inside the ball. The cause is the first limit listed in [](#sec8-limits): the barrier trusts the model. Its model of $\dot\Omega$ uses $J_0$ and no offset torque, so the 1.8 N·m of the package, which adaptation is quietly canceling in $\tau_d$, is missing from $\ddot H$. The flight without adaptation is no different: 0.41 m.
 
@@ -229,7 +229,7 @@ The vehicle is upright 0.50 s after the release and within 5 cm of the waiting r
 | :-- | :-: | :-: | :-: | :-: | :-- |
 | Everything on | 2.0 cm | 0.9 cm | 0.82 m | 0.25 | flies |
 | Truth instead of estimate | 1.7 cm | 0.2 cm | 0.86 m | 0.30 | flies |
-| No feedforward | 4.7 cm | 0.9 cm | 0.82 m | 0.21 | flies |
+| No flat feedforward | 4.7 cm | 0.9 cm | 0.82 m | 0.21 | flies |
 | Closed-loop feedforward | 1.6 cm | 1.2 cm | 0.78 m | 0.10 | flies |
 | No adaptation | 4.6 cm | 4.1 cm | 0.41 m | −0.33 | enters the ball |
 | No safety filter | 1.2 cm | 0.9 cm | 0.15 m | −0.56 | enters the ball |
@@ -247,7 +247,7 @@ Read it as a bill.
 
 *The estimate* cost 0.3 cm of tracking, 0.7 cm at the target and 4 cm of clearance. The invariant filter earned its keep in the six seconds before the release, not after.
 
-*The feedforward* of [](#ch-flatness) bought a factor of 2.4 in tracking. Without it the stack still flies, because $\kappa = 2$ was chosen so that it would. The closed-loop feedforward of [](#thm6-cascade), which won [](#tbl17-cascade) by a factor of eight, tracks a little better here and leaves less room at the ball. Its advantage rested on an exact model and an exact state.
+*The flat feedforward* of [](#ch-flatness) bought a factor of 2.4 in tracking. Without it the stack still flies, because $\kappa = 2$ was chosen so that it would. The closed-loop feedforward of [](#thm6-cascade), which won [](#tbl17-cascade) by a factor of eight, tracks a little better here and leaves less room at the ball. Its advantage rested on an exact model and an exact state.
 
 *Adaptation* bought a factor of 2.3 in tracking and of 4.5 at the target. Its larger contribution is in another column. Without an estimate of the offset torque the barrier's model is wrong, and the vehicle enters the ball.
 
@@ -261,7 +261,7 @@ Read it as a bill.
 
 ## Honest limits {#sec17-limits}
 
-**The theorems are about blocks.** [](#thm6-cascade) is about the cascade with exact feedforward, the true state and unlimited inputs. [](#thm8-l1) bounds the prediction error, with no safety filter in the loop. [](#thm8-rd2) keeps $H \ge 0$ for the model, in continuous time, with unlimited torque. [](#thm14-loglinear) is about propagation without noise. Not one of them is a statement about the mission of [](#sec17-all), and this chapter has not added one. What it has is a simulation, a dozen variants of it, and a table.
+**The guarantees are per block.** [](#thm6-cascade) is about the cascade with closed-loop feedforward, the true state and unlimited inputs. [](#thm8-l1) bounds the prediction error, with no safety filter in the loop. [](#thm8-rd2) keeps $H \ge 0$ for the model, in continuous time, with unlimited torque. [](#thm14-loglinear) is about propagation without noise. Not one of them is a statement about the mission of [](#sec17-all), and this chapter has not added one. What it has is a simulation, a dozen variants of it, and a table.
 
 **The two wires are engineering.** Telling the predictor restores [](#eq8-pred-dyn), which we checked numerically. Informing the barrier has no theorem at all, as [](#sec8-limits) says. Together they kept $H$ positive in this flight, with one package and one gust, and in three other draws of the sensor noise that we tried.
 
@@ -284,7 +284,7 @@ Move the ball so that the reference passes exactly through its center, and then 
 :::
 
 ::: {.exercise #exr17-force}
-The crosswind leaves a position error of about $3\ \text{N}/k_x$. Design an estimate of the unknown force on the position loop: a state predictor for $v$, an adaptation law and a low-pass filter, in the pattern of [](#sec8-l1). Add its output to $F_d$ in [](#eq6-Fd). What happens to $R_d$, and so to $\Omega_d$, when the estimate moves quickly? Find a cutoff that removes the error without shaking the attitude loop.
+The crosswind leaves a position error of about $3\ \text{N}/k_x$. Design an estimate of the unknown force on the position loop: a state predictor for $v$, an adaptation law and a low-pass filter, in the pattern of [](#sec8-l1). [](#eq18-predictor) and [](#eq18-adapt) do this for a quadrotor with a load, and are a design to compare yours with. Add its output to $F_d$ in [](#eq6-Fd). What happens to $R_d$, and so to $\Omega_d$, when the estimate moves quickly? Find a cutoff that removes the error without shaking the attitude loop.
 :::
 
 ::: {.exercise #exr17-wires}

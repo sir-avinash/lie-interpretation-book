@@ -819,7 +819,7 @@ def weights(robot, w_config, w_velocity):
 
 def geomech_linear(robot, tag):
     """geomech's own variation-based linearization of the robot's Lagrangian."""
-    from geomech import check_eom, compute_eom, linearize
+    from geomech import check_eom, compute_eom, linearize, to_standard_form
     from geomech.codegen import StateLayout, collect_params, load_module, module_source
     L, dW, V, inputs = robot.lagrangian()
     t0 = time.time()
@@ -829,14 +829,18 @@ def geomech_linear(robot, tag):
     lin = linearize(eom, V, inputs)
     layout = StateLayout(V, inputs, collect_params([L, dW], V, inputs))
     mod = load_module(module_source(lin, layout), tag)
+    # the coefficients themselves, E = M v_dot + b + G u (eq5-standard), for the term of eq18-projection
+    mod.sf = load_module(module_source(to_standard_form(eom, V, inputs), layout, lagrangian=L), tag + "_sf")
     return mod, layout, err, took, len(str(eom))
 
 
 def geomech_AB(robot, mod, layout, state, u, gp, names):
     """M, A and B of geomech's linearization M s_dot = A s + B du at a state of the
     library, in the slot order of `slots`. M is singular along each q (the equation
-    of a direction is a projected one), so compare M A_ours with A, not inverses."""
-    pack, acc = {}, np.zeros(mod.LAYOUT["n_accel"])
+    of a direction is a projected one), so compare M A_ours with A, not inverses.
+    Also returns, for each slot, the coefficient E = M v_dot + b + G u of eq5-standard
+    at this state, which is zero up to its part along q."""
+    pack, acc, rows = {}, np.zeros(mod.LAYOUT["n_accel"]), []
     a = acc_vector(robot, state, u)
     accel = {e["name"]: e["slice"] for e in mod.LAYOUT["acceleration"]}
     for k, (kind, c, v, i) in enumerate(slots(robot)):
@@ -846,11 +850,14 @@ def geomech_AB(robot, mod, layout, state, u, gp, names):
         lo, hi = accel[{"R": f"{name}_ddot", "S2": f"omega_{name}_dot",
                         "SO3": f"Omega_{name}_dot"}[kind]]
         acc[lo:hi] = a[3 * k:3 * k + 3]
+        rows.append((lo, hi))
     x = layout.pack(**pack)
     n = len(u[0])
     ug = np.concatenate([np.r_[u[0][i], u[1][i]] for i in range(n)])
     perm = [4 * i for i in range(n)] + [4 * i + 1 + j for i in range(n) for j in range(3)]
-    return mod.M_lin(x, acc, ug, gp), mod.A_lin(x, acc, ug, gp), mod.B_lin(x, acc, ug, gp)[:, perm]
+    E = mod.sf.mass(x, gp) @ acc + mod.sf.bias(x, gp) + mod.sf.input_matrix(x, gp) @ ug
+    return (mod.M_lin(x, acc, ug, gp), mod.A_lin(x, acc, ug, gp), mod.B_lin(x, acc, ug, gp)[:, perm],
+            [E[lo:hi] for lo, hi in rows])
 
 
 # =====================================================================
@@ -1231,15 +1238,17 @@ def geomech_agreement(rb, mod, layout, state, u):
     """Largest difference between geomech's linearization and ours on ker C.
     Returns (raw, tangent, reconciled): raw compares M A_ours Z with A_geomech Z;
     tangent projects the rows of each direction by I - q q^T; reconciled also removes,
-    for each direction, the one term c (xi x q) that the projection of a coefficient
-    E_xi with a component c along q contributes (see the chapter)."""
+    for each direction, the term -(xi x q)(q . E_xi) of eq18-projection: geomech varies
+    the coefficient E_xi as printed, and the equation of motion is only its tangent
+    part. The term is computed from geomech's own E_xi, not fitted. `c` is the
+    coefficient a least-squares fit would give and `c_explicit` is -q . E_xi."""
     A, B, Z = linearize_fd(rb, state, u)
-    Mg, Ag, Bg = geomech_AB(rb, mod, layout, state, u, geomech_params(rb.params), team_name)
+    Mg, Ag, Bg, E = geomech_AB(rb, mod, layout, state, u, geomech_params(rb.params), team_name)
     Rm = Mg @ A @ Z - Ag @ Z
     raw = float(np.abs(Rm).max())
     sl = slots(rb)
     m = len(sl)
-    tangent_part, reconciled, cs = 0.0, 0.0, []
+    tangent_part, reconciled, cs, cx = 0.0, 0.0, [], []
     other = Rm.copy()
     for k, (kind, c, v, i) in enumerate(sl):
         if kind != "S2":
@@ -1248,13 +1257,14 @@ def geomech_agreement(rb, mod, layout, state, u):
         rows = slice(3 * (m + k), 3 * (m + k) + 3)
         Rk = (I3 - np.outer(q, q)) @ Rm[rows]
         D = np.array([np.cross(Z[3 * k:3 * k + 3, j], q) for j in range(Z.shape[1])]).T
-        cfit = float(np.sum(Rk * D) / np.sum(D * D))
-        cs.append(cfit)
+        cs.append(float(np.sum(Rk * D) / np.sum(D * D)))
+        c_explicit = -float(q @ E[k])
+        cx.append(c_explicit)
         tangent_part = max(tangent_part, float(np.abs(Rk).max()))
-        reconciled = max(reconciled, float(np.abs(Rk - cfit * D).max()))
+        reconciled = max(reconciled, float(np.abs(Rk - c_explicit * D).max()))
         other[rows] = 0.0
     return dict(raw=raw, tangent=tangent_part, reconciled=max(reconciled, float(np.abs(other).max())),
-                B=float(np.abs(Mg @ B - Bg).max()), c=cs, scale=float(np.abs(Ag @ Z).max()))
+                B=float(np.abs(Mg @ B - Bg).max()), c=cs, c_explicit=cx, scale=float(np.abs(Ag @ Z).max()))
 
 
 # =====================================================================
@@ -1308,7 +1318,7 @@ def main():
         rbn = team(n)
         mod, layout, err, took, size = geomech_linear(rbn, f"ch19_team{n}")
         ck.true(f"n = {n}: geomech check_eom below 1e-5", err < 1e-5, f"{err:.1e}")
-        worst_rest, worst_move, worst_raw, worst_B = 0.0, 0.0, 0.0, 0.0
+        worst_rest, worst_move, worst_raw, worst_B, worst_c, worst_qE_rest = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         for trial in range(4):
             st = rbn.random_state(rng, speed=0.0 if trial < 2 else 0.7)
             u = (rng.uniform(10, 20, n), 0.3 * rng.normal(size=(n, 3)))
@@ -1316,11 +1326,15 @@ def main():
             worst_B = max(worst_B, g["B"])
             if trial < 2:
                 worst_rest = max(worst_rest, g["raw"])
+                worst_qE_rest = max(worst_qE_rest, max(abs(c) for c in g["c_explicit"]))
             else:
                 worst_move, worst_raw = max(worst_move, g["reconciled"]), max(worst_raw, g["tangent"])
+                worst_c = max(worst_c, max(abs(a - b) for a, b in zip(g["c"], g["c_explicit"])))
         ck.close(f"n = {n}: our linearization equals geomech's at states at rest", worst_rest, 0, tol=1e-6)
         ck.close(f"n = {n}: B equals geomech's", worst_B, 0, tol=1e-9)
-        ck.close(f"n = {n}: moving states agree once c (xi x q) is accounted for", worst_move, 0, tol=1e-6)
+        ck.close(f"n = {n}: moving states agree once -(xi x q)(q . E_xi) of eq18-projection is added", worst_move, 0, tol=1e-6)
+        ck.close(f"n = {n}: a fitted coefficient equals -q . E_xi", worst_c, 0, tol=1e-6)
+        ck.close(f"n = {n}: q . E_xi vanishes at states at rest", worst_qE_rest, 0, tol=1e-9)
         ck.true(f"n = {n}: without that term the tangent rows differ at moving states", worst_raw > 1e-2,
                 f"{worst_raw:.2f}")
         Gm = grasp_map(rbn.params.r)
@@ -1336,7 +1350,7 @@ def main():
                         grasp_rank=rank, internal=N.shape[1], reduced=Ar.shape[0],
                         ctrb=ctrb_rank(Ar, Br), pairs=n * (n - 1) // 2,
                         qp_vars=N.shape[1], qp_cons=n + n * (n - 1) // 2, filter_vars=3 * n,
-                        lin_rest=worst_rest, lin_move=worst_move, lin_raw=worst_raw,
+                        lin_rest=worst_rest, lin_move=worst_move, lin_raw=worst_raw, lin_c=worst_c,
                         model_ms=(time.time() - t0) / 20 * 1e3)
     ck.true("n = 2: the grasp map has rank 5", scale[2]["grasp_rank"] == 5)
     ck.true("n = 3, 4: the grasp map has rank 6", scale[3]["grasp_rank"] == 6 and scale[4]["grasp_rank"] == 6)

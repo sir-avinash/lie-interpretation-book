@@ -366,17 +366,17 @@ def main():
                         s1_dot=st.slide_dot[0], s2_dot=st.slide_dot[1], s3_dot=st.slide_dot[2], x_dot=vP,
                         Omega_R1=st.Omega1, Omega_RP=st.OmegaP, Omega_R2=st.Omega2)
         Mg = np.asarray(gm_f.mass(xf, gm_p))
-        D, A = impact_matrices(st.R2, st.slide, gait.l_0)
+        M_f, C_c = impact_matrices(st.R2, st.slide, gait.l_0)
         order = []                                    # geomech's acceleration order -> ours
         for key in ("Omega_R1_dot", "Omega_RP_dot", "s1_ddot", "s2_ddot", "s3_ddot", "Omega_R2_dot", "x_ddot"):
             sl = next(a["slice"] for a in gm_f.LAYOUT["acceleration"] if a["name"] == key)
             order += list(range(sl[0], sl[1]))
         Mg = Mg[np.ix_(order, order)]
-        w_mass = max(w_mass, min(np.abs(Mg - D).max(), np.abs(Mg + D).max()))
+        w_mass = max(w_mass, min(np.abs(Mg - M_f).max(), np.abs(Mg + M_f).max()))
         v = np.concatenate([st.Omega1, st.OmegaP, st.slide_dot, st.Omega2, vP])
-        w_T = max(w_T, abs(0.5 * v @ D @ v - kinetic_floating(st, vP, st.Omega1, st.OmegaP, st.Omega2, st.slide_dot)))
-    ck.true("floating-base model: the matrix D of the impact equals geomech's mass matrix (up to its overall sign)", w_mass < 1e-10, f"err {w_mass:.1e}")
-    ck.true("floating-base model: v.D v/2 equals the kinetic energy summed mass by mass", w_T < 1e-12, f"err {w_T:.1e}")
+        w_T = max(w_T, abs(0.5 * v @ M_f @ v - kinetic_floating(st, vP, st.Omega1, st.OmegaP, st.Omega2, st.slide_dot)))
+    ck.true("floating-base model: the mass matrix M_f of the impact equals geomech's mass matrix (up to its overall sign)", w_mass < 1e-10, f"err {w_mass:.1e}")
+    ck.true("floating-base model: v.M_f v/2 equals the kinetic energy summed mass by mass", w_T < 1e-12, f"err {w_T:.1e}")
 
     # (b) the closed form against the linear system, momentum, energy, involution
     worst = dict(kkt=0.0, mom=0.0, others=0.0, carnot=0.0, stick=0.0, idem=0.0, kin=0.0, printed=0.0, loss=np.inf)
@@ -384,19 +384,19 @@ def main():
         st = biped.random_state(rng)
         l_0 = 0.6 + rng.random()
         new, imp, _ = impact(st, l_0)
-        v, v_plus, imp_kkt, D, A = impact_kkt(st, l_0)
+        v, v_plus, imp_kkt, M_f, C_c = impact_kkt(st, l_0)
         vP_plus = v_plus[12:15]
         worst["kkt"] = max(worst["kkt"], np.abs(v_plus[9:12] - new.Omega1).max(), np.abs(imp - imp_kkt).max(),
                            np.abs(v_plus[0:9] - v[0:9]).max())
-        worst["stick"] = max(worst["stick"], np.abs(A @ v_plus).max())
+        worst["stick"] = max(worst["stick"], np.abs(C_c @ v_plus).max())
         # angular momentum about the landing foot, mass by mass (the foot is at -l_0 R2 e3 from the hip)
         c = -l_0 * st.R2 @ E3
         H_minus = angular_momentum_about(c, st, v[12:15], st.Omega1, st.OmegaP, st.Omega2)
         H_plus = angular_momentum_about(c, st, vP_plus, v_plus[0:3], v_plus[3:6], v_plus[9:12])
         worst["mom"] = max(worst["mom"], np.abs(H_plus - H_minus).max())
-        T_minus, T_plus = 0.5 * v @ D @ v, 0.5 * v_plus @ D @ v_plus
+        T_minus, T_plus = 0.5 * v @ M_f @ v, 0.5 * v_plus @ M_f @ v_plus
         dv = v_plus - v
-        worst["carnot"] = max(worst["carnot"], abs((T_minus - T_plus) - 0.5 * dv @ D @ dv))
+        worst["carnot"] = max(worst["carnot"], abs((T_minus - T_plus) - 0.5 * dv @ M_f @ dv))
         worst["loss"] = min(worst["loss"], T_minus - T_plus)
         # the new stance state reproduces the hip velocity after the impact
         worst["kin"] = max(worst["kin"], np.abs(hip_velocity(new.l, new.l_dot, new.R1, new.Omega1) - vP_plus).max())
@@ -405,11 +405,11 @@ def main():
                                         l=st.l, l_dot=0.0), l_0)
         st_b = replace(st, Omega2=new.Omega1)
         v_b = np.concatenate([v_plus[0:9], new.Omega1, vP_plus])
-        K = np.block([[D, -A.T], [A, np.zeros((3, 3))]])
-        sol = np.linalg.solve(K, np.concatenate([D @ v_b, np.zeros(3)]))
+        K = np.block([[M_f, -C_c.T], [C_c, np.zeros((3, 3))]])
+        sol = np.linalg.solve(K, np.concatenate([M_f @ v_b, np.zeros(3)]))
         worst["idem"] = max(worst["idem"], np.abs(sol[:15] - v_b).max(), np.abs(sol[15:]).max())
-        # eq. (5.20) as printed, with -D v on the right: on a velocity that already satisfies A v = 0 it returns -v
-        sol_p = np.linalg.solve(K, np.concatenate([-D @ v_b, np.zeros(3)]))
+        # eq. (5.20) as printed, with -M_f v on the right: on a velocity that already satisfies C_c v = 0 it returns -v
+        sol_p = np.linalg.solve(K, np.concatenate([-M_f @ v_b, np.zeros(3)]))
         worst["printed"] = max(worst["printed"], np.abs(sol_p[:15] + v_b).max())
     ck.true("impact: the closed form equals the solution of the 18 x 18 linear system", worst["kkt"] < 1e-10, f"err {worst['kkt']:.1e}")
     ck.true("impact: the landing foot is at rest afterwards", worst["stick"] < 1e-12, f"err {worst['stick']:.1e}")
@@ -418,17 +418,17 @@ def main():
             worst["carnot"] < 1e-11 and worst["loss"] >= 0, f"err {worst['carnot']:.1e}, smallest loss {worst['loss']:.2e} J")
     ck.true("impact: the new stance state has the hip velocity of the floating-base model (l_dot = 0)", worst["kin"] < 1e-12, f"err {worst['kin']:.1e}")
     ck.true("impact: a second landing on the same foot changes nothing", worst["idem"] < 1e-10, f"err {worst['idem']:.1e}")
-    ck.true("thesis eq. (5.20) with -D v on the right returns -v for a velocity with A v = 0", worst["printed"] < 1e-9, f"err {worst['printed']:.1e}")
+    ck.true("thesis eq. (5.20) with -M_f v on the right returns -v for a velocity with C_c v = 0", worst["printed"] < 1e-9, f"err {worst['printed']:.1e}")
     vv = rng.normal(size=15)
     ck.close("relabeling the legs twice is the identity", relabel(relabel(vv)), vv, tol=0)
     # thesis p. 46 writes the swing foot at x_P + l_0 R2 e3; eq. (5.43) and the switching surface write x_P - l_0 R2 e3.
     # With the first, the hip velocity after the impact is the opposite of what the relabeled stance leg implies.
     st = biped.random_state(rng)
-    D, A = impact_matrices(st.R2, st.slide, 0.9)
-    A_alt = A.copy()
+    M_f, C_c = impact_matrices(st.R2, st.slide, 0.9)
+    A_alt = C_c.copy()
     A_alt[:, 9:12] *= -1
     v = np.concatenate([st.Omega1, st.OmegaP, st.slide_dot, st.Omega2, hip_velocity(st.l, st.l_dot, st.R1, st.Omega1)])
-    sol = np.linalg.solve(np.block([[D, -A_alt.T], [A_alt, np.zeros((3, 3))]]), np.concatenate([D @ v, np.zeros(3)]))
+    sol = np.linalg.solve(np.block([[M_f, -A_alt.T], [A_alt, np.zeros((3, 3))]]), np.concatenate([M_f @ v, np.zeros(3)]))
     implied = hip_velocity(0.9, 0.0, st.R2, sol[9:12])
     ck.true("with the swing foot at x_P + l_0 R2 e3 the relabeled stance leg implies minus the hip velocity",
             np.abs(implied + sol[12:15]).max() < 1e-12 and np.linalg.norm(sol[12:15]) > 1e-3, f"|v_P| {np.linalg.norm(sol[12:15]):.3f} m/s")
@@ -537,7 +537,7 @@ def main():
     ck.record("walk_straight", walk_rec)
     ck.true("walking straight: every step ends in a touchdown and the gait settles to a periodic one",
             periodic < 1e-4, f"step-to-step change {periodic:.1e} after {n_straight} steps")
-    ck.true("walking straight: step length within 6% of 2 l_0 sin(theta_s), step time within 2% of t_s",
+    ck.true("walking straight: step length within 6% of 2 l_0 sin(theta_s), step duration within 2% of t_s",
             abs(last["step_length"] / walk_rec["nominal_step_length"] - 1) < 0.06 and abs(last["step_time"] - 1) < 0.02,
             f"{last['step_length']:.4f} m, {last['step_time']:.4f} s")
     ck.true("walking straight: the ground pushes up throughout and the friction ratio stays below 0.6",

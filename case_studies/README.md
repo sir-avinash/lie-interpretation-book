@@ -95,7 +95,7 @@ log, steps = bw.walk([0.0] * 10)                   # sec20-walk: ten steps strai
 
 | Name | What it is |
 | :-- | :-- |
-| `impact`, `impact_matrices`, `impact_kkt`, `relabel` | The impact of a foot that lands and sticks: the closed form eq20-impact, the matrices `D`, `A` and the linear system eq20-kkt, the exchange of the legs eq20-relabel |
+| `impact`, `impact_matrices`, `impact_kkt`, `relabel` | The impact of a foot that lands and sticks: the closed form eq20-impact, the mass matrix `M_f` and the contact constraint matrix `C_c` of the linear system eq20-kkt, the exchange of the legs eq20-relabel |
 | `hip_velocity`, `swing_foot`, `particles`, `angular_momentum_about`, `kinetic_floating`, `floating_lagrangian` | The floating-base model behind the impact, built mass by mass, and its geomech Lagrangian |
 | `Gait`, `primitive`, `primitive_state` | The motion primitive eq20-primitive |
 | `thesis_law`, `ThesisGains`, `thesis_V`; `book_law`, `BookGains`, `book_V0` | The thesis's law (eq20-right, eq20-law) and eq6-law on each factor with the term -(1/2) J_dot e_Omega, each with its Lyapunov function |

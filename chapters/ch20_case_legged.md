@@ -25,7 +25,7 @@ A leg that pivots about its foot is a 3D pendulum standing on its pivot. Fix the
 
 [](#sec6-fl) reran that comparison. Its result is [](#tbl6-grid): over a grid of 208 attitudes the Euler-angle law is undefined at 16 and uses nearly four times the peak torque, and the geometric law is slower and stalls at 29 exact half turns. The grid reaches to 180°. A legged reader should ask what is left of this at the angles of walking, with a deadline.
 
-We asked. Take the same pendulum, the same gains $k_p = 100$ and $k_d = 20$, and the same two laws, taken from the script that checked [](#tbl6-grid). Start at rest, rotated by a given angle about a random axis, 30 axes per angle. Stop at 0.35 s, the step time [](#sec6-legs) used.
+We asked. Take the same pendulum, the same gains $k_p = 100$ and $k_d = 20$, and the same two laws, taken from the script that checked [](#tbl6-grid). Start at rest, rotated by a given angle about a random axis, 30 axes per angle. Stop at 0.35 s, the step duration [](#sec6-legs) used.
 
 ::: {.table #tbl20-deadline}
 
@@ -89,7 +89,7 @@ The thesis writes these equations with other letters and another vertical. Its T
 | $\Omega - \Omega^d$ | $\Omega - \Omega_d$ | Velocity error that goes with it |
 | $A$, $\Phi$ | $D$, the identity | Weights of the error function |
 | $T$, $\zeta_1$ | $t_s$, $2\theta_s\,e_2$ | Duration of a step, rotation of the leg over a step |
-| $D_e$, $A$, $I_R$ | $D$, $A$, $p_c$ in [](#sec20-impact) | Floating-base inertia, contact Jacobian, impulse |
+| $D_e$, $A$, $I_R$ | $M_f$, $C_c$, $p_c$ in [](#sec20-impact) | Floating-base mass matrix, contact constraint matrix, impulse |
 | $e_3$ along gravity | $e_3$ up | Flip the sign of every gravity term |
 
 : From the symbols of Siravuru (2019, ch. 5) to those of this chapter.
@@ -114,19 +114,21 @@ So far the robot stands on one foot forever. Walking needs the other foot to lan
 
 A step ends when the swing foot reaches the ground. The thesis models that instant in three moves. Release the stance foot, so that the model has a floating base. Let an impulse act on the swing foot that brings it to rest: the foot neither bounces nor slips. Then exchange the names of the two legs.
 
-The floating-base model adds the hip position $x_P$ to the three attitudes and the slides. Its velocity is $(\Omega_1, \Omega_P, \dot r, \Omega_2, v_P)$ with $v_P = \dot x_P$, and its kinetic energy has the block-diagonal inertia
+The floating-base model adds the hip position $x_P$ to the three attitudes and the slides. Its velocity is $(\Omega_1, \Omega_P, \dot r, \Omega_2, v_P)$ with $v_P = \dot x_P$, and its kinetic energy $\tfrac12 v\cdot M_f\,v$ has the block-diagonal mass matrix
 
 $$
-D = \operatorname{diag}\big(J_0,\ J_P(r),\ 2 m_r I,\ J_0,\ m I\big) .
+M_f = \operatorname{diag}\big(J_0,\ J_P(r),\ 2 m_r I,\ J_0,\ m I\big) .
 $$
 
-Both leg axes point from foot to hip, so the swing foot is at $x_c = x_P - l_0\,R_2 e_3$. Its velocity is $A$ times the velocity vector, with $A = \begin{bmatrix} 0 & 0 & 0 & l_0 R_2\,e_3^\wedge & I\end{bmatrix}$. An impulse $p_c$ on the foot changes the momenta by $A\T p_c$, and the foot is at rest afterwards. With $-$ and $+$ for just before and just after,
+The thesis writes $D_e$ for it. Here $D$ is the weight of an error function, and [](#sec20-walk) needs it for that.
+
+Both leg axes point from foot to hip, so the swing foot is at $x_c = x_P - l_0\,R_2 e_3$. Its velocity is $C_c\,v$, with the contact constraint matrix $C_c = \begin{bmatrix} 0 & 0 & 0 & l_0 R_2\,e_3^\wedge & I\end{bmatrix}$. An impulse $p_c$ on the foot changes the momenta by $C_c\T p_c$, and the foot is at rest afterwards. With $-$ and $+$ for just before and just after,
 
 $$
-D\,(v^+ - v^-) = A\T p_c , \qquad A\,v^+ = 0 . \label{eq20-kkt}
+M_f\,(v^+ - v^-) = C_c\T p_c , \qquad C_c\,v^+ = 0 . \label{eq20-kkt}
 $$
 
-Before solving anything, look at $A$. Its first three blocks are zero.
+Before solving anything, look at $C_c$. Its first three blocks are zero.
 
 ::: {.thought #thought20-hip name="What does the torso feel?"}
 The swing foot hits the ground. The impulse travels up the leg to the hip. How much does the torso's angular velocity change?
@@ -154,14 +156,14 @@ and the torso and the slides carry over. The new stance leg starts with $\dot l 
 The robot library implements [](#eq20-impact) next to the stance model, and the script of this chapter checks it five ways at 50 random states.
 
 1. *Against the full system.* Solving the 18 equations of [](#eq20-kkt) gives the same $\Omega_2^+$, $v_P^{+}$ and $p_c$ to $10^{-14}$, and leaves $\Omega_1$, $\Omega_P$ and $\dot r$ untouched.
-2. *Against a second derivation of $D$.* The symbolic library derives the floating-base model from a Lagrangian built mass by mass (`check_eom` $4.5\times10^{-8}$). Its mass matrix equals $D$ to rounding error.
+2. *Against a second derivation of $M_f$.* The symbolic library derives the floating-base model from a Lagrangian built mass by mass (`check_eom` $4.5\times10^{-8}$). Its mass matrix equals $M_f$ to rounding error, up to the overall sign that [](#eq5-standard) carries.
 3. *Momentum.* The angular momentum of the whole robot about the landing foot, summed over every mass and body, is the same before and after, to $10^{-14}$.
-4. *Energy.* The kinetic energy lost equals the kinetic energy of the jump, $\tfrac12 (v^+ - v^-)\cdot D\,(v^+ - v^-)$, and is never negative.
+4. *Energy.* The kinetic energy lost equals the kinetic energy of the jump, $\tfrac12 (v^+ - v^-)\cdot M_f\,(v^+ - v^-)$, and is never negative.
 5. *Consistency.* The relabeled stance state reproduces $v_P^{+}$. Landing again on the same foot changes nothing. Trading names twice is the identity.
 
 ![The impact at the end of a step of the periodic gait of [](#sec20-walk), computed with [](#eq20-impact). The hip arrives at 0.40 m/s, almost straight down the leg that lands. A rigid leg cannot give way along its axis, so the impulse takes nearly all of it, and 0.29 J is lost. The torso's angular velocity and the slides do not change.](figures/ch20-impact.svg){#fig20-impact}
 
-Two details of the thesis's text needed a decision, recorded in the Notes at the end of this chapter. Its page 46 places the swing foot at $x_P + \rho_2 R_2 e_3$, while its equation (5.43) and its switching surface use $x_P - \rho_2 R_2 e_3$. We use the second, for which [](#eq20-relabel) is a plain exchange. And its equation (5.20) prints the right side of the linear system as $-D\,v^-$, where the relation stated just above it gives $+D\,v^-$.
+Two details of the thesis's text needed a decision, recorded in the Notes at the end of this chapter. Its page 46 places the swing foot at $x_P + \rho_2 R_2 e_3$, while its equation (5.43) and its switching surface use $x_P - \rho_2 R_2 e_3$. We use the second, for which [](#eq20-relabel) is a plain exchange. And its equation (5.20) prints the right side of the linear system as $-M_f\,v^-$ in our letters, where the relation stated just above it gives $+M_f\,v^-$.
 
 ::: {.warning #warn20-impact name="An impact map is a modeling claim too"}
 [](#eq20-impact) assumes that the foot sticks, that the ground can pull as well as push for an instant, and that the old stance foot leaves without an impulse of its own. None of these is enforced. After every impact check that $p_c$ points up and lies inside the friction cone, as [](#warn2-taut) asks you to check a cable's tension.
@@ -236,7 +238,7 @@ Here the first two of the thesis's answers become concrete. The controller that 
 
 ::: {.table #tbl20-compare}
 
-| Walk | Step length | Step time | Largest leg error | Leg error at touchdown | Peak ankle torque | Peak force ratio |
+| Walk | Step length | Step duration | Largest leg error | Leg error at touchdown | Peak ankle torque | Peak force ratio |
 | :-- | :-: | :-: | :-: | :-: | :-: | :-: |
 | Thesis law, heading 0° | 49.1 cm | 0.989 s | 8.4° | 1.2° | 15.7 N·m | 0.22 |
 | Thesis law, heading 90° | 50.6 cm | 0.982 s | 8.3° | 1.9° | 16.5 N·m | 0.23 |
@@ -249,6 +251,8 @@ Here the first two of the thesis's answers become concrete. The controller that 
 
 :::
 
+Read it as a bill.
+
 *The heading.* The first two rows are the same robot, the same law and the same gait, walking along $e_1$ and along $e_2$. They differ by 1.5 cm a step ([](#fig20-gait)). The cause is [](#eq20-right). A small rotation about the world axis $e_1$, $e_2$ or $e_3$ is resisted with stiffness $d_2 + d_3$, $d_1 + d_3$ or $d_1 + d_2$: 52.8, 48 and 43.2 N·m for these weights. Walking along $e_1$, the legs pitch about $e_2$ and feel 48. Walking along $e_2$, they pitch about $e_1$ and feel 52.8. A weight on world axes makes the controller depend on which way the robot faces.
 
 *The book's error.* The third row uses [](#eq6-law) on each factor with the trace error and the scalar gain $k_R = 48$. Its gait is the same at every heading, exactly, because nothing in it refers to a world axis other than the vertical. At heading 0° it is also the same as the thesis's, to the last digit: for a planar pitch the two laws coincide. The thesis's unequal weights have a purpose of their own: they are what [](#thm6-almost) needs.
@@ -257,7 +261,7 @@ Here the first two of the thesis's answers become concrete. The controller that 
 
 *Feedforward.* Without the reference's velocity and acceleration the robot still walks, 18% farther per step than asked and 0.1 s late, with nearly four times the error at touchdown. In a gait with a deadline, feedforward is most of the tracking.
 
-*Faster gains.* Multiplying the stiffnesses by 4 and the dampings by 2 halves the errors, doubles the ankle torque, and raises the force ratio to 0.55, against a friction coefficient the thesis assumes to be above 0.6. The feet would slip before the motors complained. On a legged robot the ground, not the actuator, is the first bound a high gain meets.
+*Faster gains.* Multiplying the stiffnesses by 4 and the dampings by 2, the $\kappa = 2$ of [](#warn6-feedforward) applied to every loop at once, halves the errors, doubles the ankle torque, and raises the force ratio to 0.55, against a friction coefficient the thesis assumes to be above 0.6. The feet would slip before the motors complained. On a legged robot the ground, not the actuator, is the first bound a high gain meets.
 
 One row is missing because it is identical to the first: hold the reaction masses still. With a torso that only leans, the blocks of [](#eq20-stance) are decoupled and the walk does not change by a micrometer. In this gait the reaction masses do nothing. They matter when the torso must turn, as [](#thought20-skater) showed, and the thesis leaves gaits that use them to future work.
 
@@ -305,6 +309,8 @@ What this book has of that is little, and we will be exact about it. The library
 
 **Described from the thesis, not reproduced.** Its curves, point for point: three parameters of its primitive are not printed. Its walk toward a chosen point and its full circle of 19 steps with a 30° lean. Its comparison of integrators inside the closed loop. Its almost-global theorem, which we restate and do not prove. Everything about Cassie. Its third part, on learning gait policies and step lengths from images, is outside this book.
 
+**The guarantees are per block.** The thesis's Theorem 5.1.1 is about one stance phase, with unlimited torques and no disturbance ([](#sec20-recipe)). [](#eq20-impact) is a model of one instant. The Riccati gain of [](#sec20-recipe) belongs to one stance phase as well. Not one of them is a statement about the walk of [](#sec20-walk), which is a sequence of stance phases and impacts, and this chapter has not added one. It has a simulation and the variants of [](#tbl20-compare).
+
 **Absent.** A variational integrator for the biped. A planner. An estimator in the loop. Any model of Cassie's contact.
 
 **Not modeled at all.** *Underactuation.* The stance model has an ankle that supplies any torque, 37 N·m about the vertical in the turn. A foot of finite size bounds the two tilting torques by the position of the center of pressure, and a point foot supplies none. The thesis says this itself: its controllers apply to models with full actuation, "i.e. any flat-footed humanoid robot". Cassie is not one. *Contact.* The foot is a pin while it is on the ground and an impulse when it lands. We monitored the force and the impulse against a friction ratio and never enforced it. *The swing foot.* It is a point at the end of a leg whose length is set, not simulated. *Hybrid stability.* The gait is periodic to five digits after ten steps. We did not compute the linearization of the step-to-step map, and we prove nothing about it.
@@ -318,7 +324,7 @@ Rerun [](#tbl20-deadline) in the notebook with the logarithm error of [](#sec3-e
 :::
 
 ::: {.exercise #exr20-impact}
-Derive [](#eq20-impact) from [](#eq20-kkt). Then move the center of mass of the swing leg from the hip to the middle of the leg. Which blocks of $D$ and $A$ change? Argue, without solving, whether the torso's angular velocity still survives the impact.
+Derive [](#eq20-impact) from [](#eq20-kkt). Then move the center of mass of the swing leg from the hip to the middle of the leg. Which blocks of $M_f$ and $C_c$ change? Argue, without solving, whether the torso's angular velocity still survives the impact.
 :::
 
 ::: {.exercise #exr20-energy}

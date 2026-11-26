@@ -55,6 +55,57 @@
 #  biped         configuration manifold of the Reaction Mass Biped has dimension 14;
 #                its stance dynamics involve 13 (the swing-leg length drops out).
 #  scope         check_terms also scans case_studies/**/*.py and case_studies/README.md.
+#
+# Decisions for the case studies, Chapters 17 to 20 (tblA-cases and the
+# paragraph "Case studies" of the conventions in the appendix).
+#
+#  rho           \rho is the body-frame vector from a reference point of a body to its
+#                center of mass (pivot in eq4-pendulum, thrust point in Chapter 17).
+#                \rho_i is the attachment point of cable i in the payload frame
+#                (library name r[i]); r with a subscript stays a radius (r_o, r_min).
+#  override      \delta\tau = \tau - \tau_d (eq17-dtau) is the override of a safety filter
+#                and of the limits: the deviation of tblA-mpc from the torque the tracker
+#                proposes. "Tell the predictor" (add the override to the predictor's input)
+#                and "inform the barrier" (add \Delta_f to the barrier's model) are kept
+#                as the names of the two wires of sec17-safety.
+#  believed      m_{L,0} like J_0. Scripts of Chapter 17: rho, r_add, m_add, F_e, tau_e (tblA-code).
+#  Delta         generalized: one vector that enters where the input enters. A torque in
+#                the body frame in eq8-lumped, a force in the world frame in eq18-lumped.
+#                Its predictor: v_p, \omega_p, \tilde e_v, \tilde e_\omega, \tilde k_v, \tilde k_\omega.
+#  forces        F_e external force on a quadrotor. F_d also the thrust vector a cascade asks
+#                for, or that of a reference. F alone in Chapter 18 is the thrust vector only:
+#                the force on the bob in eq18-pendulum is written out. c in eq18-linear is local.
+#  limits        f_max, \tau_max, T_min: stated once per case study and flagged
+#                "our assumption" (r_min is the value of sec8-quad). T_min has one definition (smallest tension a cable must keep).
+#  team          index i for vehicle i and its cable; (F_L, \tau_L) the wrench, G_L the grasp
+#                map (G alone is the input matrix), T_int the internal force per cable,
+#                T_d the stack of tension vectors of the plan (not \bar T: a planned quantity
+#                takes the subscript d), H_ij the pairwise barrier function.
+#  biped         R_1, R_P, R_2 (P: torso and hip), r = (r_1, r_2, r_3) slide distances
+#                (code slide; a local meaning of r), l_0 nominal leg length, x_P, v_P hip,
+#                t_s, \theta_s step, f_s slide forces, k_l, k_{\dot l}, k_r, k_{\dot r}.
+#  impact        M_f mass matrix of the floating base (not D: D is the weight of the attitude
+#                error function, and Chapter 20 uses both) and C_c contact constraint matrix
+#                (not A: A is the matrix of a linearization; A_c is taken by Chapter 13).
+#                M_f (v+ - v-) = C_c^T p_c, C_c v+ = 0. p_c impulse; x_c is the foot in
+#                contact, as in Chapter 14. Superscripts - and + : before and after an
+#                instantaneous event. Code: M_f, C_c in biped_walking.impact_matrices.
+#  words         mission; ablation table ("Everything on" first, "one block changed at a
+#                time"); flat feedforward and closed-loop feedforward; safety filter for every
+#                barrier program; "The guarantees are per block." as the heading of that limit
+#                in all four; step duration (not step time: h is the time step);
+#                wrench, grasp map, internal force, tension distribution, reaction masses,
+#                motion primitive, touchdown, stance leg, swing leg, force ratio, impulse.
+#  geomech S^2   linearize varies the coefficient E_\xi as printed, radial part included.
+#                Compared with a linearization of the projected equation, its sphere rows
+#                differ by -(\xi x q)(q . E_\xi), with E_\xi in the sign of eq5-standard.
+#                geomech prints the linearized rows with the inertia positive (M_lin = -M of
+#                eq5-standard), so M_lin s_dot - A_lin s - B_lin du = -\delta E_\xi.
+#                Confirmed numerically for the load and for teams of 2, 3 and 4 (the coefficient
+#                fitted in the first draft of Chapter 19 equals -q . E_\xi to 3e-9; q . E_\xi
+#                is zero for the lone pendulum and at states at rest).
+#                Stated in sec18-linear, used in sec19-lqr, noted in sec5 (after linearize).
+#  runtimes      no chapter quotes a wall-clock time as a fact.
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------- spelling
@@ -939,3 +990,36 @@ pattern = '\([A-Z][^()0-9\n$]*[a-z.] [12]\d{3}[,)]'
 use = 'a comma before the year of a citation in parentheses: (Teng et al., 2026)'
 where = ['chapters']
 math = false
+
+# ---------------------------------------------------------------------------
+# Chapters 17 to 20: the case studies. See the decisions at the top of this file.
+
+[[rule]]
+pattern = '\\bar\{?T\b|\bT_bar\b|\bTbar\b'
+use = 'T_d for the stack of tension vectors a plan asks for (a planned quantity takes the subscript d)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\bstep times?\b'
+use = 'step duration for the time between two touchdowns (the time step is h)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = 'D\\,\(v\^\+|D\\,v\^|\bA\\,v\^\+|\bA\\T\s*p_c|\bD \(v\+ - v-\)|\bA\^T p_c|\bA v\+ = 0|[+-]D v-|\bD_e\b(?!\\,\\omega)'
+use = 'M_f for the mass matrix of the floating base and C_c for the contact constraint matrix: M_f (v+ - v-) = C_c^T p_c, C_c v+ = 0 (D is the weight of the attitude error function, A the matrix of a linearization)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+allow = ['| $D_e$, $A$, $I_R$ |', 'has $-D_e', 'The thesis writes $D_e$ for it']
+
+[[rule]]
+pattern = 'm_\{?L\}?\^\{?0|\\hat\{?m\}?_L|m_\{L,\\text\{(model|believed|nom)'
+use = 'm_{L,0} for the load mass a controller believes, like J_0'
+math = true
+
+[[rule]]
+pattern = 'The theorems are about blocks|guarantees are block by block|(cone|tension|cone and tension) filter\b'
+use = '"The guarantees are per block." for that limit of a case study; safety filter for the program that enforces a barrier condition'
+where = ['chapters']
+ignore_case = true
