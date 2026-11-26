@@ -1,226 +1,347 @@
-﻿Chapter 7: Variation-Based Linearization, State-Constrained Controllability & LTV-LQR
-Linearizing nonlinear mechanical systems evolving on curved configuration manifolds—such as $SO(3)$, $S^2$, and their products $\prod_i M_i$—using local coordinates (e.g., Euler angles or spherical coordinates) introduces representation singularities and cumbersome trigonometric expressions. Building on the coordinate-free variation framework of Wu & Sreenath (IEEE Access 2015) and its extension to multi-link cable-suspended aerial systems in Kotaru, Wu, & Sreenath (arXiv:1711.04895), this chapter develops symbolic variation-based linearization, establishes state-constrained controllability on the invariant nullspace of the tangent-bundle constraints, and synthesizes finite-horizon LTV-LQR controllers directly on the manifold.
+---
+title: Variation-based linearization and LQR
+short: Linearization and LQR
+id: ch-linearization
+summary: What a small deviation of a rotation is, how to linearize about any trajectory without a singularity, and how far the resulting LQR can be trusted.
+notebook: notebooks/ch07_variation_lqr_sim.ipynb
+verify: verify/ch07.py
+epigraph: "Remember that all models are wrong; the practical question is how wrong do they have to be to not be useful."
+epigraph_source: "George Box and Norman Draper, *Empirical Model-Building and Response Surfaces* (1987)"
+---
 
+A tail-sitter drone takes off like a rocket, nose pointing at the sky, then tips over and flies like an airplane. You want a linear quadratic regulator for the nose-up hover. LQR needs a model $\dot x = Ax + Bu$. So what is $x$?
 
-________________
+Try yaw, pitch and roll. Nose-up is 90° of pitch, where the matrix $E$ of [](#eq-euler-jacobian) has no inverse. There is no $A$. Back the target off to 85° and $A$ exists, with entries of size $1/\cos 85^\circ = 11.5$. At 89.5° they are 115.
 
+Try the nine entries of $R$ instead. Now $x$ has twelve components, $A$ and $B$ exist at every attitude, and the design fails anyway. The controllability matrix has rank 6. Six of the twelve directions are changes that would make $R$ stop being a rotation. No torque produces them, the Riccati solver gives up, and $x_d + \delta x$ is not an attitude.
 
-7.1 Notation and Lie-Algebra Preliminaries
-We use the standard hat map $(\cdot)^\wedge : \mathbb{R}^3 \to \mathfrak{so}(3)$ defined by
+Both attempts ask how the *numbers that label* an attitude change. The useful question is how the attitude itself changes. The answer is a vector with three components and no singularity anywhere. We will build linear models out of it, put LQR on top, and then find out where the result stops being true. [](#fig7-puzzle) shows the three answers side by side.
 
+![One small deviation of an attitude, written three ways. A body sits 10° from its reference while the reference pitches up. Top: the deviation in Euler angles grows as the pitch nears 90°. Middle: the nine entries of $R$ can be changed in ways that are not rotations. Bottom: the three components of the variation $\eta$ do not change.](figures/ch07-puzzle-strip.png){#fig7-puzzle anim="figures/ch07-puzzle.gif"}
 
-$$ x^\wedge y = x \times y, \qquad \forall x, y \in \mathbb{R}^3, \tag{7.1} $$
+## A small deviation of a direction {#sec7-variation}
 
+Start one dimension down. A pendulum rod, a cable or a thrust axis is a direction $q \in S^2$, and it moves as $\dot q = \omega \times q$ with $\omega \cdot q = 0$. Let $q_d(t)$ be a reference motion and $q(t)$ a neighbor ([](#fig7-variation)).
 
-and its inverse vee map $(\cdot)^\vee : \mathfrak{so}(3) \to \mathbb{R}^3$ satisfying $(x^\wedge)^\vee = x$. For any $x, y \in \mathbb{R}^3$ and $R \in SO(3)$, the hat map obeys $x^\wedge y = -y^\wedge x$, $(x^\wedge)^T = -x^\wedge$, and $(R x)^\wedge = R x^\wedge R^T$.
+The difference $q - q_d$ is a poor state. It has three components for two degrees of freedom, and $q_d$ plus a small multiple of it is off the sphere. [](#def3-variation) gave the right object. A nearby direction is the reference turned by a small rotation, $q = \exp(\epsilon\,\xi^\wedge)\,q_d$, and to first order
 
+$$
+\delta q = \xi \times q_d, \qquad \xi \cdot q_d = 0. \label{eq7-var-s2}
+$$
 
-________________
+The vector $\xi$ is the axis and angle of that small rotation. Its part along $q_d$ would spin $q_d$ about itself and move nothing, so we set it to zero. What remains lies in the tangent plane at $q_d$: two numbers, as there should be.
 
+![A free swing of a spherical pendulum (indigo) and a neighbor released 20° away (terracotta), both simulated. At each instant the neighbor is the reference turned about $\xi$. Watch the tangent plane at $q_d(t)$ ride along with the reference: $\xi$ and the displacement $\delta q = \xi \times q_d$ stay in it, at right angles to each other.](figures/ch07-variation-strip.png){#fig7-variation anim="figures/ch07-variation.gif"}
 
-7.2 Variation-Based Linearization on Product Manifolds $\prod_i M_i$
-Consider a mechanical system evolving on a product manifold $\mathcal{Q} = \prod_{i=1}^k M_i$, where each factor $M_i \in {\mathbb{R}^3, S^2, SO(3)}$, with state $x(t) \in T\mathcal{Q}$ and control input $u(t) \in \mathbb{R}^m$. Given a smooth, dynamically feasible desired trajectory $(x_d(t), u_d(t))$, we perturb the trajectory via a smooth one-parameter family $(x_\epsilon(t), u_\epsilon(t))$ with $x_0(t) = x_d(t)$ and $u_0(t) = u_d(t)$, and define the variation $\delta x = \left.\frac{d}{d\epsilon}\right|{\epsilon=0} x\epsilon$ and $\delta u = \left.\frac{d}{d\epsilon}\right|{\epsilon=0} u\epsilon$.
+The variation of the velocity is simpler to define and stranger to live with: $\delta\omega = \omega - \omega_d$, to first order.
 
+::: {.thought #thought7-planes name="Two tangent planes"}
+Hold two pencils by their ends so that they point in different directions, and twirl each one sideways. Each angular velocity is perpendicular to its own pencil. So $\omega_d$ lies in the plane perpendicular to $q_d$, and $\omega$ lies in the plane perpendicular to $q$. Those are different planes.
 
-Manifold Factor $M_i$
-	Configuration Variation
-	Velocity Variation
-	Algebraic Constraint $C_i(x_d) s_i = 0$
-	$\mathbb{R}^3$
-	$\delta p = \delta p \in \mathbb{R}^3$
-	$\delta v = \delta \dot{p} \in \mathbb{R}^3$
-	None ($C_i = 0$)
-	$S^2$
-	$\delta q = \xi \times q_d = -q_d^\wedge \xi$
-	$\delta \omega \in \mathbb{R}^3$
-	$\xi \cdot q_d = 0$, $(\xi \times q_d) \cdot \omega_d + q_d \cdot \delta \omega = 0$
-	$SO(3)$
-	$\delta R = R_d \eta^\wedge$
-	$\delta \Omega = \Omega_d^\wedge \eta + \dot{\eta}$
-	None ($C_i = 0$)
-	
+Carry $\omega$ over to $q_d$ and compare ([](#fig7-planes)). It sticks out of the plane there. The difference $\delta\omega$ therefore has a component along $q_d$, and that component is not free. It is fixed by how far apart the pencils are and how fast the reference is turning.
+:::
 
-Table 7.1: Canonical tangent-space variations and algebraic constraints on elementary manifold factors $M_i \in {\mathbb{R}^3, S^2, SO(3)}$ (Wu & Sreenath, 2015).
-7.2.1 Variations on $\mathbb{R}^3$
-For $p \in \mathbb{R}^3$ with $\dot{p} = v$, the perturbed state $p_\epsilon = p_d + \epsilon \delta p$ yields linear kinematics without constraints:
+![Why $\delta\omega$ is constrained. The reference spins with $\omega_d$, tangent at $q_d$. The neighbor spins with $\omega$, tangent at $q$. Carried over to $q_d$ (dashed), $\omega$ leaves the tangent plane, so $\delta\omega = \omega - \omega_d$ has a component along $q_d$ (teal). Watch it shrink as the two directions come together.](figures/ch07-planes-strip.png){#fig7-planes anim="figures/ch07-planes.gif"}
 
+To find that component, vary $q \cdot \omega = 0$ with [](#eq7-var-s2). The result is the part of [](#eq3-delta-omega) along $q$:
 
-$$ \delta \dot{p} = \delta v. \tag{7.2} $$
-7.2.2 Variations on $SO(3)$
-For $R \in SO(3)$ with body-frame angular velocity $\Omega \in \mathbb{R}^3$ ($\dot{R} = R \Omega^\wedge$), the manifold-preserving perturbation is $R_\epsilon(t) = R_d(t) \exp(\epsilon \eta^\wedge(t))$ with $\eta(t) \in \mathbb{R}^3$, giving
+$$
+q_d \cdot \delta\omega = \xi \cdot (\omega_d \times q_d). \label{eq7-var-omega}
+$$
 
+One more formula and the toolkit is complete. Vary the kinematics $\dot q = \omega \times q$. The left side is $\ddt(\xi \times q_d)$, the right side is $\delta\omega \times q_d + \omega_d \times (\xi \times q_d)$, and the Jacobi identity collapses the difference to $(\dot\xi - \delta\omega - \omega_d \times \xi) \times q_d = 0$. The bracket is therefore along $q_d$, and keeping $\xi \cdot q_d = 0$ for all time fixes its size:
 
-$$ \delta R = R_d \eta^\wedge. \tag{7.3} $$
+$$
+\dot\xi = \omega_d \times \xi + (I - q_d q_d\T)\,\delta\omega . \label{eq7-xi-dot}
+$$
 
+This is the tangent part of [](#eq3-delta-omega), solved for $\dot\xi$. The tangential part of $\delta\omega$ moves $\xi$ within the plane. The term $\omega_d \times \xi$ points along $q_d$ and keeps $\xi$ in the plane as the plane turns.
 
-Differentiating $\delta R$ with respect to time and equating it to $\delta(R \Omega^\wedge) = \delta R,\Omega_d^\wedge + R_d,\delta\Omega^\wedge$ yields $R_d(\Omega_d^\wedge \eta^\wedge + \dot{\eta}^\wedge) = R_d(\eta^\wedge \Omega_d^\wedge + \delta\Omega^\wedge)$. Using $[\Omega_d^\wedge, \eta^\wedge] = (\Omega_d^\wedge \eta)^\wedge$, we obtain
+We now have a candidate state, $s = (\xi, \delta\omega)$, and two constraints on it. Does it produce a linear model?
 
+## The spherical pendulum, by hand {#sec7-s2}
 
-$$ \delta \Omega = \Omega_d^\wedge \eta + \dot{\eta} \quad \Longleftrightarrow \quad \dot{\eta} = -\Omega_d^\wedge \eta + \delta \Omega. \tag{7.4} $$
+Put a mass $m$ at the end of a massless rod of length $l$, pivoted at the origin, and push on the mass with a force $F \in \R^3$. The equations of motion are [](#eq4-sph) with the moment $l\,q\times F$ of the force added:
 
+$$
+\dot q = \omega \times q, \qquad m l^2\,\dot\omega = -m g l\; q\times e_3 + l\, q \times F . \label{eq7-pendulum}
+$$
 
-Because $\eta \in \mathbb{R}^3$ and $\delta \Omega \in \mathbb{R}^3$ are unconstrained, the variation state $s_{SO(3)} = [\eta^T, \delta \Omega^T]^T \in \mathbb{R}^6$ requires no algebraic constraint.
-7.2.3 Variations on $S^2$
-For $q \in S^2 = {q \in \mathbb{R}^3 : q^T q = 1}$ with $\dot{q} = \omega \times q$ and $q \cdot \omega = 0$, the perturbation $q_\epsilon(t) = \exp(\epsilon \xi^\wedge(t)) q_d(t)$ with $\xi \in T_{q_d} S^2$ yields
+Let $(q_d, \omega_d, F_d)$ be any solution. Divide the second equation by $l$ and vary it. The product rule gives $m l\,\delta\dot\omega = \delta q \times (F_d - m g e_3) + q_d \times \delta F$. Substitute $\delta q = \xi \times q_d$ and use $(\xi \times q) \times y = y^\wedge q^\wedge \xi$ for any vector $y$. Together with [](#eq7-xi-dot) this is a linear time-varying system.
 
+::: {.proposition #thm7-s2 name="Linearized spherical pendulum"}
+Along any solution of [](#eq7-pendulum),
+$$
+\ddt\begin{bmatrix}\xi \\ \delta\omega\end{bmatrix} =
+\underbrace{\begin{bmatrix} \omega_d^\wedge & I - q_d q_d\T \\[2pt] \tfrac{1}{ml}(F_d - m g e_3)^\wedge q_d^\wedge & 0 \end{bmatrix}}_{A(t)}
+\begin{bmatrix}\xi \\ \delta\omega\end{bmatrix} +
+\underbrace{\begin{bmatrix} 0 \\[2pt] \tfrac{1}{ml}\,q_d^\wedge \end{bmatrix}}_{B(t)} \delta F, \label{eq7-s2-lin}
+$$
+with the state confined to
+$$
+C(t)\,s = 0, \qquad C = \begin{bmatrix} q_d\T & 0 \\ (q_d \times \omega_d)\T & q_d\T \end{bmatrix}. \label{eq7-s2-constraint}
+$$
+:::
 
-$$ \delta q = \xi \times q_d = -q_d^\wedge \xi, \qquad \xi \cdot q_d = 0. \tag{7.5} $$
+No angle appears. $A$ and $B$ are polynomials in the reference, defined at every point of the sphere, including straight up and straight down where spherical coordinates fail.
 
+::: {.remark}
+Wu and Sreenath (2015) and the symbolic library of [](#ch-symbolic) print the upper-left block as $q_d q_d\T \omega_d^\wedge$. On the constraint set the two agree, because $\omega_d \times \xi$ is along $q_d$ when both vectors are tangent. Off it they differ. Blocks that multiply $\xi$ or $\delta\omega$ are unique only as maps on the constraint set, so compare two derivations there and nowhere else.
+:::
 
-Taking the variation of $q \cdot \omega = 0$ gives the velocity-level constraint
+::: {.example #ex7-s2-check name="Checking the linearization"}
+Take $m = 0.5$ kg, $l = 0.8$ m and a reference released 140° from the hanging position and pushed by a time-varying force. Perturb the initial state and the force by $\pm\epsilon$ and simulate the nonlinear pendulum. The centered difference of the two neighbors, read through [](#eq7-var-s2), is a finite-difference $s(t)$. Integrate [](#eq7-s2-lin) from the same start. With $\epsilon = 10^{-4}$ the two differ by $3.6\times10^{-8}$ over 1.5 s, and by a hundred times more with $\epsilon = 10^{-3}$, as a second-order error should. The symbolic derivation matches the lower blocks of $A$ and $B$ entry by entry.
+:::
 
+So far $s$ has been an infinitesimal. For control we need to know what it says about a real error.
 
-$$ (\xi \times q_d) \cdot \omega_d + q_d \cdot \delta \omega = 0 \quad \Longleftrightarrow \quad (q_d^\wedge \omega_d)^T \xi + q_d^T \delta \omega = 0. \tag{7.6} $$
+Near the reference the linear state *is* the geometric error of [](#def-error-s2). Put $q = \exp(\xi^\wedge) q_d$ into $e_q = q_d \times q$ and expand: $e_q = \xi + O(\|\xi\|^3)$. So integrating [](#eq7-s2-lin) predicts $e_q(t)$.
 
+[](#fig7-linear) tests the prediction on a free swing. Release a neighbor 1° away and after 1.2 s the linear model is off by 1.6% of the error. At 10° it is off by 16%, at 30° by 48%. The mismatch grows in proportion to the initial angle. That is what "first order" means, and it is the only promise a linearization makes.
 
-Equating $\frac{d}{dt}(\delta q) = \dot{\xi} \times q_d + \xi \times (\omega_d \times q_d)$ with $\delta \dot{q} = \delta \omega \times q_d + \omega_d \times (\xi \times q_d)$ and applying the Jacobi identity gives $(\dot{\xi} - \delta \omega - \omega_d \times \xi) \times q_d = 0$. Enforcing $\frac{d}{dt}(\xi \cdot q_d) = 0$ and Eq. (7.6) uniquely determines the normal component along $q_d$, yielding
+![What the linear state predicts. Left: the error $\|e_q(t)\|$ between two simulated swings, divided by the initial angle, against the linear prediction from [](#eq7-s2-lin). The 1° and 10° errors stay on the prediction and the 30° error peels away. Right: the relative error of the prediction as the swing goes on. At 1.2 s it is in proportion to the initial angle.](figures/ch07-linear-strip.png){#fig7-linear anim="figures/ch07-linear.gif"}
 
+The experiment also has a trap in it. The neighbor's $\omega$ must be perpendicular to the neighbor's $q$, so its initial $\delta\omega$ has to satisfy [](#eq7-var-omega). Start the linear model from $(\xi, 0)$ instead and the prediction is wrong by 3.5% however small the perturbation. The constraints are part of the model.
 
-$$ \dot{\xi} = \omega_d^\wedge \xi + (I_3 - q_d q_d^T) \delta \omega. \tag{7.7} $$
+## A state that is not free {#sec7-constrained}
 
+The state $s$ has six components, and the pendulum has four degrees of freedom in $(q, \omega)$. The two constraints of [](#eq7-s2-constraint) remove the excess. They hold at the start by construction. Do they keep holding?
 
-Stacking $s_{S^2} = [\xi^T, \delta \omega^T]^T \in \mathbb{R}^6$, the constraints Eqs. (7.5)–(7.6) take the compact form $C_{S^2}(t) s_{S^2} = 0$, where
+They do, for every input. A direct computation with [](#eq7-s2-lin) gives $CB = 0$ and $CA + \dot C = 0$, so
 
+$$
+\ddt\big(C(t)\,s(t)\big) = 0 . \label{eq7-invariant}
+$$
 
-$$ C_{S^2}(t) = \begin{bmatrix} q_d^T & 0_{1\times 3} \ (q_d^\wedge \omega_d)^T & q_d^T \end{bmatrix} \in \mathbb{R}^{2 \times 6}. \tag{7.8} $$
-7.2.4 General Constrained LTV System on $\prod_i M_i$
-Assembling the variation vectors $s_i$ of all manifold factors into $s \in \mathbb{R}^n$ and linearizing the Newton–Euler equations of motion about $(x_d(t), u_d(t))$ yields the symbolic constrained linear time-varying (LTV) system (Wu & Sreenath, 2015; Kotaru, Wu, & Sreenath, 2017):
+A solution that starts in the **constraint subspace** $\ker C(t_0)$ stays in $\ker C(t)$. That is reassuring. It is also a warning.
 
+::: {.thought #thought7-broom name="The broom that cannot be balanced"}
+Stand a broom on its bristles and steady the top with a fingertip. Everyone knows this can be done: a sideways push at the top controls the lean. Now ask the textbook. Linearize about upright, $q_d = e_3$ and $F_d = 0$, form $[B\ \ AB\ \cdots\ A^5B]$ and compute its rank. You get 4. The state has 6 components. The rank test says the broom is uncontrollable.
 
-$$ \dot{s} = A(x_d(t)) s + B(x_d(t)) \delta u, \tag{7.9a} $$ $$ C(x_d(t)) s = 0. \tag{7.9b} $$
+The test is not wrong. It was asked the wrong question. By [](#eq7-invariant) no input can change $Cs$, so two directions of $\R^6$ are unreachable. But those two directions are not states of a pendulum. One is a rotation vector along the rod. The other is an angular velocity along the rod. A broom cannot be in them, so there is nothing to control.
+:::
 
+Controllability has to be judged where the state lives.
 
-Here $A(x_d(t)) \in \mathbb{R}^{n \times n}$, $B(x_d(t)) \in \mathbb{R}^{n \times m}$, and $C(x_d(t)) \in \mathbb{R}^{p \times n}$ are expressed purely in terms of $(x_d(t), u_d(t))$ without local coordinate charts.
+::: {.definition #def7-constrained name="Controllability on the constraint subspace"}
+The system [](#eq7-s2-lin) with [](#eq7-s2-constraint) is **controllable on the constraint subspace** if every state in $\ker C(t_0)$ can be steered to every state in $\ker C(t_1)$. If the columns of $Z$ are an orthonormal basis of a constant $\ker C$, this is ordinary controllability of the reduced pair $(Z\T A Z,\ Z\T B)$. Along a moving reference a sufficient test is
+$$
+\operatorname{rank}\,[\,\Gamma_0\ \ \Gamma_1\ \cdots\,] = \dim\ker C(t) \ \text{ for all } t, \qquad \Gamma_0 = B, \quad \Gamma_{k+1} = \dot \Gamma_k - A\, \Gamma_k . \label{eq7-ltv-rank}
+$$
+:::
 
+For the pendulum, [](#eq7-ltv-rank) can be done on paper. $\Gamma_0$ has the block $q_d^\wedge$ in its lower half, and $\Gamma_1 = \dot B - AB$ has $-q_d^\wedge$ in its upper half. Each has rank 2, in different rows, so the rank is 4 at every point of every reference. The linearized pendulum is controllable along all of its trajectories, a result due to Wu and Sreenath. The same constraint subspace returns in estimation, where the covariance of a filter on the sphere must lie in it ([](#thought14-flat)). Mind the minus sign in $\Gamma_{k+1}$. With a plus the test can pass on a system that is not controllable ([](#exr7-sign)).
 
-________________
+::: {.example #ex7-upright name="LQR for the upright pendulum"}
+At $q_d = e_3$ the tangent plane is spanned by $e_1, e_2$, so $Z$ selects the first two components of $\xi$ and of $\delta\omega$. The reduced system is two copies of an inverted pendulum,
+$$
+Z\T A Z = \begin{bmatrix} 0 & I_2 \\ \tfrac{g}{l} I_2 & 0 \end{bmatrix}, \qquad \tfrac{g}{l} = 12.26\ \text{s}^{-2},
+$$
+with rank 4 of 4. Weight the reduced state with $Q = \operatorname{diag}(10, 10, 1, 1)$ and the force with $0.1\,I$, and solve the algebraic Riccati equation. Written back in three dimensions with the error of [](#def-error-s2), the control is
+$$
+F = k_p\; e_3 \times e_q + k_d\; e_3 \times \omega, \qquad k_p = 16.04\ \text{N}, \quad k_d = 4.78\ \text{N·s},
+$$
+with closed-loop poles at $-3.17$ and $-8.77\ \text{s}^{-1}$, each double. Released 30° from upright, the nonlinear pendulum is back within 1° in 1.26 s.
+:::
 
+::: {.warning name="Do not solve a Riccati equation on the unreduced state"}
+The six-state pair $(A, B)$ of the upright pendulum has two uncontrollable modes at zero. No stabilizing solution of the algebraic Riccati equation exists, and a standard solver raises an error. Reduce to $\ker C$ first. The nine-entry attitude model of the opening failed for the same reason, with six such modes instead of two.
+:::
 
-7.3 State-Constrained Controllability
-Because the variation state $s(t)$ is restricted to the time-varying nullspace $\mathcal{N}(C(x_d(t))) = {s \in \mathbb{R}^n : C(x_d(t)) s = 0}$, classical unconstrained controllability criteria cannot be applied blindly without first verifying that the constraint manifold is invariant under the linearized flow.
+The sphere charges two constraints for a singularity-free model. The rotation group charges none.
 
+## The rigid body {#sec7-so3}
 
-Def. 7.1 (State-Constrained Controllability). The constrained LTV system Eq. (7.9) on $[t_0, t_f]$ is state-constrained controllable if for every initial state $s_0 \in \mathcal{N}(C(x_d(t_0)))$ and every terminal state $s_f \in \mathcal{N}(C(x_d(t_f)))$, there exists a piecewise continuous control input $\delta u : [t_0, t_f] \to \mathbb{R}^m$ such that the solution $s(t)$ of Eq. (7.9a) with $s(t_0) = s_0$ satisfies $s(t_f) = s_f$ and $C(x_d(t)) s(t) = 0$ for all $t \in [t_0, t_f]$ (Wu & Sreenath, 2015).
+Take a rigid body with inertia $J$ about a fixed pivot, center of mass at $\rho$ in the body frame, and body torque $\tau$. With $\rho = 0$ this is the attitude of a multicopter. Its equations of motion are [](#eq4-pendulum):
 
+$$
+\dot R = R\,\Omega^\wedge, \qquad J\dot\Omega + \Omega\times J\Omega = m g\,(R\T e_3) \times \rho + \tau . \label{eq7-body}
+$$
 
-Lemma 7.1 (Time-Invariance of $\mathcal{N}(C)$). Suppose that for all $t \in [t_0, t_f]$,
+A neighboring attitude is the reference turned by a small body-frame rotation, $R = R_d \exp(\epsilon\,\eta^\wedge)$. From [](#def3-variation) and [](#eq3-delta-Omega),
 
+$$
+\delta R = R_d\,\eta^\wedge, \qquad \delta\Omega = \dot\eta + \Omega_d \times \eta . \label{eq7-var-so3}
+$$
 
-$$ C(t) B(t) = 0 \quad \text{and} \quad \big(C(t) A(t) + \dot{C}(t)\big) s = 0 ;;; \forall s \in \mathcal{N}(C(t)). \tag{7.10} $$
+Any $\eta \in \R^3$ is allowed and any $\delta\Omega \in \R^3$ is allowed. The reason is that $\Omega$ is measured in the body's own frame, so every angular velocity lives in the same $\R^3$. There is no second tangent plane to fall out of.
 
+Move the gyroscopic term of [](#eq7-body) to the right, as $J\Omega\times\Omega$, and vary term by term. The gyroscopic term gives $(J\Omega_d)^\wedge\delta\Omega - \Omega_d^\wedge J\,\delta\Omega$. For gravity, $\delta(R\T e_3) = -\eta^\wedge R_d\T e_3 = (R_d\T e_3)^\wedge \eta$.
 
-Then $\frac{d}{dt}\big(C(t) s(t)\big) \equiv 0$ along every trajectory of Eq. (7.9a). Consequently, if $s(t_0) \in \mathcal{N}(C(t_0))$, then $s(t) \in \mathcal{N}(C(t))$ for all $t \ge t_0$, regardless of the control input $\delta u(t)$.
+::: {.proposition #thm7-so3 name="Linearized rigid body"}
+Along any solution of [](#eq7-body),
+$$
+\ddt\begin{bmatrix}\eta \\ \delta\Omega\end{bmatrix} =
+\begin{bmatrix} -\Omega_d^\wedge & I \\[2pt] -m g\,J^{-1}\rho^\wedge (R_d\T e_3)^\wedge & J^{-1}\big((J\Omega_d)^\wedge - \Omega_d^\wedge J\big) \end{bmatrix}
+\begin{bmatrix}\eta \\ \delta\Omega\end{bmatrix} +
+\begin{bmatrix} 0 \\ J^{-1} \end{bmatrix} \delta\tau, \label{eq7-so3-lin}
+$$
+with no constraint on the state. Since $[\,B\ \ {-AB}\,]$ has rank 6, the system is controllable along every reference.
+:::
 
+The finite-difference test of [](#ex7-s2-check), run on a tumbling body with a full inertia matrix, agrees to $9\times10^{-6}$ at $\epsilon = 10^{-4}$ and converges at second order. The symbolic derivation agrees entry by entry.
 
-Proof. Differentiating $C(t) s(t)$ along Eq. (7.9a) gives $\frac{d}{dt}(C s) = (CA + \dot{C}) s + CB,\delta u$. Under Eq. (7.10), $\frac{d}{dt}(Cs) = 0$ whenever $s \in \mathcal{N}(C)$, so $C(t)s(t) = C(t_0)s(t_0) = 0$ for all $t \ge t_0$. $\square$
+Look at what is missing from [](#eq7-so3-lin). For $\rho = 0$ the reference attitude $R_d$ does not appear at all. Twist a book 5° about its spine while it lies flat, then again while you hold it upright: your wrist cannot tell the difference, and neither can $A$ and $B$. One linear model, and so one LQR gain, serves every attitude you could hold. This is the left-invariance that [](#sec-euler) asked for.
 
+Now the dictionary between the linear state and what a controller can compute. Insert $R = R_d\exp(\epsilon\eta^\wedge)$ and $\Omega = \Omega_d + \epsilon\,\delta\Omega$ into the errors of [](#def-error-so3).
 
-Remark 7.1. Lemma 7.1 is the cornerstone of constrained LTV control on manifolds: once $s(t_0) \in \mathcal{N}(C(t_0))$ is satisfied by construction of the variation map, the unconstrained dynamics Eq. (7.9a) automatically preserve Eq. (7.9b) for all $\delta u(t)$.
+::: {.proposition #thm7-dictionary name="What the linear state means"}
+To first order in the deviation,
+$$
+e_R = \eta, \qquad e_\Omega = \delta\Omega - \Omega_d \times \eta = \dot\eta . \label{eq7-dictionary}
+$$
+:::
 
+This is [](#eq3-first-order) with the small parameter absorbed into the variation. The first is no surprise. The second is. The velocity error $e_\Omega$ is not $\delta\Omega$. It is $\dot\eta$. The two differ by $\Omega_d \times \eta$, which is first order whenever the reference is turning. This is the transport map doing its job: $e_\Omega$ compares the two angular velocities in one frame, and $\delta\Omega$ subtracts their components in two.
 
-To test controllability on $\mathcal{N}(C(t))$, define the linear differential operator
+::: {.table #tbl7-dictionary}
 
+| | Linear state | Constraint | First-order image of |
+| :-- | :-: | :-: | :-: |
+| $S^2$ | $(\xi,\ \delta\omega)$ | $q_d\cdot\xi = 0$, [](#eq7-var-omega) | $(e_q,\ \omega - \omega_d)$ |
+| $\SO(3)$ | $(\eta,\ \delta\Omega)$ | none | $(e_R,\ e_\Omega + \Omega_d \times e_R)$ |
 
-$$ s(B) = \dot{B}(t) + A(t) B(t), \qquad s^0(B) = B(t), \qquad s^k(B) = s\big(s^{k-1}(B)\big). \tag{7.11} $$
+: The linearized states of this chapter and the measurable quantities that equal them to first order.
 
+:::
 
-Prop. 7.1 (State-Constrained Controllability Criterion). Assume Lemma 7.1 holds and $A(t), B(t)$ are sufficiently smooth on $[t_0, t_f]$. If there exists $k \ge 1$ such that the columns of the controllability matrix
+## LQR on the tangent space {#sec7-lqr}
 
+You know the regulator. For $\dot s = A(t)s + B(t)\,\delta u$ and the cost
 
-$$ \mathcal{C}_k(t) = \begin{bmatrix} B(t) & s(B)(t) & \cdots & s^{k-1}(B)(t) \end{bmatrix} \tag{7.12} $$
+$$
+\tfrac12\, s(t_f)\T P_f\, s(t_f) + \tfrac12\int_0^{t_f} \big(s\T Q\,s + \delta u\T R_u\,\delta u\big)\,\dd t,
+$$
 
+integrate the Riccati equation backwards from $P(t_f) = P_f$,
 
-span $\mathcal{N}(C(t))$ (i.e., $\operatorname{rank}(\mathcal{C}_k(t)) = \dim \mathcal{N}(C(t)) = n - \operatorname{rank}(C(t))$) for all $t \in [t_0, t_f]$, then Eq. (7.9) is state-constrained controllable on $[t_0, t_f]$ (Wu & Sreenath, 2015).
-7.3.1 Application to the Spherical Pendulum on $S^2$
-Consider a spherical pendulum of mass $m$ and length $l$ with $q \in S^2$ and $q \cdot \omega = 0$:
+$$
+-\dot P = A\T P + P A - P B R_u^{-1} B\T P + Q, \qquad K(t) = R_u^{-1} B(t)\T P(t), \label{eq7-riccati}
+$$
 
+and apply $\delta u = -K(t)\,s$. At an equilibrium $A$ and $B$ are constant, $\dot P = 0$, and [](#eq7-riccati) becomes the algebraic Riccati equation. The optimal cost from $s_0$ at time $t_0$ is $\tfrac12 s_0\T P(t_0)\,s_0$.
 
-$$ \dot{q} = \omega \times q, \qquad \dot{\omega} = \frac{g}{l} e_3^\wedge q + \frac{1}{m l^2}(I_3 - q q^T) u. \tag{7.13} $$
+The new part is the last step. The plant state is $(R, \Omega)$, not $s$. The gain must be fed something computed from that state which equals $s$ to first order. [](#tbl7-dictionary) says what.
 
+::: {.definition #def7-feedback name="Variation-based LQR"}
+With $K(t)$ from [](#eq7-riccati) and [](#eq7-so3-lin), and the errors of [](#def-error-so3),
+$$
+\tau = \tau_d(t) - K(t)\begin{bmatrix} e_R \\ e_\Omega + \Omega_d \times e_R \end{bmatrix}. \label{eq7-feedback}
+$$
+For a direction held at an equilibrium $q_d$, with $K$ designed on $\ker C$ and the error of [](#def-error-s2), $F = F_d - K\,(e_q,\ \omega)$.
+:::
 
-Linearizing Eq. (7.13) about $(q_d(t), \omega_d(t), u_d(t))$ using Eqs. (7.5)–(7.7) gives $s = [\xi^T, \delta \omega^T]^T \in \mathbb{R}^6$ with $C(t) = C_{S^2}(t)$ from Eq. (7.8) and
+Nothing in [](#eq7-feedback) is a difference of coordinates.^[Since $\delta\Omega$ is the plain difference $\Omega - \Omega_d$ of body-frame components, you may feed that instead. The form with $e_\Omega$ shows how to convert a law written in the velocity errors used elsewhere in this book.] The errors are built from $R_d\T R$, so they pass the two-labs test of [](#thought-two-labs), and they are smooth at every attitude.
 
+## Nose up, and through a flip {#sec7-worked}
 
-$$ A(t) = \begin{bmatrix} \omega_d^\wedge & I_3 - q_d q_d^T \ A_{21}(t) & 0_{3\times 3} \end{bmatrix}, \qquad B(t) = \begin{bmatrix} 0_{3\times 3} \ \frac{1}{m l^2}(I_3 - q_d q_d^T) \end{bmatrix}, \tag{7.14} $$
+Now the tail-sitter. Take $J = \operatorname{diag}(0.03, 0.05, 0.07)$ kg·m², $\rho = 0$, $Q = \operatorname{diag}(100\,I, I)$ and $R_u = 20\,I$.
 
+::: {.example #ex7-hold name="Holding any attitude"}
+At rest, [](#eq7-so3-lin) is three decoupled double integrators and the Riccati equation solves in closed form:
+$$
+K = \begin{bmatrix} k_R I & \operatorname{diag}(k_{\Omega,i}) \end{bmatrix}, \qquad k_R = \sqrt{100/20} = 2.24, \qquad k_{\Omega,i} = \sqrt{1/20 + 2 J_i k_R} = (0.43,\ 0.52,\ 0.60).
+$$
+The same $K$ holds the body level, nose-up or inverted. It has the form of the feedback part of the tracking law [](#eq6-law), with one gain per axis on the velocity error.
 
-where $A_{21}(t) = -\frac{g}{l} e_3^\wedge q_d^\wedge + \frac{1}{ml^2}\big((q_d^T u_d)I_3 + q_d u_d^T\big) q_d^\wedge$. Direct differentiation confirms $C B = 0$ and $(CA + \dot{C}) s = 0$ for all $s \in \mathcal{N}(C)$ (verified numerically to $\mathcal{O}(10^{-9})$ in ch07_variation_lqr_sim.ipynb). Moreover,
+For comparison, design an LQR the usual way: linearize the same dynamics in yaw, pitch, roll and $\Omega$ about the target, use the same $Q$ and $R_u$, and feed back wrapped angle differences. Start both loops 20° from the target about the axis $(1,1,1)$.
 
+Level, the two are hard to tell apart. Peak torque is 0.76 N·m for the geometric loop and 0.81 for the Euler loop.
 
-$$ s(B) = \dot{B} + A B = \begin{bmatrix} \frac{1}{m l^2}(I_3 - q_d q_d^T) \ -\frac{1}{m l^2}(\dot{q}_d q_d^T + q_d \dot{q}_d^T) \end{bmatrix}. \tag{7.15} $$
+At 85° of pitch the geometric loop does exactly what it did before, to the last digit. The Euler loop rolls the body almost all the way over ([](#fig7-hold)). The attitude error climbs from 20° to 177.8° before it recovers. Peak torque is 14.2 N·m, 19 times higher, and the effort $\int\|\tau\|^2\dd t$ is 327 times higher. At 88° of pitch a 5° error is enough to set it off.
+:::
 
+![Holding a nose-up attitude at 85° of pitch from a 20° initial error, simulated. Left: the same body under the two loops, with the target dashed. The geometric LQR turns it straight to the target. The Euler-angle LQR rolls it almost all the way over first. Right: the attitude error angle of both loops.](figures/ch07-hold-strip.png){#fig7-hold anim="figures/ch07-hold.gif"}
 
-Since $\operatorname{rank}(I_3 - q_d q_d^T) = 2$ and the upper and lower $3 \times 3$ blocks of $[B, s(B)]$ are block-triangular with respect to $T_{q_d}S^2$, $\operatorname{rank}([B, s(B)]) = 4 = \dim \mathcal{N}(C(t))$ for every smooth trajectory $(q_d(t), \omega_d(t))$. By Prop. 7.1, the spherical pendulum is state-constrained controllable along all feasible trajectories.
-7.3.2 Application to the 3D Pendulum on $SO(3)$
-Consider a 3D rigid-body pendulum with attitude $R \in SO(3)$, body angular velocity $\Omega \in \mathbb{R}^3$, inertia $J \succ 0$, mass $m$, and center-of-mass offset $\rho \in \mathbb{R}^3$:
+The cause is the one from [](#ex-euler-blowup). Near the pole of the chart a small rotation is a large change of yaw and roll. The Euler regulator sees a large error, where the body has a small one, and spends torque on it.
 
+::: {.example #ex7-flip name="Tracking a flip"}
+Now a reference that moves. The body makes one full turn in 1.5 s about an axis tilted 5° from its pitch axis. The rate peaks at 7.85 rad/s, 450° per second, and the pitch reaches ±85°. Evaluate [](#eq7-so3-lin) along it, integrate [](#eq7-riccati) backwards from the hover solution, and close the loop with [](#eq7-feedback).
 
-$$ \dot{R} = R \Omega^\wedge, \qquad J \dot{\Omega} + \Omega \times J \Omega = -m g \rho^\wedge R^T e_3 + u. \tag{7.16} $$
+[](#fig7-gain) shows the gain. In $(\eta, \delta\Omega)$ its norm stays between 3.83 and 4.09 for the whole flip, because the reference enters $A(t)$ only through $\Omega_d$. Do the same design in Euler angles and $A(t)$ has entries up to 873, and the gain swells to 18.0 each time the reference nears the pole.
 
+Start the body 15° off. The geometric loop ends the flip 0.007° from the reference. Its peak torque is 0.86 N·m, against 0.80 for the feedforward alone.
+:::
 
-Applying Eqs. (7.3)–(7.4) with $s = [\eta^T, \delta \Omega^T]^T \in \mathbb{R}^6$ ($C(t) = 0$) yields
+![Riccati gain along the flip of [](#ex7-flip). Left: the reference attitude. Top: its pitch angle passes within 5° of the chart singularity twice. Bottom: the norm of the LQR gain, designed in the linear state $(\eta, \delta\Omega)$ and in Euler angles. Watch the Euler-angle gain swell before each pass.](figures/ch07-gain-strip.png){#fig7-gain anim="figures/ch07-gain.gif"}
 
+One more number, for honesty. The Euler-angle LQR also tracks this flip, ending 0.005° off. The reference is within 10° of the pole for less than 0.05 s per pass, too briefly for the swollen gain to do harm. A chart singularity hurts where you linger, as in [](#ex7-hold), and it forbids a reference that passes through it. It does not ruin every maneuver that goes near.
 
-$$ A(t) = \begin{bmatrix} -\Omega_d^\wedge & I_3 \ -m g J^{-1} \rho^\wedge (R_d^T e_3)^\wedge & J^{-1}\big((J\Omega_d)^\wedge - \Omega_d^\wedge J\big) \end{bmatrix}, \qquad B(t) = \begin{bmatrix} 0_{3\times 3} \ J^{-1} \end{bmatrix}. \tag{7.17} $$
+::: {.warning name="Feed the gain the state it was designed for"}
+LQR has a built-in test: for small errors the closed-loop cost must equal $\tfrac12 s_0\T P(t_0)\,s_0$. Inject an attitude error mid-flip, at $t_0 = 0.45$ s, where $\Omega_d$ is 5.5 rad/s. With [](#eq7-feedback) the ratio of measured to predicted cost is 1.0000 for a 1° error, 1.006 for 15° and 1.064 for 45°. Replace the velocity entry by $e_\Omega$ alone, as the feedback is sometimes written, and the ratio is 2.00: twice the optimal cost, however small the error. That loop is stable. It is not the regulator you designed. By [](#eq7-dictionary), $e_\Omega$ is $\dot\eta$, and the gain was computed for $\delta\Omega$. At a hover the two agree and the slip is invisible.
+:::
 
+A ratio of 1.064 at 45° says the linear model is still good a long way out. How far does that go?
 
-Here $s(B) = \dot{B} + AB = \begin{bmatrix} J^{-1} \ J^{-1}((J\Omega_d)^\wedge - \Omega_d^\wedge J) J^{-1} \end{bmatrix}$, so $\operatorname{rank}([B, s(B)]) = 6 = \dim(\mathbb{R}^6)$ for all $t$, proving controllability along every trajectory on $SO(3)$.
+## How local is local? {#sec7-local}
 
+LQR theory guarantees a neighborhood and says nothing about its size. So measure it ([](#fig7-large)).
 
-________________
+Take the upright pendulum of [](#ex7-upright) first. The gain was computed at $q_d = e_3$, where a horizontal force is perpendicular to the rod. Tilt the rod by $\theta$ and the same force has a lever arm shorter by $\cos\theta$. The feedback torque is $l\,k_p \sin\theta\cos\theta$. Gravity's is $m g l \sin\theta$. Released from rest, the pendulum comes back only if
 
+$$
+\cos\theta_0 > \frac{m g}{k_p}, \qquad \theta_0 < 72.2^\circ .
+$$
 
-7.4 Finite-Horizon Riccati LTV-LQR Design
-Because Lemma 7.1 guarantees that $\mathcal{N}(C(t))$ is forward-invariant under Eq. (7.9a), we can synthesize a finite-horizon Linear Quadratic Regulator directly on the unconstrained pair $(A(t), B(t))$ (Kotaru, Wu, & Sreenath, 2017). Given symmetric weighting matrices $Q(t) \succeq 0$, $P_f \succeq 0$, and $R(t) \succ 0$, we minimize
+Simulation agrees to the half degree. Here $B$ depends on the state, the gain does not know it, and the region of attraction is a cone.
 
+The attitude hold of [](#ex7-hold) is the opposite case. Torque acts in the body frame, the lower block of $B$ is $J^{-1}$ everywhere, and in simulation the loop recovers from every initial error we tried, up to 179.99°. But look at the time it takes. The feedback uses $e_R$, whose length is $\sin\theta$ ([](#warn-sine)). It fades as the error approaches half a turn. At exactly 180° the regulator applies no torque at all, so the settling time grows without bound as the start approaches it.
 
-$$ J = \frac{1}{2} s(t_f)^T P_f s(t_f) + \frac{1}{2} \int_{t_0}^{t_f} \Big(s(t)^T Q(t) s(t) + \delta u(t)^T R(t) \delta u(t)\Big) dt. \tag{7.18} $$
+![Where the regulators stop working, from simulation. Left: time for the upright pendulum to settle from rest. With $e_q$ it falls beyond 72.2°. With the logarithm error it falls beyond 77.2°. Right: the attitude hold recovers from any error below 180°, slowly near half a turn with $e_R$, quickly with the logarithm error.](figures/ch07-large-errors.svg){#fig7-large}
 
+Swap $e_R$ for the logarithm error $\log(R_d\T R)^\vee$ of [](#sec3-errors), whose length is $\theta$ itself, and keep the same $K$. To first order nothing has changed: same linearization, same gain, same poles. Far from the reference the two loops differ. The logarithm error does not fade near half a turn, and it moves the pendulum's boundary out to 77.2°. In exchange it is discontinuous at 180° of error. Those attitudes form the **cut locus** of the target, where the shortest rotation back is not unique.
 
-The optimal feedback gain is obtained by integrating the Continuous-Time Differential Riccati Equation (DRE) backward from $t_f$ to $t_0$:
+Mueller (2018) makes this point for multicopters, and [](#ex3-linger) measures it on one axis. He compares four attitude controllers that are identical to first order, and shows that they recover differently from large disturbances and that the $e_R$ form can linger near half a turn for an arbitrarily long time. Linearization cannot see any of this.
 
+So be clear about what has been built. A variation-based LQR is valid at every reference, with no singular attitude, and optimal to first order around each one. It promises nothing far away. No almost-global claim follows, and by [](#thm-obstruction) no continuous law can make a global one. The large-error behavior above belongs to these two examples and to the choice of error, not to LQR.
 
-$$ -\dot{P}(t) = A(t)^T P(t) + P(t) A(t) - P(t) B(t) R(t)^{-1} B(t)^T P(t) + Q(t), \qquad P(t_f) = P_f, \tag{7.19} $$
+## The same linear system from the Lie algebra {#sec7-lie}
 
+There is a second road to [](#eq7-so3-lin). For a state $X$ in a matrix Lie group with body velocity $\zeta$, form the left-invariant error $E_\ell = X_d^{-1}X$ of [](#def3-invariant-errors) and take its logarithm $\chi$. On $\SO(3)$ that is $\chi = \log(R_d\T R)^\vee$. Differentiate and keep first-order terms. The result is [](#eq3-lie-algebra-error):
 
-yielding the LTV-LQR control law
+$$
+\dot\chi = -\ad_{\zeta_d}\chi + (\zeta - \zeta_d) . \label{eq7-lie}
+$$
 
+On $\SO(3)$ the operator $\ad_\Omega$ is $\Omega^\wedge$, and [](#eq7-lie) is the first row of [](#eq7-so3-lin) with $\chi$ in place of $\eta$. The two are the same vector to first order. On $\SE(3)$ the operator is a $6\times 6$ matrix built from the reference twist, and it couples position and attitude errors correctly.
 
-$$ K(t) = R(t)^{-1} B(t)^T P(t), \qquad \delta u(t) = -K(t) s(t), \qquad u(t) = u_d(t) + \delta u(t). \tag{7.20} $$
+This form matters beyond LQR. Given the reference, [](#eq7-lie) is linear in the unknowns $(\chi, \zeta)$, and so is the linearized momentum equation. Discretize over a horizon, add a quadratic cost in $\chi$ and linear bounds on the inputs, and the tracking problem is a quadratic program: convex, with fast reliable solvers. The same problem posed in $R$ and $\Omega$ is not convex. Teng et al. (2022) show that the logarithm error keeps its convergence rate out to large angles: the right-hand panel of [](#fig7-large) again. Jang, Teng and Ghaffari (2023) build the convex predictive controller on $\SE(3)$ for marine vehicles. [](#sec13-qp) writes that quadratic program out and flies it against a torque bound, and [](#thm13-se3) gives the model on $\SE(3)$.
 
+## Exercises {#sec7-exercises .unnumbered}
 
-To evaluate $s(t)$ from the nonlinear state $(x(t), x_d(t))$ at runtime:
+::: {.exercise #exr7-derive}
+Derive [](#eq7-var-omega) and [](#eq7-xi-dot). Then show from [](#eq7-s2-lin) that $CB = 0$ and $CA + \dot C = 0$, which proves [](#eq7-invariant). Does the proof use $\omega_d \cdot q_d = 0$?
+:::
 
+::: {.exercise #exr7-sign}
+For $\dot x = A(t)x + B(t)u$ with transition matrix $\Phi$, show that $\tfrac{\partial}{\partial t}\big(\Phi(t_0,t)B(t)\big) = \Phi(t_0,t)\,(\dot B - AB)$, and explain why this puts a minus sign in [](#eq7-ltv-rank). Then take constant $A$ and $B(t) = e^{At}b$. Show that the system is not controllable, that [](#eq7-ltv-rank) says so, and that the test with $\dot \Gamma_k + A\, \Gamma_k$ does not.
+:::
 
-* On $SO(3)$: $\eta = \big(\log(R_d^T R)\big)^\vee$ and $\delta \Omega = \Omega - \Omega_d$.
-* On $S^2$: $\xi = \frac{\theta}{\sin\theta}(q_d \times q)$ with $\theta = \arccos(q_d^T q)$, and $\delta \omega = \omega - \omega_d - \big(q_d \cdot (\omega - \omega_d) + (\xi \times q_d)\cdot \omega_d\big) q_d$, which enforces $C_{S^2}(t) s(t) = 0$ to machine precision even at large initial errors.
+::: {.exercise #exr7-s2-velocity}
+For a moving reference on the sphere, the velocity error is the $e_\omega = \omega - (I - qq\T)\,\omega_d$ of [](#eq3-e-omega). Show that to first order $e_\omega = (I - q_d q_d\T)\,\delta\omega$, and write $\delta\omega$ in terms of $e_q$ and $e_\omega$. What must replace $(e_q, \omega)$ in [](#def7-feedback)?
+:::
 
+::: {.exercise #exr7-euler}
+In the notebook, repeat [](#ex7-hold) for hold pitches from 0° to 89° and plot the peak torque of both loops. For a hold at 80°, find the smallest initial error that makes the Euler loop tumble. Does the answer depend on the axis of the error?
+:::
 
-________________
+::: {.exercise #exr7-roa}
+Derive the bound $\cos\theta_0 > m g/k_p$ of [](#sec7-local). Then limit the force to $\|F\| \le F_{\max}$ and predict the new boundary. Check it in the notebook. What happens to the boundary as you raise the weight on $\xi$ in $Q$?
+:::
 
+## Notes and sources {#sec7-notes .unnumbered}
 
-7.5 Worked Examples
-Worked Example 7.1: Spherical Pendulum Tracking from $50^\circ$ Initial Error
-In ch07_variation_lqr_sim.ipynb, we simulate Eq. (7.13) with $m = 1.0\text{ kg}$, $l = 1.0\text{ m}$, $g = 9.81\text{ m/s}^2$ along a time-varying conical figure-8 trajectory on $S^2$ over $t \in [0, 10]\text{ s}$, using $Q = \operatorname{diag}(40, 40, 40, 8, 8, 8)$, $R = 0.5 I_3$, and $P_f = \operatorname{diag}(50, 50, 50, 10, 10, 10)$. Starting from a $50.00^\circ$ attitude error and velocity perturbation $[0.8, -0.6, 0]^T\text{ rad/s}$:
+Variation-based linearization, the constrained state on $S^2$ and the controllability results of [](#sec7-constrained) are due to Wu and Sreenath (2015). Wu (2017) extends them to quadrotors with cable-suspended loads. The variation formulas are those of Lee, Leok and McClamroch (2018), the error functions those of Bullo and Lewis (2005), and the velocity error of [](#exr7-s2-velocity) that of Sreenath, Lee and Kumar (2013). The rank test [](#eq7-ltv-rank) is that of Silverman and Meadows (1967). Anderson and Moore (1990) is the standard reference for the regulator. Siravuru (2019, ch. 4) compares Euler-angle and geometric controllers on a 3D pendulum. The Lie-algebraic route is from Teng et al. (2022) and Jang, Teng and Ghaffari (2023), and Teng et al. (2026) use Lie-group derivatives of the same kind inside a constrained trajectory optimizer.
 
-
-* Constraint invariance holds with $\max_t |\frac{d}{dt}(C s)| = 1.104 \times 10^{-9}$ and $\max_t |C(t)s(t)| = 6.942 \times 10^{-16}$.
-* Controllability rank is $\min_t \operatorname{rank}([B, s(B)]) = 4 = \dim \mathcal{N}(C)$.
-* Closed-loop tracking converges to $0.0000^\circ$ attitude error and $1.853 \times 10^{-9}\text{ rad/s}$ velocity error (Fig. 7.1 in ch07_variation_lqr_sim.ipynb).
-Worked Example 7.2: 3D Pendulum Tracking on $SO(3)$ from $60^\circ$ Initial Error
-For the 3D pendulum Eq. (7.16) with $m = 1.5\text{ kg}$, $J = \operatorname{diag}(0.12, 0.15, 0.08)\text{ kg}\cdot\text{m}^2$, and $\rho = [0, 0, -0.5]^T\text{ m}$ over $t \in [0, 10]\text{ s}$, using $Q = \operatorname{diag}(50, 50, 50, 5, 5, 5)$ and $R = 0.2 I_3$:
-
-
-* Controllability rank is $\min_t \operatorname{rank}([B, s(B)]) = 6$.
-* Integrating the nonlinear dynamics with a geometric Lie-group Heun integrator preserves $\max_t |\det(R) - 1| = 6.883 \times 10^{-15}$.
-* Starting from a $60.00^\circ$ attitude error, the LTV-LQR controller stabilizes the trajectory to $0.0004^\circ$ attitude error and $3.972 \times 10^{-4}\text{ rad/s}$ velocity error (Fig. 7.2 in ch07_variation_lqr_sim.ipynb).
-
-
-________________
-
-
-7.6 Exercises
-1. Product Manifold Linearization ($SE(3) \times S^2$): Derive $(A(t), B(t), C(t))$ for a rigid-body quadrotor ($SE(3) = \mathbb{R}^3 \times SO(3)$) carrying a point-mass payload via a single rigid massless link ($S^2$), following Kotaru, Wu, & Sreenath (2017). Verify that $C(t) \in \mathbb{R}^{2 \times 16}$ and $\dim \mathcal{N}(C) = 14$.
-2. Invariance Proof: Prove analytically that for the spherical pendulum Eq. (7.13)–(7.14), the second row of $(CA + \dot{C}) s$ vanishes identically for all $s \in \mathcal{N}(C)$ even when $u_d(t)$ has a nonzero normal component $q_d^T u_d \neq 0$.
-3. Controllability with Restricted Input: Suppose the spherical pendulum is actuated only by a horizontal force $f \in \mathbb{R}^2$ in the $e_1$–$e_2$ plane so that $u = q \times [f_1, f_2, 0]^T$. When does $\operatorname{rank}([B, s(B)])$ drop below $4$?
-4. Riccati Projection Comparison: In ch07_variation_lqr_sim.ipynb, compare the closed-loop trajectory when $P(t)$ is integrated directly in $\mathbb{R}^{6\times 6}$ versus projecting $P(t)$ onto $\mathcal{N}(C(t))$ via $N(t)^T P(t) N(t)$. Explain why both yield identical feedback $\delta u = -K(t) s(t)$ when $s(t) \in \mathcal{N}(C(t))$.
+- B. D. O. Anderson and J. B. Moore, *Optimal Control: Linear Quadratic Methods*, Prentice Hall, 1990.
+- F. Bullo and A. D. Lewis, [*Geometric Control of Mechanical Systems*](https://doi.org/10.1007/978-1-4899-7276-7), Springer, 2005.
+- J. Jang, S. Teng and M. Ghaffari, ["Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles"](https://doi.org/10.1109/LRA.2023.3328450), *IEEE Robotics and Automation Letters* 8(12), 2023. arXiv:2305.09009.
+- T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
+- M. W. Mueller, ["Multicopter attitude control for recovery from large disturbances"](https://arxiv.org/abs/1802.09143), arXiv:1802.09143, 2018.
+- L. M. Silverman and H. E. Meadows, ["Controllability and observability in time-variable linear systems"](https://doi.org/10.1137/0305005), *SIAM Journal on Control* 5(1), 1967.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- K. Sreenath, T. Lee and V. Kumar, ["Geometric control and differential flatness of a quadrotor UAV with a cable-suspended load"](https://doi.org/10.1109/CDC.2013.6760219), *IEEE Conference on Decision and Control*, 2013.
+- S. Teng, W. Clark, A. Bloch, R. Vasudevan and M. Ghaffari, ["Lie algebraic cost function design for control on Lie groups"](https://arxiv.org/abs/2204.09177), arXiv:2204.09177, 2022.
+- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, ["LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies"](https://arxiv.org/abs/2606.10579), arXiv:2606.10579, 2026.
+- G. Wu, [*Safety-critical Geometric Control Design with Application to Aerial Transportation*](https://kilthub.cmu.edu/articles/thesis/Safety-critical_Geometric_Control_Design_with_Application_to_Aerial_Transportation/6721382), PhD thesis, Carnegie Mellon University, 2017.
+- G. Wu and K. Sreenath, ["Variation-based linearization of nonlinear systems evolving on SO(3) and S²"](https://doi.org/10.1109/ACCESS.2015.2477880), *IEEE Access* 3, 2015.

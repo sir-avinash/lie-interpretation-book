@@ -1,0 +1,190 @@
+{
+  "planar": {
+    "theta0_deg": 60.0,
+    "h": 0.05,
+    "T": 10.0,
+    "E0_J": 4.904999999999999,
+    "period_s": 2.152938068834423
+  },
+  "planar_E_end_explicit_J": 28.498451145508984,
+  "planar_E_end_implicit_J": 0.04562714946416728,
+  "planar_E_band_symplectic_J": [
+    4.5667840652404035,
+    5.290189270829334
+  ],
+  "planar_E_band_verlet_J": [
+    4.877456750966701,
+    4.904999999999999
+  ],
+  "planar_explicit_over_top_s": 5.4,
+  "planar_implicit_amplitude_end_deg": 8.51140522083551,
+  "planar_euler_energy_factor": 1.024525,
+  "planar_euler_energy_factor_10s": 127.20730891714993,
+  "planar_verlet_band_20000s_J": 0.027570777244427802,
+  "planar_verlet_band_ratio_h_halved": 4.000344149938447,
+  "ball": {
+    "m": 1.0,
+    "tf": 1.0,
+    "N": 5,
+    "h": 0.2,
+    "knot_heights_m": [
+      0.0,
+      0.7848,
+      1.1772,
+      1.1772,
+      0.7848,
+      0.0
+    ],
+    "apex_m": 1.22625
+  },
+  "ball_action_rise_knot_0.1m": 0.049999999999998934,
+  "ball_action_sum": -3.8494440000000005,
+  "ball_action_exact": -4.009837500000001,
+  "accuracy_1s_attitude_error_deg": {
+    "rk4": {
+      "0.08": 7.924093784693983,
+      "0.04": 0.012132777401979239,
+      "0.02": 0.0006740301446567066,
+      "0.01": 4.03571889760196e-05,
+      "0.005": 2.484701468808308e-06
+    },
+    "lgvi": {
+      "0.08": 5.172398429741149,
+      "0.04": 2.8127055599438133,
+      "0.02": 0.6819911451380842,
+      "0.01": 0.16924800934430437,
+      "0.005": 0.04223498157368305
+    }
+  },
+  "order_measured": {
+    "rk4": 4.0619155203783945,
+    "lgvi": 2.010614142396931
+  },
+  "hour": {
+    "h_lgvi": 0.02,
+    "h_rk4": 0.08,
+    "T": 3600.0,
+    "E0_above_rest_J": 7.388210186610988
+  },
+  "hour_lgvi_band_J": 0.027115971457746024,
+  "hour_lgvi_band_first_minute_J": 0.026850022881509616,
+  "hour_lgvi_band_h0.04_J": 0.10945682786114963,
+  "hour_lgvi_band_h0.01_J": 0.006746353070427258,
+  "hour_lgvi_orth": 6.567755669744778e-14,
+  "hour_lgvi_pi3_err": 2.1621593404574924e-14,
+  "hour_rk4_h0.08_dE_J": -5.570267858985197,
+  "hour_rk4_h0.08_dE_10min_J": -2.2972596970130947,
+  "hour_rk4_h0.08_left_J": 1.8179423276257909,
+  "hour_rk4_h0.08_swing_end_deg": 16.57677923879948,
+  "hour_rk4_h0.08_pi3_change": 0.7400146061546827,
+  "hour_rk4_h0.02_dE_J": -0.016039531872472423,
+  "hour_rk4_h0.02_dE_1min_J": -0.00022298733211245647,
+  "hour_rk4_h0.08_dE_30min_J": -5.5351821031560045,
+  "newton_iterations_max": 7,
+  "newton_iterations_mean": 5.550911111111111,
+  "book": {
+    "h": 0.01,
+    "T": 100.0,
+    "E0_J": 0.08074810918988617,
+    "momentum_Nms": 0.012850478994855653
+  },
+  "book_momentum_err": 1.2663481374630692e-16,
+  "book_energy_band_rel": 6.448037584993967e-12,
+  "book_first_flip_s": 0.88,
+  "book_flip_count_100s": 65,
+  "book_coarse_energy_band_rel": 2.1458390619955026e-12,
+  "book_euler_momentum_growth_3s": 1.4327320976693367,
+  "explicit_update_energy_gain_60s_J": {
+    "0.02": 107.86438717362087,
+    "0.01": 50.235148693251276,
+    "0.001": 2.505104738017235
+  },
+  "book_explicit_energy_ratio": 2.0634632759918157,
+  "hour_pi3_initial": -0.13602592357507523,
+  "onesided_implicit_band_60s_J": 0.2561324851480604,
+  "s2": {
+    "h": 0.01,
+    "steps": 100000,
+    "norm_err": 5.6621374255882984e-14,
+    "pz_err": 0.0,
+    "energy_band_J": 0.001165142134892605,
+    "E0_above_rest_J": 5.789634379433549
+  },
+  "collocation_defect_h0.1": {
+    "trapezoid": 4.491796739700821e-06,
+    "hermite_simpson": 8.787726241132887e-10
+  },
+  "midpoint_det_30deg": 0.9330127018922195,
+  "midpoint_det_90deg": 0.49999999999999994,
+  "midpoint_direction_length_90deg": 0.7071067811865476,
+  "opt_entrywise_dependent_constraints": [
+    6,
+    264
+  ],
+  "opt": {
+    "N": 20,
+    "h": 0.1,
+    "tf": 2.0,
+    "tau_max": 0.5,
+    "angle_deg": 150.0,
+    "peak_energy_J": 0.33069929049372004,
+    "peak_rate_rad_s": 2.061606472051317
+  },
+  "opt_chart": {
+    "iterations": 62,
+    "seconds": 4.6,
+    "variables": 189,
+    "cost": 0.16138395615661197,
+    "constraint_residual": 1.2838757834643388e-12,
+    "orth_knots": 1.2087551097848727e-15,
+    "end_angle_deg": 0.452471521096327,
+    "end_rate_rad_s": 0.00048069532175729464,
+    "knot_mismatch_deg": 0.452471521096327,
+    "bound_active_components": 5,
+    "energy_gap_J": 0.0005620681626124502
+  },
+  "opt_chart_first_order": {
+    "iterations": 53,
+    "seconds": 1.6,
+    "variables": 189,
+    "cost": 0.20492106768024673,
+    "constraint_residual": 2.427710810160022e-13,
+    "orth_knots": 1.2087551097848727e-15,
+    "end_angle_deg": 14.76626576318046,
+    "end_rate_rad_s": 0.0003288881764516986,
+    "knot_mismatch_deg": 14.76626576318046,
+    "bound_active_components": 7,
+    "energy_gap_J": null
+  },
+  "opt_entrywise": {
+    "iterations": 188,
+    "seconds": 15.1,
+    "variables": 315,
+    "cost": 0.24302852529150562,
+    "constraint_residual": 3.5388358909926865e-16,
+    "orth_knots": 0.011970419704314105,
+    "end_angle_deg": 0.7439918482988281,
+    "end_rate_rad_s": 0.0002575525343399984,
+    "knot_mismatch_deg": 0.7439709406905415,
+    "bound_active_components": 4,
+    "energy_gap_J": null
+  },
+  "opt_variational": {
+    "iterations": 60,
+    "seconds": 4.2,
+    "variables": 123,
+    "cost": 0.15720375939419273,
+    "constraint_residual": 2.244170202800148e-12,
+    "orth_knots": 1.1706723078613438e-15,
+    "end_angle_deg": 1.4372031459480474,
+    "end_rate_rad_s": 0.012755657425705301,
+    "knot_mismatch_deg": 1.4372031460082622,
+    "bound_active_components": 5,
+    "energy_gap_J": 0.0005021657617476638
+  },
+  "geomech_check_eom": {
+    "rigid_pendulum": 3.3949492775992917e-09,
+    "free_rigid_body": 4.751577206762122e-09,
+    "spherical_pendulum": 1.9090929052101823e-08
+  }
+}

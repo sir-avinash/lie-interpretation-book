@@ -1,0 +1,74 @@
+{
+  "puzzle_naive_velocity_error": 1.4142135623417067,
+  "weighted_values": {
+    "identity": 0.0,
+    "flip about e1": 1.7999999999999998,
+    "flip about e2": 2.4,
+    "flip about e3": 3.0
+  },
+  "restoring_at_170deg": {
+    "trace_sin": 0.17364817766693028,
+    "log_theta": 2.9670597283903604,
+    "quat_2sin_half": 1.992389396183491
+  },
+  "linger_gains": {
+    "kp": 4.0,
+    "kd": 2.8284271247461903
+  },
+  "linger_settle_times_s": {
+    "trace": {
+      "179.0": 6.1290000000000004,
+      "179.9": 8.353
+    },
+    "log": {
+      "179.0": 2.7760000000000002,
+      "179.9": 2.779
+    },
+    "quat": {
+      "179.0": 2.87,
+      "179.9": 2.8770000000000002
+    }
+  },
+  "linger_escape_rate": 1.0352761804100827,
+  "linger_seconds_per_decade": 2.2241264085511654,
+  "holonomy_octant_deg": 90.0,
+  "holonomy_small_triangle_deg": 36.869897645844006,
+  "holonomy_small_triangle_area": 0.6435011087932841,
+  "dead_reckoning_euler_diff_deg": {
+    "min": 4.587652645813144,
+    "max": 64.02611672812294
+  },
+  "first_order_eta_norm": 0.8637145060430579,
+  "first_order_table_SO3": [
+    {
+      "eps": 0.4,
+      "eR_minus_eps_eta": 0.006831988365562429,
+      "eOm_minus_eps_etadot": 0.038315318790480085
+    },
+    {
+      "eps": 0.2,
+      "eR_minus_eps_eta": 0.0008578303049259071,
+      "eOm_minus_eps_etadot": 0.00960268861262339
+    },
+    {
+      "eps": 0.1,
+      "eR_minus_eps_eta": 0.00010734885004839973,
+      "eOm_minus_eps_etadot": 0.002402165133201244
+    },
+    {
+      "eps": 0.05,
+      "eR_minus_eps_eta": 1.3422360685266828e-05,
+      "eOm_minus_eps_etadot": 0.0006006345721120415
+    }
+  ],
+  "eR_shortfall_percent": {
+    "10deg": 0.5069229954701382,
+    "30deg": 4.507034144862798
+  },
+  "example_eR": [
+    0.09916874752156284,
+    0.0,
+    0.19833749504312567
+  ],
+  "example_angle_deg": 12.811725781509189
+}

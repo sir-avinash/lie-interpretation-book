@@ -1,353 +1,412 @@
-﻿Chapter 2: Core Manifolds: $S^1/\mathrm{SO}(2)$, $S^2$, $\mathrm{SO}(3)$, $S^3$, $\mathrm{SE}(3)$ & Product Spaces
-"Because globally valid coordinate charts do not exist for non-Euclidean configuration spaces, coordinate-free geometric formulations on Lie groups and homogeneous manifolds eliminate parameterization singularities and enable almost-global stability."
-— Adapted from Wu & Sreenath (2015) and Kotaru, Edmonson, & Sreenath (2020)
+---
+title: The manifolds robots live on
+short: Manifolds
+id: ch-manifolds
+summary: Circles, spheres, rotations and rigid motions. What a tangent vector is, why rotations form a group and directions do not, and how to take a time step without falling off.
+notebook: notebooks/ch02_lie_groups_product_manifolds.ipynb
+verify: verify/ch02.py
+epigraph: "Mathematics is the art of giving the same name to different things."
+epigraph_source: "Henri Poincaré, *Science and Method* (1908)"
+---
 
+A quadrotor carries a load on a cable one meter long. Your simulator stores the cable's direction as a unit vector $q$ and its angular velocity as $\omega$. The load swings steadily at 2 rad/s. Every hundredth of a second the simulator updates $q \leftarrow q + h\,(\omega \times q)$. After ten seconds, how long is the cable?
 
-________________
+One meter, surely. The simulator disagrees ([](#fig2-puzzle)). It reports $\|q\| = 1.22$, and the load hangs 22 cm further away than the cable allows.
 
+The arithmetic is not at fault, and a smaller step only slows the growth. Each update moves $q$ in a direction that is correct at that instant, and still lands off the sphere. To see why, and to find an update that cannot do this, we need to know what kind of object $q$ is, and what kind of object its velocity is. They are not the same kind.
 
-2.1 Motivation: Why Coordinate-Free Manifolds?
-Robotic systems rarely evolve in flat Euclidean space $\mathbb{R}^n$. A planar mobile robot, a spherical pendulum, an agile quadrotor UAV, a cable-suspended aerial payload, and a floating-base humanoid each evolve on curved smooth manifolds or products of manifolds. Traditional parameterizations—such as Euler angles (roll–pitch–yaw) on $\mathrm{SO}(3)$ or spherical coordinates $(\theta,\phi)$ on $S^2$—suffer from coordinate singularities (e.g., gimbal lock at $\pm 90^\circ$ pitch or at the poles of $S^2$), rendering local linearizations and controllers invalid outside a single coordinate chart (Sreenath, Lee, & Kumar, 2013; Wu & Sreenath, 2015). Conversely, global multi-covering parameterizations such as unit quaternions $S^3$ introduce a two-to-one ambiguity ($q$ and $-q$ represent the same physical orientation), which can trigger the unwinding phenomenon under continuous feedback (Kotaru, Edmonson, & Sreenath, 2020).
+![The opening puzzle. The load must stay on the sphere of radius one meter about the quadrotor. The simulated load (terracotta) starts on it and spirals outward, one small step at a time, while the hollow marker shows where the load should be. After ten seconds the simulated cable is 1.22 m long.](figures/ch02-puzzle-strip.png){#fig2-puzzle anim="figures/ch02-puzzle.gif"}
 
+## Curved sets and their velocities {#sec2-tangent}
 
-This chapter establishes the mathematical foundations of the core manifolds used throughout A Lie-Interpretation of Robotics and Control:
+Start with the heading that opened [](#ch-why). A heading is a point on the unit circle,
 
+$$
+S^1 = \{\, q \in \R^2 : q \cdot q = 1 \,\}.
+$$
 
-1. Circle and Planar Rotation Group ($S^1 / \mathrm{SO}(2)$) — 1D periodic phase and planar orientation.
-2. Two-Sphere ($S^2$) — 2D directional attitude for spherical pendulums and taut cable links.
-3. Special Orthogonal Group ($\mathrm{SO}(3)$) — 3D rigid-body orientation, Lie algebra $\mathfrak{so}(3)$, matrix identities, and Rodrigues' exponential/logarithm maps.
-4. Three-Sphere / Unit Quaternions ($S^3 \cong \mathrm{SU}(2)$) — Double cover of $\mathrm{SO}(3)$ and topological unwinding.
-5. Special Euclidean Group ($\mathrm{SE}(3)$) — 3D rigid-body pose, twists in $\mathfrak{se}(3)$, $\exp/\log$, and the Adjoint map $\mathrm{Ad}_g$.
-6. Product Manifolds in Robotics — $\mathrm{SE}(3) \times S^2$, $\mathrm{SO}(3) \times \mathbb{R}^3 \times (S^2)^n$, $\mathrm{SE}(3) \times \prod_{j=1}^p \mathrm{SO}(3) \times (S^2)^{n_j}$, and $\mathrm{SE}(2) \times S^n$, with degrees of freedom (DoF) and degrees of underactuation (DoUA) analysis.
+Two numbers, one constraint, one degree of freedom. Let the heading move along a curve $q(t)$ that stays on the circle, and differentiate the constraint:
 
+$$
+\ddt\,(q\cdot q) = 2\, q \cdot \dot q = 0 .
+$$
 
-________________
+The velocity is perpendicular to the position. At each point the allowed velocities form a line, the tangent line there. With $\Lambda = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}$, the quarter turn of the plane, each one is $\dot q = \omega\, \Lambda q$ for a single number $\omega$.
 
+The cable direction lives one dimension up, on the sphere $S^2 = \{ q \in \R^3 : q\cdot q = 1\}$. The same differentiation gives the same conclusion, $q \cdot \dot q = 0$. The allowed velocities at $q$ now fill a plane ([](#fig2-tangent)).
 
-2.2 The Hat and Vee Operators on $\mathbb{R}^3$ and $\mathfrak{so}(3)$
-Before studying individual manifolds, we fix the standard cross-product isomorphism used across all three-dimensional rotational and directional kinematics.
+![The tangent plane to the sphere at $q$. The teal curve $q(t)$ stays on the sphere, and its velocity $\dot q$ lies in the plane perpendicular to $q$. So does the angular velocity $\omega = q \times \dot q$, which is $\dot q$ turned a quarter turn about the normal. Watch the plane ride along with $q$ and tilt as it goes. The dashed outline is the plane at the starting point.](figures/ch02-tangent-strip.png){#fig2-tangent anim="figures/ch02-tangent.gif"}
 
+::: {.thought #thought2-horizon name="Standing on a planet"}
+Stand on a small, perfectly round planet. You can walk north, east, or any mixture. You cannot walk *up*. Every velocity available to you lies in the plane of your horizon ([](#fig2-flat)).
 
-Def. 2.1 (Hat and Vee Maps on $\mathbb{R}^3$). Let $\mathfrak{so}(3) := {S \in \mathbb{R}^{3\times 3} \mid S^\top = -S}$ denote the vector space of $3 \times 3$ real skew-symmetric matrices. The hat map $(\cdot)^\wedge : \mathbb{R}^3 \to \mathfrak{so}(3)$ is the linear isomorphism defined for any $x = [x_1, x_2, x_3]^\top \in \mathbb{R}^3$ and $y \in \mathbb{R}^3$ by $x^\wedge y = x \times y$, explicitly:
+Fly to another spot and the horizon tilts with you ([](#fig2-tangent)). A walker near the pole and a walker on the equator both say "I am heading north at 1 m/s". Those are different arrows in space, lying in different planes.
+:::
 
+![Why a round planet looks flat to someone standing on it. Zoom in on $q$ while a square patch of ground keeps its size on the page: the sphere grows, and the gap between the patch of sphere (indigo grid) and the tangent plane at $q$ (ink grid) shrinks toward zero.](figures/ch02-flat-strip.png){#fig2-flat anim="figures/ch02-flat.gif"}
 
-$$ x^\wedge = \begin{bmatrix} 0 & -x_3 & x_2 \ x_3 & 0 & -x_1 \ -x_2 & x_1 & 0 \end{bmatrix} \in \mathfrak{so}(3), \qquad (S)^\vee = \begin{bmatrix} S_{32} \ S_{13} \ S_{21} \end{bmatrix} \in \mathbb{R}^3. \tag{Eq. 2.1} $$
+The circle and the sphere are instances of one idea.
 
+::: {.definition #def2-manifold name="Manifold and tangent space"}
+Let $c : \R^n \to \R^k$ be a smooth function whose Jacobian $c'(x)$ has rank $k$ at every point of the set
+$$
+\mathcal{M} = \{\, x \in \R^n : c(x) = 0 \,\}.
+$$
+Then $\mathcal{M}$ is a **manifold** of dimension $n - k$: near each of its points it looks like a piece of flat $\R^{n-k}$. A **tangent vector** at $x \in \mathcal{M}$ is the velocity $\dot x(0)$ of a curve $x(t)$ that stays in $\mathcal{M}$ and passes through $x$ at $t = 0$. The tangent vectors at $x$ form the **tangent space**
+$$
+T_x\mathcal{M} = \{\, v \in \R^n : c'(x)\, v = 0 \,\},
+$$
+a vector space of dimension $n - k$.
+:::
 
-The inverse vee map $(\cdot)^\vee : \mathfrak{so}(3) \to \mathbb{R}^3$ satisfies $(x^\wedge)^\vee = x$ for all $x \in \mathbb{R}^3$ and $(S^\vee)^\wedge = S$ for all $S \in \mathfrak{so}(3)$ (Sreenath, Lee, & Kumar, 2013; Wu & Sreenath, 2016; Seo et al., 2026).
+For the sphere, $c(q) = q\cdot q - 1$ and $c'(q) = 2q\T$, which is never zero on the sphere. So $n = 3$, $k = 1$, the dimension is 2, and $T_qS^2 = \{ v : q \cdot v = 0 \}$, the **tangent plane** at $q$.
 
+The definition draws a line that code tends to blur. A configuration is a point of a curved set. A velocity is a vector in a flat space attached to that point. Adding one to the other, as the simulator did, gives something that belongs to neither.
 
-Remark 2.1 (Notation Convention). In some references (e.g., Kotaru, Edmonson, & Sreenath, 2020), the hat map is written $(\cdot)^\times$. Throughout this textbook we uniformly use $(\cdot)^\wedge$ and $(\cdot)^\vee$, and equip $\mathfrak{so}(3)$ with the scaled Frobenius inner product $\langle \hat{x}, \hat{y} \rangle_{\mathfrak{so}(3)} := \frac{1}{2}\operatorname{tr}(\hat{x}^\top \hat{y}) = x^\top y$.
+On the sphere, every tangent vector at $q$ is a cross product:
 
+$$
+\dot q = \omega \times q, \qquad \omega \cdot q = 0, \qquad \omega = q \times \dot q . \label{eq2-s2-kinematics}
+$$
 
-________________
+The vector $\omega$ is the **angular velocity** of the direction. A component of $\omega$ along $q$ would spin the cable about its own axis, and $\omega \times q$ does not see it, so we set it to zero. Note the count: three numbers in $\omega$, one constraint, two degrees of freedom. On the sphere the constraint cannot be shaken off. [](#sec2-sphere) explains why.
 
+Rotations are harder to picture. The same differentiation works on them, and it turns up something the sphere does not have.
 
-2.3 Core Manifolds
-2.3.1 The Circle $S^1$ and Planar Rotation Group $\mathrm{SO}(2)$
-Def. 2.2 ($S^1$ and $\mathrm{SO}(2)$). The unit circle $S^1$ and the 2D special orthogonal group $\mathrm{SO}(2)$ are 1-dimensional smooth compact manifolds ($\dim = 1$):
+## Rotations: a manifold you can multiply {#sec2-so3}
 
+The rotation group of [](#def-so3) fits [](#def2-manifold). A matrix has nine entries. $R\T R = I$ is a symmetric matrix equation, so it is six constraints, and $9 - 6 = 3$. The condition $\det R = +1$ removes no dimension. It selects one of two disconnected pieces.
 
-$$ S^1 := {q \in \mathbb{R}^2 \mid q^\top q = 1}, \qquad \mathrm{SO}(2) := {R \in \mathbb{R}^{2\times 2} \mid R^\top R = I_2,\ \det(R) = +1}. \tag{Eq. 2.2} $$
+For the tangent space, differentiate $R\T R = I$ along a curve:
 
+$$
+\dot R\T R + R\T \dot R = 0 .
+$$
 
-Every $R \in \mathrm{SO}(2)$ has the form $R(\theta) = \begin{bmatrix} \cos\theta & -\sin\theta \ \sin\theta & \cos\theta \end{bmatrix}$ for $\theta \in [0, 2\pi)$, which is diffeomorphic (and Lie-group isomorphic) to $S^1$ via $R(\theta) \leftrightarrow [\cos\theta, \sin\theta]^\top$.
+So $R\T \dot R$ is skew-symmetric. By [](#def-hat) it is $\Omega^\wedge$ for some $\Omega \in \R^3$, and
 
+$$
+T_R\SO(3) = \{\, R\,\Omega^\wedge : \Omega \in \R^3 \,\}. \label{eq2-tangent-so3}
+$$
 
-* Lie Algebra $\mathfrak{so}(2)$: Skew-symmetric $2\times 2$ matrices $\mathfrak{so}(2) = \left{ \Omega^\wedge_{2} := \begin{bmatrix} 0 & -\Omega \ \Omega & 0 \end{bmatrix} ,\middle|, \Omega \in \mathbb{R} \right}$, with $\dim\mathfrak{so}(2) = 1$.
-* Tangent Space and Kinematics: $T_R \mathrm{SO}(2) = {R \Omega^\wedge_2 \mid \Omega \in \mathbb{R}}$, so $\dot{R} = R \Omega^\wedge_2$, and on $S^1$, $T_q S^1 = {v \in \mathbb{R}^2 \mid q^\top v = 0}$ with $\dot{q} = \Omega J_2 q$ where $J_2 = \begin{bmatrix} 0 & -1 \ 1 & 0 \end{bmatrix}$.
-* Exponential and Logarithm Maps: $\exp(\Omega^\wedge_2) = R(\Omega)$ and $\log(R) = \operatorname{atan2}(R_{21}, R_{11}) J_2$.
-* Robotics Context: Planar heading, single-axis revolute joints, and periodic gait phase variables (e.g., $\phi_t$ in legged locomotion; Seo et al., 2026).
+So the kinematics $\dot R = R\,\Omega^\wedge$ of [](#eq-kinematics) are not a modeling assumption. They say that $\dot R$ is tangent to $\SO(3)$.
 
+Compare [](#eq2-tangent-so3) with the sphere. At the identity the tangent space is $\so(3)$. At any other $R$ it is the same space multiplied by $R$. One fixed copy of $\R^3$ labels the velocities at every attitude, with no constraint on $\Omega$. Multiplication is the reason: composing with $R$ carries the neighborhood of the identity onto the neighborhood of $R$, velocities included.
 
-________________
+::: {.definition #def2-lie-group name="Lie group and Lie algebra"}
+A **Lie group** is a manifold that is also a group, with smooth multiplication and inversion. Its **Lie algebra** is the tangent space at the identity: the velocities with which a curve can leave the identity.
+:::
 
+The circle is a Lie group too. Identify the point at angle $\theta$ with the planar rotation by $\theta$ in $\SO(2)$, and multiplication adds angles. Its Lie algebra is the line $\{\omega \Lambda\}$. The three-sphere $S^3$ of unit quaternions from [](#sec-quaternions) is a third: four numbers, one constraint, quaternion multiplication, and a Lie algebra of pure quaternions $(0, x)$, $x \in \R^3$. It covers $\SO(3)$ twice, and its kinematics $\dot\quat = \tfrac12\,\quat\otimes(0,\Omega)$ are [](#eq-kinematics) one level up.
 
-2.3.2 The Two-Sphere $S^2$
-Def. 2.3 (Two-Sphere $S^2$). The unit two-sphere is the 2-dimensional compact embedded submanifold of $\mathbb{R}^3$ ($\dim S^2 = 2$) defined by:
+### Two velocities for one motion {#sec2-body-spatial}
 
+There are two ways to carry a velocity back to the identity. Multiply $\dot R$ by $R\T$ on the left, or on the right:
 
-$$ S^2 := {q \in \mathbb{R}^3 \mid q \cdot q = 1}. \tag{Eq. 2.3} $$
+$$
+\dot R = R\,\Omega^\wedge = \omega^\wedge R, \qquad \omega = R\,\Omega . \label{eq2-spatial}
+$$
 
+$\Omega$ is the **body angular velocity**: the spin resolved along the body's own axes, which is what a gyroscope reports. $\omega$ is the **world-frame angular velocity**: the same spin resolved along the world axes. (The robotics literature also calls it the spatial angular velocity.) One physical arrow, two frames. Passing between the two forms of [](#eq2-spatial) uses an identity worth memorizing:
 
-Unlike $\mathrm{SO}(2)$ and $\mathrm{SO}(3)$, $S^2$ is not a Lie group (by the hairy ball theorem, it admits no globally non-vanishing smooth tangent vector field), so it is treated as a homogeneous Riemannian manifold acted on by $\mathrm{SO}(3)$.
+$$
+R\, x^\wedge R\T = (R\,x)^\wedge \qquad \text{for all } R \in \SO(3),\ x \in \R^3 . \label{eq2-adjoint}
+$$
 
+The left side changes the frame of the matrix $x^\wedge$ by conjugation. The right side changes the frame of the vector $x$. They agree. Conjugation by a group element, acting on the Lie algebra, is the **adjoint**, $\Ad_R\, x^\wedge = R\,x^\wedge R\T$. On $\SO(3)$, in vector form, $\Ad_R$ is just the matrix $R$. The adjoint is the change of frame for velocities.
 
-* Tangent Space and Kinematics: Differentiating $q \cdot q = 1$ gives $T_q S^2 = {\dot{q} \in \mathbb{R}^3 \mid q \cdot \dot{q} = 0}$. Introducing the angular velocity $\omega \in \mathbb{R}^3$ constrained to be orthogonal to $q$, the kinematics on $S^2$ take the form:
+::: {.thought #thought2-turntable name="A phone on a turntable"}
+A phone's axes are $x$ across the screen, $y$ along its long side and $z$ out of the screen. Lay it flat on a turntable that spins at 0.5 rad/s about the vertical. Its gyroscope reads $\Omega = (0, 0, 0.5)$: all of the spin is along the axis that comes out of the screen. Now stand the phone upright, long axis vertical, and spin the turntable again. The gyroscope reads $\Omega = (0, 0.5, 0)$.
 
+A camera on the ceiling sees no difference. In the world frame the angular velocity is $\omega = (0, 0, 0.5)$ both times. The phone changed its frame, and $\Omega = R\T\omega$ changed with it ([](#fig2-turntable)).
+:::
 
-$$ \dot{q} = \omega \times q = \omega^\wedge q, \qquad \omega \cdot q = 0, \qquad \Longleftrightarrow \qquad \omega = q \times \dot{q}. \tag{Eq. 2.4a} $$
+![One spin, two readings. Both turntables spin up to 0.5 rad/s about the vertical, so both phones have the same world-frame angular velocity $\omega$ (ink). The bars show the body angular velocity $\Omega = R\T\omega$ that each gyroscope reports: along the phone's $z$ axis when it lies flat, along its $y$ axis when it stands upright.](figures/ch02-turntable-strip.png){#fig2-turntable anim="figures/ch02-turntable.gif"}
 
+We can now describe a rotation in progress. We cannot yet say where it ends up. If the gyroscope reads a constant $\Omega$ for $t$ seconds, what is $R$?
 
-(Note: In the numbered sequence of this chapter, we reserve Eq. (2.4)–(2.6) for the core $\mathfrak{so}(3)/\mathrm{SO}(3)$ matrix identities below, and number the $S^2$ configuration-error and transport equations immediately after.)
+## From a velocity to a rotation: exp and log {#sec2-exp}
 
+With $\Omega$ constant, $\dot R = R\,\Omega^\wedge$ is a linear differential equation with constant coefficients. Its solution is a matrix exponential:
 
-Wait—let's keep the equation numbering strictly sequential without 2.4a so that Eq. (2.4)–(2.6) are unambiguously the matrix identities! Let's write the $S^2$ kinematics in Eq. (2.3) alongside the definition, and then Eq. (2.4)–(2.6) are the three matrix identities on $\mathrm{SO}(3)$! Let's double check that—yes, that's super clean and unambiguous.
+$$
+R(t) = R(0)\,\exp(t\,\Omega^\wedge), \qquad \exp(A) = I + A + \tfrac{1}{2!}A^2 + \tfrac{1}{3!}A^3 + \cdots
+$$
 
+Write $t\,\Omega = \theta a$ with $a$ a unit vector. Since $(a^\wedge)^3 = -a^\wedge$, the powers cycle, and the series sums to a sine and a cosine.
 
-Let's check the $S^2$ configuration error, position error, and transport map from Sreenath, Lee, & Kumar (2013) and Wu & Sreenath (2015, 2016):
+::: {.proposition #prop2-rodrigues name="Exponential and logarithm on $\SO(3)$"}
+For a unit vector $a$ and an angle $\theta$,
+$$
+\exp(\theta\, a^\wedge) = I + \sin\theta\; a^\wedge + (1 - \cos\theta)\,(a^\wedge)^2 . \label{eq2-rodrigues}
+$$
+This is the rotation by $\theta$ about $a$. Conversely, a rotation $R$ with $\tr R \neq -1$ is $\exp(\theta a^\wedge)$ for exactly one $\theta a$ with $\theta < \pi$, given by
+$$
+\theta = \arccos\!\left(\frac{\tr R - 1}{2}\right), \qquad
+\theta\, a = \log(R)^\vee = \frac{\theta}{2\sin\theta}\,\bigl(R - R\T\bigr)^\vee , \label{eq2-log}
+$$
+with the factor $\theta / (2\sin\theta)$ read as $\tfrac12$ at $\theta = 0$.
+:::
 
+Equation [](#eq2-rodrigues) is Rodrigues' formula. The map $\exp$ wraps the flat space $\so(3)$ onto the curved group. [](#fig2-expmap) shows the same wrapping where you can see it, on the circle and the sphere. On the sphere the formula is
 
-* Configuration Error on $S^2$: $\Psi_q(q, q_d) = 1 - q \cdot q_d \in [0, 2]$.
-* Position Error Vector: $e_q = (q_d^\wedge)^2 q = q_d^\wedge q_d^\wedge q = -(q \times (q \times q_d))$ or in Wu & Sreenath (2015), $e_q = q_d^\wedge q = q_d \times q$ (note: $q_d^\wedge q \in T_{q_d} S^2$ and $(q^\wedge)^2 q_d \in T_q S^2$; specifically in Wu & Sreenath (2016) Sec. V, $e_q = d_1 \Psi = (q^\wedge)^2 q_d$ and $T(q, q_d)\dot{q}_d = (q_d \times \dot{q}d) \times q$, giving $e{\dot{q}} = \dot{q} - (q_d \times \dot{q}d) \times q$ and $e\omega = \omega - (- (q^\wedge)^2)\omega_d$).
-* Infinitesimal Variation on $S^2$: $\delta q = \xi \times q_d$ with $\xi \in \mathbb{R}^3$, $\xi \cdot q_d = 0$, and $(\xi \times q_d) \cdot \omega_d + q_d \cdot \delta\omega = 0$ (Wu & Sreenath, 2015).
+$$
+\exp_q(v) = \cos\|v\|\; q + \sin\|v\|\; \frac{v}{\|v\|}, \qquad v \in T_qS^2 :
+$$
 
+leave $q$ in the direction $v$ and follow the great circle for a distance $\|v\|$.
 
-________________
+![The exponential map wraps a tangent space onto the manifold, keeping lengths along each ray from the base point. Left: the tangent line at the identity of $\SO(2)$. A segment of length $\theta$ lands on the arc of length $\theta$. Right: a tangent vector $v$ at $q \in S^2$ lands on the great-circle arc of length $\|v\|$ that leaves $q$ in the direction of $v$. Watch each segment roll onto the manifold without stretching. The dashed copies stay behind in the tangent space.](figures/ch02-expmap-strip.png){#fig2-expmap anim="figures/ch02-expmap.gif"}
 
+::: {.example #ex2-exp name="A quarter turn about a diagonal"}
+A body starts at $R = I$ and turns at $\Omega = \tfrac{\pi}{2}\,(1, 1, 0)/\sqrt2$ rad/s for one second. Its axis is $a = (1,1,0)/\sqrt2$ and its angle is $\theta = \pi/2$, so $\sin\theta = 1$ and $1 - \cos\theta = 1$. Equation [](#eq2-rodrigues) gives
+$$
+R = I + a^\wedge + (a^\wedge)^2 =
+\begin{bmatrix} 0.5 & 0.5 & 0.707 \\ 0.5 & 0.5 & -0.707 \\ -0.707 & 0.707 & 0 \end{bmatrix}.
+$$
+The third column says the body's $e_3$ axis now points along $(0.707, -0.707, 0)$. Going back, $\tr R = 1$ gives $\theta = \arccos 0 = \pi/2$, and $\tfrac{\theta}{2}(R - R\T)^\vee = (1.111, 1.111, 0) = \theta a$.
+:::
 
-2.3.3 The Special Orthogonal Group $\mathrm{SO}(3)$
-Def. 2.4 ($\mathrm{SO}(3)$ and Lie Algebra $\mathfrak{so}(3)$). The 3D special orthogonal group is the 3-dimensional compact connected Lie group ($\dim \mathrm{SO}(3) = 3$):
+You have met the image of $\log$ already. It is the solid ball of [](#fig-so3-ball): each rotation plotted at its rotation vector $\theta a$. That ball *is* the Lie algebra, cut off at radius $\pi$. At $\theta = \pi$ the formula [](#eq2-log) divides by $\sin\pi = 0$, and $\exp(\pi a^\wedge) = \exp(-\pi a^\wedge)$, so the logarithm has two answers. The flat algebra matches the curved group near the identity and fails half a turn away. Any method that works in logarithm coordinates inherits that limit.
 
+There is a second limit. If rotations behaved like translations, $\exp(x^\wedge)\exp(y^\wedge)$ would equal $\exp((x + y)^\wedge)$ and rotation vectors would add. They do not.
 
-$$ \mathrm{SO}(3) := {R \in \mathbb{R}^{3\times 3} \mid R^\top R = I_3,\ \det(R) = +1}. $$
+## Order matters: the bracket {#sec2-bracket}
 
+::: {.thought #thought2-book name="A book, two quarter turns"}
+Lay a book on the desk, cover up, spine on your left. Fix three axes to the desk: $x$ to your right, $y$ away from you, $z$ up. Turn the book 90° about $x$, then 90° about $z$. It ends up standing like a book on a shelf, cover facing right, spine upright.
 
-Its Lie algebra is $T_{I_3}\mathrm{SO}(3) = \mathfrak{so}(3)$ with Lie bracket $[A, B] = AB - BA$, satisfying $[x^\wedge, y^\wedge] = (x \times y)^\wedge$. The tangent space at any $R \in \mathrm{SO}(3)$ is $T_R \mathrm{SO}(3) = {R \Omega^\wedge \mid \Omega \in \mathbb{R}^3}$, yielding the body-frame rotational kinematics $\dot{R} = R \Omega^\wedge$, where $\Omega = (R^\top \dot{R})^\vee \in \mathbb{R}^3$ is the body-fixed angular velocity.
-Core Matrix Identities on $\mathfrak{so}(3)$ and $\mathrm{SO}(3)$
-Prop. 2.1 (Fundamental Matrix Identities). For any vectors $x, y \in \mathbb{R}^3$, any matrix $A \in \mathbb{R}^{3\times 3}$, and any rotation $R \in \mathrm{SO}(3)$, the following identities hold (Kotaru, Edmonson, & Sreenath, 2020, Appendix A):
+Start again, and turn 90° about $z$ first, then 90° about $x$. Now the cover faces you and the spine lies level, underneath ([](#fig2-noncommute)). Same two turns, different attitude. The two results are 120° apart.
+:::
 
+![The same two quarter turns in two orders, played one turn at a time on two copies of the book. The dark block marks the top of the front cover and the tan face is the spine. The final attitudes are 120° apart: in the last step a single turn of 120° about one fixed axis (teal) carries the left result onto the right one.](figures/ch02-noncommute-strip.png){#fig2-noncommute anim="figures/ch02-noncommute.gif"}
 
-1. Trace–Vee Identity: $$ \operatorname{tr}(x^\wedge A) = \operatorname{tr}(A x^\wedge) = \frac{1}{2}\operatorname{tr}!\bigl(x^\wedge (A - A^\top)\bigr) = -x^\top (A - A^\top)^\vee. \tag{Eq. 2.4} $$
-2. Adjoint Conjugation (Equivariance of the Hat Map): $$ R x^\wedge R^\top = (R x)^\wedge, \qquad R^\top x^\wedge R = (R^\top x)^\wedge. \tag{Eq. 2.5} $$
-3. Skew-Symmetric Symmetrization Identity: $$ x^\wedge A + A^\top x^\wedge = \bigl((\operatorname{tr}(A) I_3 - A) x\bigr)^\wedge. \tag{Eq. 2.6} $$
+Quarter turns are large. Now go small. Rotate by an angle $\epsilon$ about a unit axis $a$, then about another unit axis $b$, then undo the first, then undo the second. If rotations commuted, you would be back at the start. Instead:
 
+$$
+\exp(\epsilon a^\wedge)\,\exp(\epsilon b^\wedge)\,\exp(-\epsilon a^\wedge)\,\exp(-\epsilon b^\wedge)
+= \exp\!\bigl(\epsilon^2\,(a \times b)^\wedge + O(\epsilon^3)\bigr). \label{eq2-commutator}
+$$
 
-Proof Sketch. For Eq. (2.4), decompose $A = \frac{1}{2}(A + A^\top) + \frac{1}{2}(A - A^\top)$; the symmetric part is orthogonal to the skew-symmetric matrix $x^\wedge$ under the Frobenius inner product, and $\operatorname{tr}(x^\wedge S) = -2 x^\top S^\vee$ for $S \in \mathfrak{so}(3)$. For Eq. (2.5), evaluate $(R x^\wedge R^\top) y = R(x \times (R^\top y)) = (Rx) \times y = (Rx)^\wedge y$ for all $y \in \mathbb{R}^3$ using $\det(R) = +1$. For Eq. (2.6), verify the $(i,j)$ entries directly or apply both sides to an arbitrary vector $v \in \mathbb{R}^3$ using the BAC-CAB vector triple product. Additionally, $(x^\wedge)^2 = x x^\top - |x|^2 I_3$ and $(x^\wedge)^3 = -|x|^2 x^\wedge$. $\square$
-Rodrigues' Exponential and Logarithm Maps on $\mathrm{SO}(3)$
-Prop. 2.2 (Rodrigues' Formula on $\mathrm{SO}(3)$). Let $\phi = \theta u \in \mathbb{R}^3$ be an axis-angle vector with angle $\theta = |\phi|_2 \ge 0$ and unit axis $u = \phi/\theta \in S^2$ (for $\theta > 0$). The exponential map $\exp : \mathfrak{so}(3) \to \mathrm{SO}(3)$ is given in closed form by Rodrigues' formula:
+A rotation is left over. Its axis is $a \times b$, a direction you never turned about, and its size is second order. With $a = e_1$, $b = e_2$ and $\epsilon = 0.1$ rad (about 5.7°), the leftover is a rotation of 0.0100 rad, or 0.57°, almost exactly about $e_3$.
 
+The leftover is measured by the matrix commutator, and on $\so(3)$ that is an old friend:
 
-$$ \exp(\phi^\wedge) = I_3 + \frac{\sin\theta}{\theta},\phi^\wedge + \frac{1 - \cos\theta}{\theta^2},(\phi^\wedge)^2 = I_3 + \sin\theta,u^\wedge + (1 - \cos\theta),(u^\wedge)^2. \tag{Eq. 2.7} $$
+$$
+[x^\wedge, y^\wedge] = x^\wedge y^\wedge - y^\wedge x^\wedge = (x \times y)^\wedge . \label{eq2-bracket}
+$$
 
+This is the **Lie bracket**. With it, $\so(3)$ is $\R^3$ with the cross product. The bracket is what survives in the flat algebra of the group's failure to commute. It is why rotation vectors do not add: for small $x$ and $y$,
 
-For $|\phi| \ll 1$, numerical evaluation uses the Taylor expansions $\frac{\sin\theta}{\theta} = 1 - \frac{\theta^2}{6} + \mathcal{O}(\theta^4)$ and $\frac{1 - \cos\theta}{\theta^2} = \frac{1}{2} - \frac{\theta^2}{24} + \mathcal{O}(\theta^4)$ to avoid $0/0$ cancellation.
+$$
+\log\bigl(\exp(x^\wedge)\exp(y^\wedge)\bigr)^\vee = x + y + \tfrac12\, x \times y + \cdots
+$$
 
+On $\SO(2)$ the bracket is zero. Planar rotations commute, angles add, and planar robots are spared most of this book's trouble. In three dimensions the bracket is everywhere, starting with the term $\Omega \times J\Omega$ in Euler's equation [](#eq4-euler-free), where $J$ is the inertia matrix.^[The bracket is the derivative of the adjoint: $\ddt \Ad_{\exp(t x^\wedge)}\, y\,\big|_{t=0} = x \times y$. This map is written $\ad_x\, y$.]
 
-Prop. 2.3 (Logarithm Map on $\mathrm{SO}(3)$). Given $R \in \mathrm{SO}(3)$, the rotation angle $\theta \in [0, \pi]$ satisfies $\cos\theta = \frac{\operatorname{tr}(R) - 1}{2}$. Away from the cut locus $\theta = \pi$, the inverse map $\log : \mathrm{SO}(3) \to \mathfrak{so}(3)$ is:
+Rotations have a multiplication, an algebra and a bracket. The cable direction lives on a sphere. Can the sphere have them too?
 
+## The sphere is not a group {#sec2-sphere}
 
-$$ \log(R) = \frac{\theta}{2\sin\theta},(R - R^\top), \qquad \theta = \arccos!\left(\operatorname{clip}!\left(\frac{\operatorname{tr}(R)-1}{2}, -1, 1\right)\right). \tag{Eq. 2.8} $$
+It cannot, and the reason is a fact about hair.
 
+::: {.thought #thought2-hair name="Combing a group"}
+On a Lie group, pick any nonzero velocity $\zeta$ at the identity. Multiply it by each group element $X$ to get a velocity $X\zeta$ at $X$. Since $X$ is invertible, $X\zeta$ is never zero. You have covered the whole group with a smooth field of arrows that vanishes nowhere. On the circle this is the field "go counterclockwise at unit speed".
 
-At $\theta \to 0$, $\frac{\theta}{2\sin\theta} \to \frac{1}{2} + \frac{\theta^2}{12} + \mathcal{O}(\theta^4)$. At $\theta = \pi$, $\sin\theta = 0$ and $R = R^\top = -I_3 + 2 u u^\top$; the unit axis $u \in S^2$ is extracted from the column of $R + I_3$ with largest norm (or the eigenvector of $R$ with eigenvalue $+1$), up to sign $\pm u$.
-Configuration Error and Transport Map on $\mathrm{SO}(3)$
-Following Sreenath, Lee, & Kumar (2013) and Kotaru, Edmonson, & Sreenath (2020), given actual $(R, \Omega)$ and desired $(R_d, \Omega_d)$:
+Now try it on a sphere. Comb a hairy ball flat. However you do it, you get a cowlick: a point where the hair has no direction ([](#fig2-comb)). This is the hairy ball theorem. Every continuous field of tangent vectors on $S^2$ is zero somewhere. So no multiplication on $S^2$ can make it a Lie group.^[Among spheres, only $S^0$, $S^1$ and $S^3$ are Lie groups: the signs $\pm1$, the unit complex numbers and the unit quaternions.]
+:::
 
+![Combing a group and combing a sphere. Left: on the circle, multiplication carries one arrow to every point, and none of the copies is zero. Right: every way of combing the sphere leaves a cowlick, a point where the field vanishes. Changing the combing moves the cowlicks and can merge two into one. It cannot remove the last.](figures/ch02-comb-strip.png){#fig2-comb anim="figures/ch02-comb.gif"}
 
-$$ \Psi_R(R, R_d) = \frac{1}{2}\operatorname{tr}(I_3 - R_d^\top R) \in [0, 2], \quad e_R = \frac{1}{2}(R_d^\top R - R^\top R_d)^\vee, \quad e_\Omega = \Omega - R^\top R_d \Omega_d, \tag{Eq. 2.9} $$
+The sphere has the next best thing: $\SO(3)$ **acts** on it: a rotation $R$ moves the direction $q$ to $Rq$, and some rotation takes any direction to any other. A manifold with a group acting on it this way is a **homogeneous space**. Every direction is $q = R\,e_3$ for some $R$, but not for a unique one. Rotations about $e_3$ leave $e_3$ alone, so $R$ and $R\,R_z(\alpha)$ give the same $q$. The sphere is the rotation group with a circle's worth of information forgotten, and the dimensions agree: $3 - 1 = 2$.
 
+The kinematics come along for free. If $q = R\,b$ for a direction $b$ fixed in the body, then by [](#eq2-spatial)
 
-where $\Omega_d \mapsto R^\top R_d \Omega_d$ is the transport map from $T_{R_d}\mathrm{SO}(3)$ to $T_R\mathrm{SO}(3)$ (Wu & Sreenath, 2015). Using Eq. (2.4) and Eq. (2.6), one obtains $\dot{\Psi}R = e\Omega \cdot e_R$ and $\dot{e}R = C(R_d^\top R) e\Omega$ with $C(R_d^\top R) = \frac{1}{2}(\operatorname{tr}(R_d^\top R)I_3 - R_d^\top R)$.
+$$
+\dot q = \dot R\, b = \omega^\wedge R\, b = \omega \times q .
+$$
 
+That is [](#eq2-s2-kinematics), with $\omega$ the world-frame angular velocity. The component of $\omega$ along $q$ is the forgotten circle.
 
-________________
+Here is what the missing group structure costs.
 
+**No unconstrained velocity coordinates.** On $\SO(3)$, $\Omega \in \R^3$ is free. On $S^2$ that would need two basis vectors in every tangent plane, chosen continuously, and the hairy ball forbids even one. So we carry three numbers and the constraint $\omega\cdot q = 0$.
 
-2.3.4 The Three-Sphere $S^3$ (Unit Quaternions) and Double Cover
-Def. 2.5 (Unit Quaternions $S^3$). The three-sphere $S^3 := {q \in \mathbb{R}^4 \mid |q|_2 = 1}$ ($\dim S^3 = 3$), equipped with Hamilton quaternion multiplication, forms a compact, simply connected Lie group isomorphic to $\mathrm{SU}(2)$. Writing $q = [q_w, q_v^\top]^\top$ with scalar $q_w \in \mathbb{R}$ and vector $q_v \in \mathbb{R}^3$:
+**No relative element.** On $\SO(3)$ the error between $R$ and $R_d$ is the group element $R_d\T R$. On $S^2$ there is no "$q_d^{-1}q$". Errors are built from dot and cross products instead, as in [](#def-error-s2).
 
+**No free comparison of velocities.** On a group, every velocity can be carried to the identity and compared there. On the sphere, $\dot q$ and $\dot q_d$ lie in different planes, like the two walkers of [](#thought2-horizon). Comparing them needs an extra choice, which [](#sec3-transport) makes.
 
-$$ \pi(q) = I_3 + 2 q_w q_v^\wedge + 2 (q_v^\wedge)^2 \in \mathrm{SO}(3), \qquad \exp_{S^3}(\phi) = \begin{bmatrix} \cos(|\phi|/2) \ \frac{\sin(|\phi|/2)}{|\phi|}\phi \end{bmatrix}. \tag{Eq. 2.10} $$
+None of this is a defect of $S^2$ as a model. A cable has no twist, and modeling it on $\SO(3)$ would carry a degree of freedom that does nothing.
 
+## Position and attitude together {#sec2-se3}
 
-Remark 2.2 (Double Cover and the Unwinding Phenomenon). The homomorphism $\pi : S^3 \to \mathrm{SO}(3)$ is a 2-to-1 covering map with $\ker(\pi) = {\pm 1}$: antipodal quaternions $q$ and $-q$ map to the exact same rotation matrix $\pi(q) = \pi(-q)$. Because $S^3$ is simply connected whereas $\mathrm{SO}(3) \cong \mathbb{R}\mathrm{P}^3$ is not, any continuous feedback law on $S^3$ that stabilizes only one equilibrium (say $+q_d$) forces trajectories starting near $-q_d$ to rotate through a full $2\pi$ excursion—the unwinding phenomenon (Wu & Sreenath, 2015; Kotaru, Edmonson, & Sreenath, 2020). Formulating control directly on $\mathrm{SO}(3)$ avoids unwinding altogether.
+A rigid body has an attitude $R$ and a position $x \in \R^3$. Pack them into one matrix that maps body coordinates $y$ to world coordinates $Ry + x$:
 
+$$
+X = \begin{bmatrix} R & x \\ 0 & 1 \end{bmatrix} \in \SE(3), \qquad
+X_1 X_2 = \begin{bmatrix} R_1R_2 & x_1 + R_1 x_2 \\ 0 & 1 \end{bmatrix}. \label{eq2-se3}
+$$
 
-________________
+This is the **special Euclidean group**. It stores twelve numbers under six constraints and has dimension six. Its Lie algebra $\se(3)$ consists of **twists**. We write a twist as $\zeta = (V, \Omega) \in \R^6$, linear part first, with
 
+$$
+\zeta^\wedge = \begin{bmatrix} \Omega^\wedge & V \\ 0 & 0 \end{bmatrix}, \qquad
+\dot X = X\,\zeta^\wedge \iff \dot R = R\,\Omega^\wedge,\quad \dot x = R\,V . \label{eq2-se3-kin}
+$$
 
-2.3.5 The Special Euclidean Group $\mathrm{SE}(3)$
-Def. 2.6 ($\mathrm{SE}(3)$ and Lie Algebra $\mathfrak{se}(3)$). The 3D special Euclidean group $\mathrm{SE}(3) := \mathrm{SO}(3) \ltimes \mathbb{R}^3$ ($\dim \mathrm{SE}(3) = 6$) represents rigid-body poses $g = (R, p)$ via $4 \times 4$ homogeneous matrices:
+So the body twist is $\zeta = (R\T v,\ \Omega)$: linear velocity $v = \dot x$ and angular velocity, both in body axes. The adjoint again converts it to the world frame, and is now more than a rotation:
 
+$$
+X\,\zeta^\wedge X^{-1} = (\Ad_X\, \zeta)^\wedge, \qquad
+\Ad_X = \begin{bmatrix} R & x^\wedge R \\ 0 & R \end{bmatrix}. \label{eq2-ad-se3}
+$$
 
-$$ g = \begin{bmatrix} R & p \ 0_{1\times 3} & 1 \end{bmatrix} \in \mathrm{SE}(3), \qquad g^{-1} = \begin{bmatrix} R^\top & -R^\top p \ 0_{1\times 3} & 1 \end{bmatrix}. \tag{Eq. 2.11} $$
+The block $x^\wedge R$ is the lever arm. A body spinning about its own center, seen from a frame a distance $x$ away, also appears to translate.
 
+::: {.remark name="$\SE(3)$ or $\R^3 \times \SO(3)$?"}
+As sets they are the same. They differ in how elements combine: in [](#eq2-se3) the rotation $R_1$ acts on $x_2$, and in the plain product positions simply add. The quadrotor controllers in this book keep $x$ and $v$ in the world frame, which is the product structure. Estimators often prefer $\SE(3)$, because their measurements arrive in the body frame. The manifold and its dimension are the same either way.
+:::
 
-Its Lie algebra $\mathfrak{se}(3)$ is isomorphic to $\mathbb{R}^6$ via the twist $\xi = \begin{bmatrix} v \ \omega \end{bmatrix} \in \mathbb{R}^6$ (with linear part $v \in \mathbb{R}^3$ and angular part $\omega \in \mathbb{R}^3$, following Seo et al., 2026, Eq. (2)):
+One relative deserves a paragraph. An inertial navigation state has an attitude, a velocity and a position. Put $R$ in the corner of a $5\times5$ matrix, with $v$ and $x$ as two extra columns. These matrices form a nine-dimensional Lie group, $\SE_2(3)$. Hartley et al. (2018) use it to estimate the state of the biped Cassie from an inertial measurement unit and leg kinematics ([](#sec14-legged)). On this group the estimation error evolves independently of the trajectory being estimated, which is the reason for the construction ([](#eq14-X), [](#thm14-loglinear)).
 
+## Real robots are products {#sec2-products}
 
-$$ \xi^\wedge = \begin{bmatrix} \omega^\wedge & v \ 0_{1\times 3} & 0 \end{bmatrix} \in \mathfrak{se}(3), \qquad (\xi^\wedge)^\vee = \begin{bmatrix} v \ \omega \end{bmatrix} \in \mathbb{R}^6. \tag{Eq. 2.12} $$
+The configuration of a multi-part robot is a list: this body's attitude, that link's direction, that slider's extension. The set of such lists is a **product manifold**. Its dimension is the sum of its factors' dimensions, and a tangent vector is a list of tangent vectors, one per factor. Nothing new is needed. You stack the kinematic equations.
 
+![A quadrotor with a cable-suspended load. Three pieces describe every configuration: the load position $x_L$, the cable direction $q$ and the quadrotor attitude $R$. The quadrotor position is not a separate coordinate. It follows from $x_Q = x_L - l\,q$.](figures/ch02-quadload.svg){#fig2-quadload}
 
-* Body Twist Kinematics: For $g(t) \in \mathrm{SE}(3)$, the body-frame twist is $V^b = (g^{-1}\dot{g})^\vee = \begin{bmatrix} R^\top \dot{p} \ \Omega \end{bmatrix}$, so $\dot{g} = g (V^b)^\wedge$.
+Take the system of the opening puzzle ([](#fig2-quadload)). While the cable is taut, its configuration is
 
+$$
+(x_L,\ q,\ R) \in \R^3 \times S^2 \times \SO(3),
+$$
 
-Prop. 2.4 (Exponential and Logarithm Maps on $\mathrm{SE}(3)$). For $\xi = [v^\top, \omega^\top]^\top \in \mathbb{R}^6$ with $\theta = |\omega|_2$, the exponential map $\exp : \mathfrak{se}(3) \to \mathrm{SE}(3)$ is:
+with $q$ pointing from the quadrotor to the load, a convention kept throughout the book.^[Using the quadrotor's position as the coordinate instead gives the same manifold written as $\SE(3) \times S^2$.] That is $3 + 3 + 9 = 15$ stored numbers, $1 + 6 = 7$ constraints and 8 degrees of freedom. With four inputs, a thrust and three torques, four of them are unactuated. The kinematics are three lines we already have:
 
+$$
+\dot x_L = v_L, \qquad \dot q = \omega \times q, \qquad \dot R = R\,\Omega^\wedge .
+$$
 
-$$ \exp(\xi^\wedge) = \begin{bmatrix} \exp(\omega^\wedge) & V(\omega) v \ 0_{1\times 3} & 1 \end{bmatrix}, \qquad V(\omega) := I_3 + \frac{1 - \cos\theta}{\theta^2},\omega^\wedge + \frac{\theta - \sin\theta}{\theta^3},(\omega^\wedge)^2. \tag{Eq. 2.13} $$
+::: {.example #ex2-quadload name="Where is the quadrotor, and how fast?"}
+A load at $x_L = (2, 0, 1)$ m moves at $v_L = (1, 0, 0)$ m/s under a cable of length $l = 1$ m that hangs straight down, so $q = -e_3$. The cable swings with $\omega = (0.5, 0, 0)$ rad/s. The quadrotor is at
+$$
+x_Q = x_L - l\,q = (2, 0, 2),
+$$
+and differentiating with [](#eq2-s2-kinematics),
+$$
+\dot x_Q = v_L - l\,(\omega \times q) = (1, 0, 0) - (0, 0.5, 0) = (1, -0.5, 0)\ \text{m/s}.
+$$
+No angles were introduced, and the formula holds for every cable direction, including straight up.
+:::
 
+[](#tbl2-robots) collects the configuration manifolds used in this book. Every one is assembled from the same few factors.
 
-When $\theta = 0$, $V(0) = I_3$. Conversely, given $g = (R, p) \in \mathrm{SE}(3)$, $\omega = (\log R)^\vee$ and $v = V(\omega)^{-1} p$, where the inverse left Jacobian of $\mathrm{SO}(3)$ is:
+::: {.table #tbl2-robots}
 
+| Robot | Configuration manifold | Numbers stored | Dimension |
+| :-- | :-- | :-: | :-: |
+| Heading of a planar robot | $S^1 \cong \SO(2)$ | 2 | 1 |
+| Spherical pendulum, cable, thrust axis | $S^2$ | 3 | 2 |
+| 3D pendulum, attitude of a satellite | $\SO(3)$ | 9 | 3 |
+| Quadrotor | $\SE(3)$ | 12 | 6 |
+| Quadrotor with cable-suspended load | $\R^3 \times S^2 \times \SO(3)$ | 15 | 8 |
+| $n$ quadrotors carrying a rigid payload | $\SE(3) \times (S^2 \times \SO(3))^n$ | $12 + 12n$ | $6 + 5n$ |
+| Reaction Mass Biped, stance phase | $\SO(3)^3 \times [0, r]^2 \times [0, r_s]^3$ | 32 | 14 |
+| Cassie, reduced geometric model | $\SE(3) \times \SO(3)^2 \times \R_+^2$ | 32 | 14 |
 
-$$ V(\omega)^{-1} = I_3 - \frac{1}{2}\omega^\wedge + \frac{1}{\theta^2}!\left(1 - \frac{\theta \sin\theta}{2(1 - \cos\theta)}\right)(\omega^\wedge)^2. \tag{Eq. 2.14} $$
+: Configuration manifolds of the robots in this book.
 
+:::
 
-Def. 2.7 (Adjoint Map on $\mathrm{SE}(3)$). For $g = (R, p) \in \mathrm{SE}(3)$, the Adjoint representation $\mathrm{Ad}_g : \mathfrak{se}(3) \to \mathfrak{se}(3)$ satisfies $(g \xi^\wedge g^{-1})^\vee = \mathrm{Ad}_g \xi$, with $6 \times 6$ matrix (Seo et al., 2026, Eq. (4)):
+Wu (2017) models $n$ quadrotors carrying one rigid payload: the payload's pose, then a cable direction and an attitude per vehicle. Siravuru (2019) models the Reaction Mass Biped with three rotation matrices (stance leg, torso, swing leg), two leg lengths and three pairs of sliding reaction masses. That makes fourteen dimensions. The stance dynamics involve thirteen of them, because the length of the swing leg drops out ([](#sec16-legs)). His reduced model of Cassie has a floating pelvis in $\SE(3)$, a rotation matrix per leg and two leg lengths, with eight of the fourteen degrees of freedom actuated. No joint angle appears in any of them. [](#tbl16-map) lists where the book treats each of these robots.
 
+::: {.warning #warn2-taut name="A configuration manifold is a modeling claim"}
+The factor $S^2$ asserts that the cable is taut. If the tension reaches zero the load is in free fall and the configuration space becomes $\R^3 \times \R^3 \times \SO(3)$. A product manifold records the constraints you assumed. It does not enforce them on the hardware. Monitor the tension, and treat slack as a different mode with its own model.
+:::
 
-$$ \mathrm{Ad}g = \begin{bmatrix} R & p^\wedge R \ 0{3\times 3} & R \end{bmatrix} \in \mathbb{R}^{6\times 6}, \qquad \mathrm{Ad}{g_1 g_2} = \mathrm{Ad}{g_1}\mathrm{Ad}{g_2}, \qquad \mathrm{Ad}{g^{-1}} = \mathrm{Ad}_g^{-1}. \tag{Eq. 2.15} $$
+Now the opening puzzle can be stated precisely. The simulator's state lives on a product of spheres and rotation groups, and its update rule was written for $\R^n$.
 
+## Stepping without falling off {#sec2-integration}
 
-As shown in Seo et al. (2026, Sec. III-A), $\mathrm{Ad}_g$ is essential in floating-base humanoid control for transforming end-effector twists and Jacobians between the world-aligned Cartesian frame ${C_E}$, the manipulation reference frame ${R}$ (pelvis ${P}$, heading ${H}$, or ground-attached heading ${H_0}$), and the end-effector body frame ${E}$, while preserving left-invariance of geometric admittance feedback $f_G(g_l g, g_l g_D) = f_G(g, g_D)$.
+The simulator's update is Euler's method, $q_{k+1} = q_k + h\,\dot q_k$. On the sphere, $\dot q_k$ is perpendicular to $q_k$, so by Pythagoras
 
+$$
+\|q_{k+1}\|^2 = \|q_k\|^2 + h^2\,\|\dot q_k\|^2 .
+$$
 
-________________
+The norm grows at every step, by an amount that depends only on the speed. The tangent plane touches the sphere at one point and lies outside it everywhere else, so a step along the tangent always lands outside ([](#fig2-steps)). With $\|\omega\| = 2$ rad/s and $h = 0.01$ s, each step multiplies $\|q\|^2$ by $1.0004$. A thousand steps give $1.0004^{500} = 1.22$. That is the stretched cable.
 
+![Four steps on a circle, exaggerated and taken one at a time. Each Euler step (terracotta) runs along the tangent and lands outside, and the radius grows from 1 to 1.38. Each exponential step (indigo) follows the circle.](figures/ch02-steps-strip.png){#fig2-steps anim="figures/ch02-steps.gif"}
 
-Table 2.1: Summary of Core Manifolds in Robotics
-Manifold
-	Definition
-	$\dim$
-	Lie Group?
-	Lie Algebra / Tangent Space
-	Singularity / Cover Notes
-	$S^1$
-	${q \in \mathbb{R}^2 \mid q^\top q = 1}$
-	1
-	Yes ($\cong \mathrm{SO}(2)$)
-	$T_q S^1 = {v \mid q^\top v = 0}$
-	Periodic; $\pi_1(S^1) = \mathbb{Z}$
-	$\mathrm{SO}(2)$
-	${R \in \mathbb{R}^{2\times 2} \mid R^\top R = I_2, \det R = 1}$
-	1
-	Yes
-	$\mathfrak{so}(2) = {\Omega^\wedge_2}$
-	Singularity-free planar rotation
-	$S^2$
-	${q \in \mathbb{R}^3 \mid q \cdot q = 1}$
-	2
-	No
-	$T_q S^2 = {\omega \times q \mid \omega \cdot q = 0}$
-	No global non-vanishing vector field
-	$\mathrm{SO}(3)$
-	${R \in \mathbb{R}^{3\times 3} \mid R^\top R = I_3, \det R = 1}$
-	3
-	Yes
-	$\mathfrak{so}(3) = {\Omega^\wedge \mid \Omega \in \mathbb{R}^3}$
-	Singularity-free; cut locus at $\theta = \pi$
-	$S^3$
-	${q \in \mathbb{R}^4 \mid |q|_2 = 1}$
-	3
-	Yes ($\cong \mathrm{SU}(2)$)
-	$\mathfrak{su}(2) \cong \mathbb{R}^3$
-	2-to-1 double cover of $\mathrm{SO}(3)$; unwinding
-	$\mathrm{SE}(3)$
-	$\mathrm{SO}(3) \ltimes \mathbb{R}^3$
-	6
-	Yes
-	$\mathfrak{se}(3) \cong \mathbb{R}^6$ (twists)
-	Non-compact; semidirect product
-	
+Rotation matrices fail the same way. One Euler step $R_{k+1} = R_k + h\,R_k\Omega^\wedge$ gives
 
-________________
+$$
+R_{k+1}\T R_{k+1} = I - h^2\,(\Omega^\wedge)^2, \qquad \det R_{k+1} = 1 + h^2\|\Omega\|^2 .
+$$
 
+The matrix is no longer orthogonal. Used as a rotation, it stretches the body.
 
-2.4 Product Manifolds in Robotics
-Complex robotic systems couple multiple rigid bodies, directional links, and joints, so their configuration spaces $Q$ are product manifolds $Q = \mathcal{M}_1 \times \mathcal{M}_2 \times \cdots \times \mathcal{M}k$ with dimension $\dim(Q) = \sum{i=1}^k \dim(\mathcal{M}_i)$ (equal to the system's degrees of freedom, DoF). If the system has $m$ independent control actuators, the degrees of underactuation (DoUA) is:
+The cure is in [](#sec2-exp). Over one step, hold the velocity fixed and solve the kinematics exactly. The solution is an exponential, and exponentials land on the manifold:
 
+$$
+R_{k+1} = R_k\,\exp(h\,\Omega_k^\wedge), \qquad q_{k+1} = \exp(h\,\omega_k^\wedge)\, q_k . \label{eq2-exp-step}
+$$
 
-$$ \mathrm{DoUA} = \mathrm{DoF} - m = \sum_{i=1}^k \dim(\mathcal{M}_i) - m. \tag{Eq. 2.16} $$
+The first is a product of rotations, so it is a rotation. The second is a rotation applied to a unit vector, so it is a unit vector. This holds for any step size, up to rounding. On a product manifold, apply [](#eq2-exp-step) factor by factor.
 
+::: {.example #ex2-drift name="Ten seconds of tumbling"}
+A body tumbles with $\Omega(t) = (\cos t,\ \sin 0.7t,\ 0.5)$ rad/s. Integrate from $R = I$ for 10 s with $h = 0.01$ s ([](#fig2-drift), left). After the Euler steps, $\|R\T R - I\| = 0.16$ in the Frobenius norm and $\det R = 1.13$. After the exponential steps it stays below $10^{-13}$.
+:::
 
-![Product Manifold Hierarchy](Fig. 2.1: Conceptual diagram of robotic product manifolds — from single-body $\mathrm{SE}(3)$ to $\mathrm{SE}(3) \times S^2$ cable-suspended load, $\mathrm{SO}(3) \times \mathbb{R}^3 \times (S^2)^n$ flexible-cable transport, and $\mathrm{SE}(3) \times \prod_{j=1}^p \mathrm{SO}(3) \times (S^2)^{n_j}$ multi-UAV cooperative manipulation.)
-2.4.1 Quadrotor with a Taut Cable-Suspended Load: $\mathrm{SE}(3) \times S^2$
-Consider a quadrotor UAV (mass $m_Q$, inertia $J_Q$, position $x_Q \in \mathbb{R}^3$, attitude $R \in \mathrm{SO}(3)$) carrying a point-mass payload (mass $m_L$, position $x_L \in \mathbb{R}^3$) via a massless taut cable of length $l > 0$ with unit direction vector $q \in S^2$ pointing from the quadrotor to the load (Sreenath, Lee, & Kumar, 2013; Wu & Sreenath, 2015):
+![Left: distance from $\SO(3)$ during the tumble of [](#ex2-drift). Euler steps drift away. Exponential steps stay on the manifold to rounding error. Right: the attitude error of the exponential step, with $\Omega$ sampled at the start of each step (first order) and at the midpoint (second order).](figures/ch02-drift.svg){#fig2-drift}
 
+::: {.warning #warn2-accuracy name="On the manifold is not the same as correct"}
+The exponential step is exact only if $\Omega$ is constant across the step. In [](#ex2-drift) it is not, and the final attitude is wrong by 0.29°, although it is a perfect rotation matrix ([](#fig2-drift), right). Halving $h$ halves the error. Sampling $\Omega$ at the middle of the step instead of the start cuts it to 0.0012° at no extra cost. Staying on the manifold removes one kind of error, not all of them. Nor does repairing an Euler step by normalizing $q$ or reorthonormalizing $R$: that restores the constraint and leaves the integration error.
+:::
 
-$$ Q = \mathrm{SE}(3) \times S^2, \qquad x_Q = x_L - l q, \qquad \dot{x}_Q = \dot{x}_L - l(\omega \times q). \tag{Eq. 2.17} $$
+## What we have, and what is missing {#sec2-next}
 
+A robot's configuration is a point on a product of a few standard manifolds, and its velocity is a list of tangent vectors. The exponential turns velocities into motion, the adjoint changes their frame, and the bracket records that order matters.
 
-* DoF & DoUA: $\dim(\mathrm{SE}(3) \times S^2) = 6 + 2 = 8$ DoF. The quadrotor has $m = 4$ actuators (scalar thrust $f \in \mathbb{R}$ and body moment $M \in \mathbb{R}^3$), giving $\mathrm{DoUA} = 8 - 4 = 4$.
-* Hybrid Mode: When cable tension $T = |m_L(\ddot{x}_L + g e_3)|$ drops to zero, the constraint $|x_Q - x_L| = l$ breaks and the configuration space switches to $Q_z = \mathrm{SE}(3) \times \mathbb{R}^3$ (9 DoF, 5 DoUA) (Sreenath, Lee, & Kumar, 2013).
-2.4.2 Quadrotor with a Flexible $n$-Link Cable: $\mathrm{SO}(3) \times \mathbb{R}^3 \times (S^2)^n$
-When cable mass is non-negligible or large deformations occur, Kotaru, Wu, & Sreenath (2017) discretize the flexible cable into $n$ rigid links with spherical joints ($q_i \in S^2$, length $l_i$, link-end mass $m_i$):
+All of this concerns one trajectory. Control and estimation concern two: actual and desired, or true and estimated. We cannot yet subtract a desired velocity from an actual one when they live in different tangent spaces, or differentiate a function like $\Psi_R$ whose argument is a matrix under constraints. [](#ch-variations) does both with one tool, the variation of [](#def3-variation).
 
+## Exercises {#sec2-exercises .unnumbered}
 
-$$ Q = \mathrm{SO}(3) \times \mathbb{R}^3 \times (S^2)^n, \qquad x_i = x_{i-1} + l_i q_i \quad (i = 1, \dots, n), \tag{Eq. 2.18} $$
+::: {.exercise #exr2-puzzle}
+Reproduce the opening puzzle. Show that with constant $\|\omega\|$ the Euler iterate satisfies $\|q_N\| = (1 + h^2\|\omega\|^2)^{N/2}$, and that for a fixed duration $t_f = Nh$ this tends to $\exp(\tfrac12 h\|\omega\|^2 t_f)$. What step size keeps the stretch below 1 mm over a 10 s flight?
+:::
 
+::: {.exercise #exr2-tangent}
+Apply [](#def2-manifold) to $\SO(3)$. Write the six constraint functions and show that their Jacobian has rank six at $R = I$ by exhibiting its kernel. Why is the rank six at every other $R$ too?
+:::
 
-where $x_0$ is the quadrotor center of mass and $x_n$ is the payload position.
+::: {.exercise #exr2-rodrigues}
+Sum the exponential series to prove [](#eq2-rodrigues). Derive [](#eq2-log) from its trace and its skew-symmetric part. What is $R - R\T$ at $\theta = \pi$, and how would you recover the axis there? Then prove [](#eq2-adjoint) by applying both sides to a vector. Where is $\det R = +1$ used?
+:::
 
+::: {.exercise #exr2-book}
+Do the book experiment of [](#thought2-book) with your hands, then with matrices. Find the axis of the 120° rotation that separates the two results. Repeat with turns of 10° and compare the leftover with [](#eq2-commutator).
+:::
 
-* DoF & DoUA: $\mathrm{DoF} = 3 + 3 + 2n = 6 + 2n$. With $m = 4$ quadrotor inputs, $\mathrm{DoUA} = (6 + 2n) - 4 = 2n + 2$. For $n = 5$ links, $\mathrm{DoF} = 16$ and $\mathrm{DoUA} = 12$ (Kotaru, Wu, & Sreenath, 2017).
-2.4.3 Multi-Quadrotor Rigid-Body Load with Flexible Cables: $\mathrm{SE}(3) \times \prod_{j=1}^p \mathrm{SO}(3) \times (S^2)^{n_j}$
-For $p$ cooperating quadrotors transporting a shared rigid-body payload (pose $(R_L, x_L) \in \mathrm{SE}(3)$, attachment offset $r_j \in \mathbb{R}^3$ in load body frame) via flexible cables of $n_j$ links each (Kotaru, Wu, & Sreenath, 2017, Sec. II-C):
+::: {.exercise #exr2-count}
+A quadrotor carries a load on a chain of $n$ rigid links joined by ball joints. Propose a configuration manifold. Count stored numbers, constraints and dimension, and write the kinematics. How many degrees of freedom are unactuated? What does your manifold assume?
+:::
 
+::: {.exercise #exr2-midpoint}
+In the notebook, measure the attitude error of the exponential step in [](#ex2-drift) for $h = 0.02, 0.01, 0.005$, sampling $\Omega$ at the start and at the midpoint of each step. Confirm orders one and two. For which motions is the start-of-step version exact?
+:::
 
-$$ Q = \mathrm{SE}(3) \times \prod_{j=1}^p \mathrm{SO}(3) \times (S^2)^{n_j}, \qquad x_{j,(n_j - 1)} = x_L + R_L r_j - l_{j, n_j} q_{j, n_j}. \tag{Eq. 2.19} $$
+## Notes and sources {#sec2-notes .unnumbered}
 
+The treatment of $\SO(3)$ and $\SE(3)$, their exponentials and adjoints follows Murray, Li and Sastry (1994) and Solà, Deray and Atchuthan (2018). Teng et al. (2022, 2026) and Jang, Teng and Ghaffari (2023) summarize the same preliminaries as used in control and trajectory optimization. $S^2$ as a configuration manifold, and multibody systems as products of $S^2$ and $\SO(3)$, follow Lee, Leok and McClamroch (2018). The cable-suspended load and multi-quadrotor models are from Wu (2017, ch. 3). The 3D pendulum, Reaction Mass Biped and Cassie models are from Siravuru (2019, ch. 4 to 6). $\SE_2(3)$ is due to Barrau and Bonnabel (2017) and was applied to legged robots by Hartley et al. (2018).
 
-* DoF & DoUA: $\mathrm{DoF} = 6 + 3p + 2\sum_{j=1}^p n_j$. With $m = 4p$ actuators, $\mathrm{DoUA} = 6 - p + 2\sum_{j=1}^p n_j$. For $p = 4$ quadrotors and $n_j = 5$ links each, $\mathrm{DoF} = 58$ and $\mathrm{DoUA} = 42$ (for a point-mass shared load on $\mathbb{R}^3 \times \prod_{j=1}^p \mathrm{SO}(3) \times (S^2)^{n_j}$, $\mathrm{DoF} = 55$ and $\mathrm{DoUA} = 39$).
-2.4.4 Planar Mobile-Base & Articulated Systems: $\mathrm{SE}(2) \times S^n$
-A planar $n$-link robotic snake or planar floating-base manipulator evolves on $\mathrm{SE}(2) \times (S^1)^n$ (often written compactly as $\mathrm{SE}(2) \times S^n$ in Wu & Sreenath, 2015), where $(x, y, \psi) \in \mathrm{SE}(2)$ captures planar position and heading (3 DoF) and $n$ revolute joints contribute $n$ DoF ($\mathrm{DoF} = 3 + n$). Similarly, in humanoid loco-manipulation (Seo et al., 2026, Sec. III-C), the ground-attached heading frame ${H_0}$ projects the floating base onto $(x, y, \psi) \in \mathrm{SE}(2)$ to decouple pelvis roll, pitch, and heave from end-effector $\mathrm{SE}(3)$ commands.
-Table 2.2: Product Manifolds, DoF, and Degrees of Underactuation
-System
-	Configuration Manifold $Q$
-	DoF
-	Actuators ($m$)
-	DoUA ($\mathrm{DoF} - m$)
-	Primary Reference
-	Quadrotor (free)
-	$\mathrm{SE}(3)$
-	6
-	4
-	2
-	Kotaru et al. (2020)
-	Quadrotor + taut cable load
-	$\mathrm{SE}(3) \times S^2$
-	8
-	4
-	4
-	Sreenath et al. (2013)
-	Quadrotor + $n$-link flexible cable
-	$\mathrm{SO}(3) \times \mathbb{R}^3 \times (S^2)^n$
-	$6 + 2n$
-	4
-	$2n + 2$
-	Kotaru et al. (2017)
-	$p$ Quadrotors + rigid load + flex cables
-	$\mathrm{SE}(3) \times \prod_{j=1}^p \mathrm{SO}(3) \times (S^2)^{n_j}$
-	$6 + 3p + 2\sum n_j$
-	$4p$
-	$6 - p + 2\sum n_j$
-	Kotaru et al. (2017)
-	Planar $n$-link snake / mobile base
-	$\mathrm{SE}(2) \times (S^1)^n$
-	$3 + n$
-	$n$ (typical)
-	$3$
-	Wu & Sreenath (2015)
-	
-
-________________
-
-
-2.5 Worked Examples
-Example 2.1 (Rodrigues' Map and Matrix Identity Verification).
-Let $\phi = [0.3, -0.4, 0.5]^\top \in \mathbb{R}^3$ ($\theta = |\phi|_2 = \sqrt{0.5} \approx 0.7071\text{ rad}$). Using Eq. (2.7), $R = \exp(\phi^\wedge) \in \mathrm{SO}(3)$ satisfies $R^\top R = I_3$ and $\det(R) = +1$. Applying Eq. (2.8) recovers $\log(R)^\vee = \phi$ to machine precision ($\sim 10^{-16}$). For any $x \in \mathbb{R}^3$ and $A \in \mathbb{R}^{3\times 3}$, Eq. (2.4)–(2.6) hold identically, which is verified numerically in the companion notebook ch02_lie_groups_product_manifolds.ipynb.
-
-
-Example 2.2 ($\mathrm{SE}(3)$ Adjoint Twist Transformation in Humanoid Control).
-In Seo et al. (2026, Eq. (9)–(11)), let $g_{C_E C_R} = (I_3, -(p_{WC_E} - p_{WC_R})) \in \mathrm{SE}(3)$ relate the world-aligned Cartesian frames of the manipulation reference and end effector. By Eq. (2.15):
-
-
-$$ \mathrm{Ad}{g{C_E C_R}} = \begin{bmatrix} I_3 & -(p_{WC_E} - p_{WC_R})^\wedge \ 0_{3\times 3} & I_3 \end{bmatrix}, \qquad V_{RE}^{E} = \mathrm{Ad}{g{E C_E}} \bigl(V_{WE}^{C_E} - \mathrm{Ad}{g{C_E C_R}} V_{WR}^{C_R}\bigr). \tag{Eq. 2.20} $$
-
-
-Example 2.3 (Quadrotor + Suspended Load Kinematics on $\mathrm{SE}(3) \times S^2$).
-Let $l = 1.0\text{ m}$, $x_L(t) = [\cos t, \sin t, 0.5 t]^\top$, and $q(t) \in S^2$ evolve via $\dot{q} = \omega \times q$ with $\omega \cdot q = 0$. Differentiating Eq. (2.17) yields $v_Q = v_L - l(\omega \times q)$ and $\ddot{x}_Q = \ddot{x}_L - l(\dot{\omega} \times q + \omega \times (\omega \times q))$. Because $\omega \cdot q = 0$, $\omega \times (\omega \times q) = -|\omega|^2 q$, which enters the tension-coupled translational dynamics in Sreenath, Lee, & Kumar (2013, Eq. (6)).
-
-
-________________
-
-
-2.6 Exercises
-1. ($\mathrm{SO}(2) / S^1$): Prove that $\mathrm{SO}(2)$ is abelian and diffeomorphic to $S^1$, and show that for $q \in S^1$, $\dot{q} = \Omega J_2 q$ preserves $|q|_2 = 1$.
-2. ($S^2$ Tangent Space & Transport Map): Show that $T(q, q_d)\dot{q}_d := (q_d \times \dot{q}d) \times q$ maps $T{q_d}S^2$ into $T_q S^2$ and satisfies the compatibility condition $d_2 \Psi_q = -T^*(q, q_d) d_1 \Psi_q$ for $\Psi_q = 1 - q \cdot q_d$ (Wu & Sreenath, 2016).
-3. (Matrix Identities): Prove Eq. (2.6), $x^\wedge A + A^\top x^\wedge = \bigl((\operatorname{tr}(A)I_3 - A)x\bigr)^\wedge$, by evaluating both sides on an arbitrary vector $v \in \mathbb{R}^3$.
-4. ($S^3$ Unwinding): Construct an initial quaternion $q(0) \in S^3$ with $\pi(q(0)) = \exp(0.1 e_3^\wedge)$ that is antipodally close to $-q_d$ ($q_d = [1, 0, 0, 0]^\top$), and explain why minimizing $|q - q_d|_2^2$ causes a $354^\circ$ rotation whereas minimizing $\Psi_R(R, I_3)$ rotates by $5.7^\circ$.
-5. ($\mathrm{SE}(3)$ Log Map): Derive Eq. (2.14) for $V(\omega)^{-1}$ from Eq. (2.13) using $(\omega^\wedge)^3 = -\theta^2 \omega^\wedge$.
-6. (Product Manifolds): Compute the DoF and DoUA for (a) $p = 3$ quadrotors carrying a rigid-body payload via $n_j = 4$ flexible cable links each, and (b) a dual-arm humanoid with a 6-DoF floating base, two 7-DoF arms, and two 6-DoF legs ($26$ actuated joints total) walking on flat ground.
+- A. Barrau and S. Bonnabel, ["The invariant extended Kalman filter as a stable observer"](https://doi.org/10.1109/TAC.2016.2594085), *IEEE Transactions on Automatic Control* 62(4), 2017.
+- R. Hartley, M. Ghaffari Jadidi, J. W. Grizzle and R. M. Eustice, ["Contact-aided invariant extended Kalman filtering for legged robot state estimation"](https://doi.org/10.15607/RSS.2018.XIV.050), *Robotics: Science and Systems*, 2018. arXiv:1805.10410.
+- J. Jang, S. Teng and M. Ghaffari, ["Convex geometric trajectory tracking using Lie algebraic MPC for autonomous marine vehicles"](https://doi.org/10.1109/LRA.2023.3328450), *IEEE Robotics and Automation Letters* 8(12), 2023. arXiv:2305.09009.
+- T. Lee, M. Leok and N. H. McClamroch, [*Global Formulations of Lagrangian and Hamiltonian Dynamics on Manifolds*](https://doi.org/10.1007/978-3-319-56953-6), Springer, 2018.
+- R. M. Murray, Z. Li and S. S. Sastry, [*A Mathematical Introduction to Robotic Manipulation*](https://doi.org/10.1201/9781315136370), CRC Press, 1994.
+- A. Siravuru, [*Geometric Control and Learning for Dynamic Legged Robots*](https://kilthub.cmu.edu/articles/thesis/Geometric_Control_and_Learning_for_Dynamic_Legged_Robots/12181962), PhD thesis, Carnegie Mellon University, 2019.
+- J. Solà, J. Deray and D. Atchuthan, ["A micro Lie theory for state estimation in robotics"](https://arxiv.org/abs/1812.01537), arXiv:1812.01537, 2018.
+- S. Teng, W. Clark, A. Bloch, R. Vasudevan and M. Ghaffari, ["Lie algebraic cost function design for control on Lie groups"](https://arxiv.org/abs/2204.09177), arXiv:2204.09177, 2022.
+- S. Teng, R. Zhang, T.-Y. Lin, W. A. Clark, M. Mueller, R. Vasudevan, M. Ghaffari and K. Sreenath, ["LieIPM: Lie group interior point method for direct trajectory optimization of rigid bodies"](https://arxiv.org/abs/2606.10579), arXiv:2606.10579, 2026.
+- G. Wu, [*Safety-critical Geometric Control Design with Application to Aerial Transportation*](https://kilthub.cmu.edu/articles/thesis/Safety-critical_Geometric_Control_Design_with_Application_to_Aerial_Transportation/6721382), PhD thesis, Carnegie Mellon University, 2017.

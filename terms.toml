@@ -1,0 +1,941 @@
+# Machine-checkable vocabulary and notation rules for the whole book.
+#
+#     python tools/check_terms.py
+#
+# The source of truth for every rule is chapters/appA_notation.md. A symbol or
+# a term is added there, and here, before it is used in a chapter.
+# Chapters use the macros of book.toml (\T, \SO, \R, \tr, \dd, \ddt ...).
+# Notebooks and skills are read outside the book, so they use plain LaTeX
+# (^\top, \mathrm{SO}(3), \mathbb{R}, \operatorname{tr}).
+
+# ---------------------------------------------------------------------------
+# Running list of decisions for Chapters 10, 12, 14, 16 and the robot library.
+# Each is stated in chapters/appA_notation.md and, where a pattern can catch
+# its variants, enforced by a rule at the end of this file.
+#
+#  estimates     A hat marks an estimate on every letter: \hat R, \hat q,
+#                \hat\omega, \hat X, \hat b_g. The hat map is always the
+#                postfix x^\wedge. No \omega_{\hat q}.
+#  errors        E_r = \hat X X^{-1} = exp(\chi_r^\wedge), E_\ell = X^{-1}\hat X
+#                = exp(\chi^\wedge): the estimate takes the slot of the actual
+#                configuration, the truth that of the desired one (def3-invariant-errors).
+#                The velocity and position parts of E_r are written out
+#                (\hat v - E_R v), not named \eta_v, \eta_x: \eta is the variation on SO(3).
+#  projector     \Pi_C projects onto ker C (not E_C): \Pi is the letter for a projection.
+#  filter        \Sigma covariance, \Sigma_n, \Sigma_g, \Sigma_a, \Sigma_y noise,
+#                \tilde y innovation (predicted minus measured), \tilde K Kalman gain,
+#                C_y measurement matrix, n_g, n_a, n_y noise, b_g, b_a biases,
+#                a_s specific force, x_c contact position, x_m landmark position
+#                (not p: p is the discrete momentum), d the known vector of a measurement.
+#  discrete      L_h, S_h (subscript h: d means desired), p_k discrete momentum,
+#                \bar p_k after the first half kick, \Upsilon_k = R_k^T R_{k+1} step
+#                rotation (not F_k: F is a force), \Omega_k step velocity,
+#                \bar J = tr(J) I / 2 - J, \theta_k step angle, \Lambda_n.
+#                "knot" for a grid point of a transcription, never "node".
+#  flatness      \varphi flat output, x^{(k)} k-th derivative, jerk, snap.
+#                \psi is the heading of eq6-Rd; it equals the yaw of eq-zyx only
+#                when the roll or the pitch is zero. F = f R e_3 thrust vector.
+#                Chain: joint 0 at the quadrotor, link i from joint i-1 to joint i.
+#                c_j polynomial coefficients (local letter).
+#  code names    a mark over a letter is appended without underscore: Rhat, Xhat,
+#                qhat, omegahat, ytilde, Ktilde, Jbar, pbar, Dhat (like Rd, qd).
+#                A time derivative keeps the underscore: R_dot. Sigma, Sigma_y,
+#                Sigma_n, Sigma_ytilde, Pi_C, Upsilon_k. Library names: table
+#                "Names in the robot library" (tblA-code) in the appendix.
+#  library       rollout(..., hold=False) evaluates a moving input at every stage
+#                (step(..., t=t)); hold=True (default) holds it over the step.
+#  citations     (Author et al., 2026) with a comma. Hairer-Lubich-Wanner cited by
+#                chapter (ch. IX), not by theorem number. Kotaru and Sreenath's S^2
+#                filter cited without a venue (ECC 2019 is not confirmed).
+#  \ell          only as the subscript of E_\ell; no \Sigma_\ell (eq14-left-right says it in words).
+#  payload       a rigid body carried by several quadrotors; a point mass is a
+#                cable-suspended load.
+#  figures       the TRUE quantity beside an estimate is drawn like a reference
+#                beside a motion: thin dashed gray, hollow marker.
+#  biped         configuration manifold of the Reaction Mass Biped has dimension 14;
+#                its stance dynamics involve 13 (the swing-leg length drops out).
+#  scope         check_terms also scans case_studies/**/*.py and case_studies/README.md.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------- spelling
+# American spelling everywhere, code identifiers and plot labels included.
+
+[[rule]]
+pattern = '\b(lineari|stabili|normali|discreti|summari|memori|prioriti|optimi|parametri|generali|minimi|maximi|initiali|organi|recogni|visuali|characteri|penali|symmetri|orthonormali|regulari|speciali|standardi|utili|locali|reali|emphasi|synchroni|factori|diagonali)s(e|es|ed|ing|ation|ations|er|ers)\b'
+use = 'the -ize spelling (linearization, stabilize, normalize, discretize)'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\banalys(e|es|ed|ing)\b'
+use = 'analyze'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\b(modell|travell|labell|levell|signall|cancell)(ed|ing|er|ers)\b'
+use = 'a single l (modeling, traveled, labeled)'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\bcent(re|res|red|ring)\b'
+use = 'center'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\b(behaviour|colour|favour|neighbour|honour|labour|flavour|vapour)'
+use = 'the -or spelling (behavior, color, favorite, neighbor)'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\bmanoeuv'
+use = 'maneuver'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\b(metre|metres|litre|litres|fibre|fibres)\b'
+use = 'meter, liter, fiber'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+[[rule]]
+pattern = '\b(aeroplane|sceptic\w*|mould\w*|grey|programme|catalogue\w*|analogue|artefact\w*|whilst|amongst|learnt|judgement|defence|licence|anticlockwise)\b'
+use = 'American spelling (airplane, skeptic, mold, gray, catalog, counterclockwise)'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'verify', 'case_studies']
+ignore_case = true
+
+# ------------------------------------------------- notation in the chapters
+
+[[rule]]
+pattern = '\^\{?\\top\}?|\^T\b|\^\{T\}|\^\{\\mathsf\{T\}\}|\^\\intercal|\^\\prime\b'
+use = '\T for the transpose, as in R\T'
+where = ['chapters']
+math = true
+
+[[rule]]
+pattern = '\\mathrm\{S[OE]\}|\\mathbb\{R\}|\\operatorname\{tr\}|\\mathrm\{d\}|\\mathfrak\{s[oe]\}|\\mathfrak\{q\}|\\operatorname\{A[Dd]\}|\\operatorname\{ad\}'
+use = 'the shared macros \SO, \SE, \R, \tr, \dd, \so, \se, \quat, \Ad, \ad'
+where = ['chapters']
+math = true
+
+[[rule]]
+pattern = '\bS[OE]\([23]\)'
+use = '$\SO(3)$, $\SE(3)$ in math'
+where = ['chapters']
+math = false
+allow = ['quadrotor UAV on SE(3)', 'evolving on SO(3) and S²']
+
+[[rule]]
+pattern = '\\frac\{\\dd\}\{\\dd ?t\}|\\tfrac\{\\dd\}\{\\dd ?t\}|\\dfrac\{\\dd\}\{\\dd ?t\}|\\frac\{d\}\{dt\}'
+use = '\ddt'
+where = ['chapters']
+math = true
+
+[[rule]]
+pattern = '(?<![A-Za-z\\{])dt\b'
+use = '\dd t'
+where = ['chapters']
+math = true
+
+[[rule]]
+pattern = 'I_3\b|I_\{3\}|\\mathbb\{[I1]\}|\\mathbf\{I\}|I_\{3\\times ?3\}'
+use = 'I for the identity (a subscript only when the size is not 3, as in I_2)'
+where = ['chapters', 'skills', 'notebooks', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '°'
+use = '^\circ inside math'
+where = ['chapters', 'skills', 'notebooks', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '(?m)^#{2,4} [^\n{]*\$'
+use = 'no math in section headings'
+where = ['chapters']
+
+[[rule]]
+pattern = '\(\[\]\(#eq[^)]*\)\)'
+use = 'an equation reference without extra parentheses: it already renders as (6.2)'
+where = ['chapters']
+
+[[rule]]
+pattern = '(Chapter|Section|Figure|Table|Theorem|Definition|Proposition|Example|Exercise|Appendix) \[\]\(#'
+use = 'the bare reference [](#label): it already carries its name'
+where = ['chapters']
+
+# ---------------------------------- notation in notebooks and skills (plain LaTeX)
+
+[[rule]]
+pattern = '\\(SO|SE|R|T|tr|quat|ddt|dd|so|se|Ad|ad)(?![A-Za-z])'
+use = 'plain LaTeX outside the book: \mathrm{SO}(3), \mathbb{R}, ^\top, \operatorname{tr}'
+where = ['notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\^T\b|\^\{T\}|\^\\intercal'
+use = '^\top for the transpose'
+where = ['notebooks', 'skills', 'figures', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\$SO\(3\)|\$SE\(3\)| SO\(3\)\$'
+use = '\mathrm{SO}(3) in math'
+where = ['notebooks', 'skills', 'case_studies']
+
+# ------------------------------------------------- notation, everywhere
+
+[[rule]]
+pattern = '\\mathbb\{S\}|\\mathcal\{S\}\^|\\mathsf\{S\}\^|\\mathbf\{S\}\^'
+use = 'S^2, S^1, S^3 in plain italic'
+math = true
+
+[[rule]]
+pattern = '\\hat\{?\\(eta|xi|zeta|chi)\b|\\hat\{?\\Omega\}?\^\\vee|R(_[dk])?(\\[,;])?\s*\\hat\{?\\(Omega|omega)\b|\\hat\{?\\(Omega|omega)\}?(\\[,;])?\s*(R|q)\b|\\hat\{?\\(Omega|omega)\}?\s*\\in|\\widehat|\]_\{?\\times|\^\{?\\times\}?|\\operatorname\{skew\}|\\mathrm\{skew\}|\^\{\\wedge\}\^|\\wedge\}'
+use = 'the postfix hat map x^\wedge (and x^\vee for its inverse)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\\varepsilon'
+use = '\epsilon'
+
+[[rule]]
+pattern = '\\lVert|\\rVert|\\Vert|\\left\\\||\\lvert|\\rvert'
+use = '\|x\| for a norm and |x| for an absolute value'
+math = true
+allow = ['\rVert$ |', '\rVert^2$ |']
+
+[[rule]]
+pattern = '\\langle|\\rangle|\\bullet'
+use = 'a \cdot b for the dot product'
+math = true
+
+[[rule]]
+pattern = '\\mathbf\{|\\boldsymbol|\\bm\{|\\vec\{|\\vec '
+use = 'plain italic symbols: vectors and matrices are not bold'
+math = true
+allow = ['\mathbf{1}']
+
+[[rule]]
+pattern = '\\(operatorname|mathrm|text)\{(expm|Exp|Log|logm)\}'
+use = '\exp and \log'
+math = true
+
+[[rule]]
+pattern = '\\(operatorname|mathrm|text)\{(Tr|trace|Trace)\}|\\text\{tr\}|\\mathrm\{tr\}'
+use = '\tr (chapters) or \operatorname{tr} (notebooks, skills)'
+math = true
+
+[[rule]]
+pattern = '\\(mathrm|text)\{(sgn|sign|diag|rank)\}|\\operatorname\{sign\}'
+use = '\operatorname{sgn}, \operatorname{diag}, \operatorname{rank}'
+math = true
+
+[[rule]]
+pattern = '\\cdot ?10\^|\\cdot ?10\{'
+use = '\times10^{n} for powers of ten'
+math = true
+
+# ------------------------------------------------- symbols and conventions
+
+[[rule]]
+pattern = '_\{?\\?(text|mathrm|rm)?\{?(ref|des|cmd|sp|goal)\b|\^\{?\*\}?|\^\{?\\star\}?|\\bar\{?[RqxΩ]|\\bar\{?\\(Omega|omega)'
+use = 'the subscript d for desired quantities (R_d, q_d, \Omega_d)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\\dot ?R\s*=\s*\\(Omega|omega)\^\\wedge\s*R\b(?!\\,\\Omega)'
+use = '\dot R = R\,\Omega^\wedge with \Omega in the body frame'
+math = true
+allow = ['\dot R = R\,\Omega^\wedge = \omega^\wedge R', '\dot R = \omega^\wedge R$ and $\delta R = \sigma^\wedge R']
+
+[[rule]]
+pattern = '\\dot ?q(_d)?\s*=\s*q(_d)?\s*\\times|\\delta ?q\s*=\s*q(_d)?\s*\\times|e_q\s*=\s*q\s*\\times\s*q_d|\\delta ?R\s*=\s*\\eta\^\\wedge'
+use = '\dot q = \omega \times q, \delta q = \xi \times q, e_q = q_d \times q, \delta R = R\,\eta^\wedge'
+math = true
+
+[[rule]]
+pattern = '\\delta ?\\omega\s*=\s*\\dot ?\\xi\s*-\s*\\omega'
+use = '\delta\omega = \dot\xi - 2\,\omega\times\xi, the full variation on the sphere'
+math = true
+allow = ['The trap is']
+
+[[rule]]
+pattern = '\\eta\s*=\s*\(\\psi|E\([^)$]*\)\\,\\dot ?\\eta|\\eta\s*-\s*\\eta_d|K_d ?\\dot ?\\eta'
+use = '\Theta = (\psi, \theta, \phi) for the Euler angles; \eta is the variation on SO(3)'
+math = true
+
+[[rule]]
+pattern = '(\\theta|\\pi)\s*(\\[,;]\s*)?u\b|\bu\^\\wedge|\\;\s*u\b|about (unit )?axis \$u\$|unit axis \$u\$'
+use = 'a for the unit rotation axis (u is the input)'
+where = ['chapters', 'figures', 'notebooks', 'skills', 'case_studies']
+
+[[rule]]
+pattern = '\\psi\s*=\s*\\log|\\ad_\{[^}]*\}\\?,?\s*\\psi|\\exp\(\\psi|\\psi\\T ?P'
+use = '\chi for the logarithm of the left-invariant error (\psi is the yaw angle)'
+math = true
+
+[[rule]]
+pattern = '\\xi\s*=\s*\(V|\\xi_d\b|\\ad_\{\\xi|\\dot ?g\b|\\Ad_\{?g\b|g\\,\\xi|X\\,\\xi\^\\wedge'
+use = '\zeta = (V, \Omega) for a twist or body velocity on a group, X for the group element (\xi is the variation on S^2, g is gravity)'
+math = true
+
+[[rule]]
+pattern = '\(\\Omega,\s*V\)|\(\\omega,\s*v\)\s*\\in\s*\\R\^6'
+use = 'twists ordered (V, \Omega), linear part first'
+math = true
+
+[[rule]]
+pattern = 'P_T\b|s\(T\)|P\(T\)|\\int_0\^T\b|\\int_0\^\{T\}|T\s*=\s*N ?h|x\(T\)|\[0,\s*T\]'
+use = 't_f for the final time (T is the cable tension)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\\tr\\?!?\\?(big|Big)?\(G\b|G\\?,?\s*R_d\\T|R_d\\?,?\s*G\b|\bg_[123]\b|\\operatorname\{diag\}\(g_|G = \\tfrac12'
+use = 'D = diag(d_1, d_2, d_3) for the weight of the attitude error function (G is the input matrix, g is gravity)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = 'T_xM\b|T_x ?M\b|\\in M\b|\bM\s*=\s*\\\{'
+use = '\mathcal{M} for a generic manifold (M is the mass matrix)'
+where = ['chapters']
+math = true
+
+[[rule]]
+pattern = 'M_\{k ?\+ ?1\}|M_k\b|M_0\s*=\s*B|M_1\s*=|dM_k'
+use = '\Gamma_k for the matrices of the controllability rank test (M is the mass matrix)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\bN\\T|N\^\\top|\bN\^T\b|N = blkdiag'
+use = 'Z for a basis of the constraint subspace (N counts time steps)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\\omega\\?,?\s*J\s*q|\\exp\(\\theta\\?,?\s*J\)|\\omega ?J\\\}'
+use = '\Lambda for the quarter turn of the plane (J is the inertia matrix)'
+where = ['chapters', 'figures', 'notebooks', 'case_studies']
+
+[[rule]]
+pattern = '\\rho_[ry]\b|\\rho_\{(r|y|tilt|yaw)\}'
+use = '\theta_{\text{tilt}}, \theta_{\text{yaw}} (\rho is the vector to the center of mass)'
+math = true
+
+[[rule]]
+pattern = '(?<!E_)\\ell\b|\bL_c\b|\bl_c\b|L_\{?\\?(text|mathrm)?\{?(cable|rod)'
+use = 'l for a length (L is the Lagrangian)'
+math = true
+
+[[rule]]
+pattern = '\b[xm]_\{?\\?(text|mathrm)?\{?(load|quad|payload)\b|\b[xm]_[lqp]\b'
+use = 'x_L, m_L for the load and x_Q, m_Q for the quadrotor'
+math = true
+
+[[rule]]
+pattern = '\be_[yz]\b|e_\{[xyz]\}|\\hat\{?[xyz]\}?\b|R(_d)?(\\[,;])?\s*e_x\b|\be_x\s*\\times|\\times\s*e_x\b|\(e_x,\s*e_[y2]'
+use = 'e_1, e_2, e_3 for the standard basis (e_x is the position error and e_v the velocity error)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+math = true
+allow = ['\hat R']
+
+[[rule]]
+pattern = '\\tilde\{?\\?(R|q|Omega|omega)\b|\bR_e\b|\\Omega_e\b|\bq_e\b|e_\{?\\dot\{?R|\be_w\b|e_\{\\Omega_d|e_\{\\text\{vel\}\}_'
+use = 'the error names e_R, e_\Omega, e_q, e_\omega, e_{\dot q}'
+math = true
+
+[[rule]]
+pattern = '\b(M_b|M_\{b\}|\\tau_b|u_\\tau|u_f|f_\{?(T|th|thrust)\}?)\b|\\tau_\{?\\?(text|mathrm)?\{?(body|ext)'
+use = '\tau for the body torque, f for the thrust, u for a generic input'
+math = true
+
+[[rule]]
+pattern = 'E\s*=\s*0\b|\\,E\s*=|\\cdot ?E\b|\\top\}\)?E\$|\\T\)\\?,?E\b'
+use = 'E_\xi, E_\eta: a coefficient of a variation always carries its subscript (E alone is the Euler-angle Jacobian)'
+where = ['chapters', 'figures', 'skills']
+math = true
+
+# ------------------------------------------------------------------ terms
+
+[[rule]]
+pattern = '\b(inertial|fixed|spatial|global|earth|lab|ground) frame|inertial velocity|inertial axes'
+use = 'world frame'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'spatial (angular )?velocit'
+use = 'world-frame angular velocity'
+ignore_case = true
+math = false
+allow = ['robotics literature also calls']
+
+[[rule]]
+pattern = 'body[- ]fixed|local frame|vehicle frame|body-frame frame'
+use = 'body frame'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'navigation function|configuration error|error potential|misfit function'
+use = 'error function'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'transported (velocity |angular velocity )?error|transport operator|the transport \$'
+use = 'velocity error; transport map'
+ignore_case = true
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+
+[[rule]]
+pattern = 'infinitesimal variation|velocity deviation|perturbation vector|variation coordinates'
+use = 'variation; linear state'
+ignore_case = true
+where = ['chapters', 'skills', 'figures']
+math = false
+
+[[rule]]
+pattern = 'almost[ -]global(?!ly)\w*\s+(?!stab|asymp|exponential|attract|guarantee|claim|result|statement|theorem|propert|converg|tracking|regulat|behav|control|law\b|barrier|region|domain|basin)\w+|almost global\b|almost-globaly'
+use = 'almost-global (hyphenated, as an adjective before stability, attractiveness, convergence, tracking, control, claim, guarantee, result)'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '\b\d+[- ]degrees?\b(?! of freedom)|flip-over'
+use = 'the ° sign: 90°, half a turn'
+ignore_case = true
+where = ['chapters', 'skills', 'figures']
+math = false
+
+[[rule]]
+pattern = 'coordinate free\b|coordinate-independent|chart-free|co-ordinate'
+use = 'coordinate-free'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '\bEOMs?\b|\bEoMs?\b'
+use = 'equations of motion'
+where = ['chapters', 'skills', 'figures', 'notebooks', 'case_studies']
+math = false
+
+[[rule]]
+pattern = 'set-?point|hold point|\bgoals?\b|commanded attitude|nominal (trajectory|attitude)'
+use = 'target (fixed) or reference (moving); the subscript d stands for desired'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '\bgyros?\b'
+use = 'gyroscope'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'multi-?rotor|multi-copter|quadcopter|quad-rotor|quadrocopter|\bUAVs?\b'
+use = 'quadrotor (four rotors) or multicopter (any number)'
+ignore_case = true
+math = false
+allow = ['quadrotor UAV']
+
+[[rule]]
+pattern = 'slung load|hanging load|tethered load|suspended payload|(?<!cable-)suspended loads?'
+use = 'cable-suspended load'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'logarithmic (error|law|one)|\blog[- ]error|"log:|rotation-vector error'
+use = 'logarithm error'
+ignore_case = true
+where = ['chapters', 'skills', 'figures', 'notebooks', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'restoring action|proportional action|restoring push'
+use = 'restoring torque'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'mass cent(er|re)|cent(er|re) of gravity|\bCoM\b|\bCOM\b'
+use = 'center of mass'
+math = false
+
+[[rule]]
+pattern = '\borientations?\b'
+use = 'attitude (of a body) or direction (of an axis)'
+ignore_case = true
+where = ['chapters', 'skills', 'figures', 'notebooks', 'case_studies']
+math = false
+
+[[rule]]
+pattern = 'non-linear|non-singular|non-zero|multi-body|semi-global|re-orthonormal|time varying\b'
+use = 'nonlinear, nonsingular, nonzero, multibody, time-varying'
+ignore_case = true
+math = false
+allow = ['Flatness and defect of non-linear systems']
+
+[[rule]]
+pattern = 'cross-product|dot-product|right hand side|left hand side|righthand side'
+use = 'cross product, dot product, right-hand side'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'Euler–Lagrange|Runge–Kutta|Newton–Euler|Lagrange–d|Euler–Poincar|Euler Lagrange|Runge Kutta'
+use = "a hyphen in compound names: Euler-Lagrange, Runge-Kutta, Newton-Euler, Lagrange-d'Alembert"
+allow = ['High order Runge–Kutta methods on manifolds']
+
+[[rule]]
+pattern = '—| – '
+use = 'a full stop, a colon or parentheses: no dashes as punctuation'
+where = ['chapters', 'skills', 'figures', 'notebooks', 'case_studies']
+
+[[rule]]
+pattern = '(a|the|this|see the) warning (above|below|block|in|at)\b|caveat box|warning box'
+use = 'Pitfall'
+ignore_case = true
+where = ['chapters', 'skills', 'notebooks', 'case_studies']
+math = false
+
+[[rule]]
+pattern = '(the|a|an) (later|earlier|previous|next|following) chapter\b|as Chapter \d+ (shows|showed|explains)|as we saw earlier|as shown (earlier|later|above|below)\b'
+use = 'a precise cross-reference [](#label)'
+ignore_case = true
+where = ['chapters']
+math = false
+
+[[rule]]
+pattern = '\bet al\b(?!\.)|\bet\. al\b|\bet\.al\b|and co-?authors|and colleagues|and coworkers'
+use = 'et al.'
+ignore_case = true
+where = ['chapters', 'skills', 'notebooks', 'case_studies']
+math = false
+
+[[rule]]
+pattern = '[Rr]eaction[- ]mass biped|Reaction mass Biped|3-D\b|3d pendulum|three-dimensional pendulum'
+use = 'Reaction Mass Biped; 3D pendulum'
+math = false
+
+[[rule]]
+pattern = '\bN m\b|\bN s\b|\bNm\b|\bN-m\b|\bkg m\b|kg m\^2|kg-m|rad/sec|rad s\^|deg/s\b|m/s\^2|m/s2\b|\\text\{N\\,[ms]\}|\\text\{N\\cdot'
+use = 'units as N·m, N·s, kg·m², rad/s, m/s², s⁻¹'
+where = ['chapters', 'skills', 'figures', 'notebooks', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\d %(?![\w(])'
+use = 'no space before the percent sign: 1%'
+where = ['chapters', 'skills', 'figures']
+math = false
+
+[[rule]]
+pattern = '\b(Claude|ChatGPT|GPT-\d|LLM|language model|AI-generated|generated by AI)\b|modelled on the layout|Tufte'
+use = 'nothing: the book never says how it was produced'
+where = ['chapters', 'skills', 'figures', 'notebooks', 'verify', 'case_studies']
+
+# ------------------------------------- code names in notebooks, figures, skills
+
+[[rule]]
+pattern = '\bexp_so3\b|\bso3_exp\b|\bexpm3\b|\bhat_map\b|\bvee_map\b|\bunhat\b|\bskew\('
+use = 'hat, vee, expm_so3, log_so3'
+where = ['notebooks', 'figures', 'skills', 'verify', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\be_Om\b|\be_om\b|\beOmega\b|\beR\b|\be_W\b|\be_w\b'
+use = 'e_R, e_Omega, e_q, e_omega'
+where = ['notebooks', 'figures', 'skills', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\bPsi\(|\bpsi_R\b|\bPsiR\b|\bPsi_SO3\b'
+use = 'Psi_R, Psi_q'
+where = ['notebooks', 'figures', 'skills', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\b(R|q|Omega|omega)_?(des|ref|star|goal)\b(?!\()'
+use = 'Rd, qd, Omegad, omegad'
+where = ['notebooks', 'figures', 'skills', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'def e_R\((Rd|R_d),|def e_q\((qd|q_d),|def Psi_R\((Rd|R_d),|def Psi_q\((qd|q_d),|def e_Omega\((Rd|R_d),'
+use = 'the actual configuration first, the desired one second: e_R(R, Rd)'
+where = ['notebooks', 'figures', 'skills', 'verify', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'Exercise starters|Exercises to start from here|Starting points for exercises'
+use = 'Starting points for the exercises'
+where = ['notebooks']
+
+[[rule]]
+pattern = '^# # Chapter \d+\.'
+use = '# Chapter N: Title (a colon, and the chapter title exactly)'
+where = ['notebooks']
+
+[[rule]]
+pattern = 'fontfamily\s*=\s*"(?!Source Sans 3)'
+use = 'fontfamily="Source Sans 3" for words in figures'
+where = ['figures']
+
+[[rule]]
+pattern = '''color\s*=\s*["'](?!none)|\btab:[a-z]+|["']C[0-9]["']'''
+use = 'the palette constants of tools/figkit.py (INK, INDIGO, TERRACOTTA, TEAL, MUTED)'
+where = ['figures']
+
+[[rule]]
+pattern = '\bG Rd\^T|Rd G\)|\bg[123]\b|G = diag|G = I/2|`G`'
+use = 'D = diag(d1, d2, d3) for the weight of the attitude error function'
+where = ['skills', 'notebooks', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\bP\(T\)|\bM\(q\)\\?,? ?a\b|\bM a \+ b'
+use = 't_f for the final time; M v_dot + b + G u = 0 for the standard form'
+where = ['skills', 'notebooks', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\b(inertial|spatial) (frame|velocity)|set-?point|hold point|\bgyros?\b|\d+ degrees?\b(?! of freedom)|restoring action|log(arithmic)? error'
+use = 'the preferred terms of Appendix A, also inside code spans'
+where = ['skills']
+ignore_case = true
+code = true
+
+[[rule]]
+pattern = '\b(R|q|Omega|omega)_d\b|\bW_d\b|\bw_d\b'
+use = 'Rd, qd, Omegad, omegad in code and code-style formulas (the subscript form R_d belongs to math)'
+where = ['skills', 'notebooks', 'case_studies']
+code = true
+math = false
+
+[[rule]]
+pattern = '\b(R|q|x|X|Omega|omega|eta|xi|theta)d?dot\b|\b(R|q|x|s|P|eta|xi|Omega|omega)\x27(?=[ `)])'
+use = 'R_dot, q_dot, Omega_dot for time derivatives in code-style formulas'
+where = ['skills']
+allow = ["slot 'q' must"]
+code = true
+
+# ---------------------------------------------------------------------------
+# Chapters 6, 8 and 13: tracking, adaptation, safety, optimization.
+# One letter, one meaning. See the tables of Appendix A.
+
+[[rule]]
+pattern = '\\mu_\{?\\?(min|max)|\\lambda_[mM]\b|\\sigma_\{?\\?(min|max)\}?\(|\\lambda_\{?\\?(text|mathrm)\{(min|max)'
+use = '\lambda_{\min}(\cdot), \lambda_{\max}(\cdot) for the smallest and largest eigenvalue; J_{\min}, J_{\max} for those of the inertia'
+math = true
+
+[[rule]]
+pattern = '\beigmin\b|\beigmax\b|\bmu_min\b|\bmu_max\b|\blam_m\b|\blam_M\b|lambda_m\b|lambda_M\b'
+use = 'lambda_min(W3), lambda_max(W2), J_min, J_max'
+where = ['skills', 'notebooks', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'z(\\T|\^\\top) ?W ?z|\bW\s*=\s*\\begin|\\lambda_\{\\min\}\(W\)|\bV_1\b|\bV_2\b|\\delta_V\b|\\dot V \+ \\beta|\\beta\\?,?\s*V\b'
+use = 'V_0 (no cross term), V (with it), W_1, W_2, W_3 for the bounds, \gamma for the rate, V_\infty for a residual level'
+math = true
+
+[[rule]]
+pattern = '\\gamma\\?,?\s*\\(operatorname|mathrm)\{Proj\}|\\tfrac\{1\}\{2\\gamma\}|1\s*/\s*\\gamma|\\gamma\s*=\s*\d{3,}|adaptation gain\*{0,2} \$\\gamma|\\propto 1/\\gamma|γ\s*=\s*\d'
+use = 'k_\Delta for the adaptation gain (\gamma is the guaranteed exponential rate)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+
+[[rule]]
+pattern = '\\kappa\\?,?\s*(\\big)?\(\\hat\\Delta|cutoff\*{0,2}\s+\$?\\?κ?kappa|\\kappa\s*=\s*[\d.]+\$? rad/s|cutoff\s+κ|\bkappa\b[^\n]{0,30}rad/s|κ\s+\(rad/s\)'
+use = 'k_f for the cutoff of the filter (\kappa is the factor that speeds up an inner loop)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '`gamma`|\bGAMMA\b|\bKAPPA\b|gamma\s*=\s*\d{3,}|`kappa`: from|`kappa` (if|spends)|(cutoff|filter|margin)[^\n]{0,60}`kappa`|`kappa`[^\n]{0,60}(cutoff|margin|rad/s)|kappa = \d+ rad'
+use = 'k_Delta for the adaptation gain and k_f for the cutoff, in code as in the text'
+where = ['skills']
+code = true
+
+[[rule]]
+pattern = '\\mu_p\b|\\mu\s*\+\s*\\Delta|\}_\{\\mu\}|\\mu\s*=\s*-\s*k_R|\\tau\s*=\s*\\mu\b|\\mu\s*=\s*J_0|\)\s*\\mu\b|except `mu`|as `mu`|\bmu_p\b'
+use = '\tau_{\text{fb}} for the feedback part of the torque (\mu is the barrier parameter)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\\dot e_v[^$\n]*\+\s*\\Delta|\\Delta\s*=\s*f\\?,?\s*R|\\\|\\Delta\\\|\s*(=|\\le)\s*\\\|F_d|e_v \+ Delta\b|\|Delta\| (=|<=) \|F_d\|'
+use = 'e_F for the force error f R e_3 - F_d (\Delta is the lumped uncertainty)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'U\s*(\\[,;])?\s*\\(hat|tilde)\\Delta|U(\\T|\^\\top)\s*\\big|\bU\s*=\s*J_0|U\\hat|U\\tilde'
+use = '\Xi for the matrix J_0 R_p^\top R J_0^{-1} R^\top R_p (U is the stack of input corrections)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+math = true
+
+[[rule]]
+pattern = 'U(\\T|\^\\top)\s*H|H\^\{-1\}\s*F|\(F\s*s_0\)|\\mathcal\{H\}|\bH_d\b|H\^-1 F|U\^T H U|`Hc`|`H` is positive|\bF s_0\b|\(F s_0\)'
+use = 'P_{UU}, P_{Us} for the matrices of the quadratic program, A_{22} for the velocity block, \operatorname{Hess} for a Hessian (H is the barrier function, F a force)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\\rho_k\b|\\rho_\{k|\brho_k\b|dexp_inv\(-?rho'
+use = 'r_k for the value of a constraint (\rho is the vector to the center of mass)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'A_r(\\T|\^\\top|\^T)\s*y\b|A_c(\\T|\^\\top|\^T)\s*z\b|w_i\s*z_i|diag\}?\(z\s*/\s*w\)|y\s*\\cdot\s*r\b|z\s*\\cdot\s*c\b|y \. r \+ z \. c|multipliers? `?\$?y\b'
+use = '\nu_r, \nu_c for the multipliers of the equality and inequality constraints (z is the vector of error norms)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\\nabla|\\partial\^2 ?\\Phi|\\(mathrm|text)\{(Proj|grad|Hess|dexp)\}'
+use = '\operatorname{grad}, \operatorname{Hess}, \operatorname{Proj}, \operatorname{dexp}'
+math = true
+
+[[rule]]
+pattern = '\bK_[pd]\s*=\s*\d|-\s*K_p\\?,?\s*e_R|\{-K_p\}\\?,?\s*e_R|K_d\\?,?\s*e_\\Omega|K_d\\?,?\s*\\Omega\b|-K_p\\Theta|-\s*K_p \\Theta'
+use = 'k_p, k_d for scalar gains (K is a gain matrix)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\\theta_c\b|\btheta_c\b|\\theta_\{?\\?(text|mathrm)?\{?(cone|lim|limit|safe)\b|q_\{?\\?(text|mathrm)?\{?(axis|cone|sun)\b'
+use = 'q_c for the axis of a cone and \theta_{\max} for its half-angle'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '(?<![A-Za-z_\\])f\s*\(\\hat\\Delta\)|\\!f\b|\bf > 0 \\text|\\,f \\ |convexity of \$f\$'
+use = 'f_\Delta for the function that defines the projection ball (f is the thrust)'
+where = ['chapters', 'notebooks', 'skills', 'case_studies']
+math = true
+
+[[rule]]
+pattern = '\$\\mathcal\{L\}_1\$(?! norm)|L1[- ]adaptation|L1-adaptive|\$L_1\$|L_1 adaptive|\bL1 control\b|ℒ'
+use = 'L1 adaptive control in prose and labels (the script letter is kept for the \mathcal{L}_1 norm)'
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+
+[[rule]]
+pattern = 'feed-forward|feed forward|sub-level|sublevel-set|cross-term|time-step\b|timesteps?\b|warmstart|hot[- ]start'
+use = 'feedforward, sublevel set, cross term, time step, warm start'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'sample time|sampling time|sample period|sampling interval|sample interval|control period|controller periods?'
+use = 'sampling period (it is the time step h)'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '(nominal|baseline) (controller|control law|law|tracker|loop)|plain (PD|tracker|law)\b|geometric PD"'
+use = 'plain controller for the tracking law without adaptation or a safety filter'
+ignore_case = true
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+
+[[rule]]
+pattern = 'reference model'
+use = 'state predictor (reference is kept for the desired motion)'
+ignore_case = true
+math = false
+allow = ['calls it the reference model', 'call it the reference model']
+
+[[rule]]
+pattern = 'control barrier function|\bCBFs?\b(?!-CLF)|barrier certificate|safe region|safety set|unsafe set|\bCLF-CBF|\bCBF-QP\b|(?<!CBF-)\bCLF-QP\b'
+use = 'barrier function, safe set, safety filter, CBF-CLF-QP'
+ignore_case = true
+math = false
+allow = ['calls it a control barrier function', '](http']
+
+[[rule]]
+pattern = 'interior point\b|interior-point(?! method| methods|-point)\b|model-predictive|quadratic programme'
+use = 'interior-point method, model predictive control, quadratic program'
+ignore_case = true
+where = ['chapters', 'notebooks', 'skills', 'figures', 'case_studies']
+allow = ['](http', 'interior-point filter line-search']
+
+[[rule]]
+pattern = 'replace the constraint by a \*\*barrier\*\*|log barrier|log-barrier|barrier term'
+use = 'logarithmic barrier for the term in a cost (a barrier function is a constraint on the motion)'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '^# ## (?!\d+\. |Starting points for the exercises$)|^# ## \d+\. Starting points'
+use = 'numbered section titles in a notebook: ## 3. Title'
+where = ['notebooks']
+
+[[rule]]
+pattern = '\bk_Om\b|\bk_om\b|\bkOm\b|\bk_W\b|\bkq\b|\bkR\b'
+use = 'k_R, k_Omega, k_q, k_omega for gains in code'
+where = ['notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'OCHRE(?!,)'
+use = 'ink, indigo, terracotta and teal: a figure has at most three colored roles'
+where = ['figures']
+
+# ---------------------------------------------------------------------------
+# Chapters 10, 12, 14, 16 and the robot library: flatness, discrete mechanics,
+# estimation. See the list of decisions at the top of this file.
+
+[[rule]]
+pattern = '\\(omega|Omega)_\{\\hat|_\{?\\?(text|mathrm)\{(est|true|gt|meas|truth)\}|\\check\b|\^\{?\\?(text|mathrm)\{(est|true)\}'
+use = 'a hat for an estimate (\hat\omega, \hat q, \hat X) and no mark for the truth'
+math = true
+
+[[rule]]
+pattern = '\\eta_[vxp]\b|\\eta_\{[vxp]\}|\\xi_[Rvp]\b|\\xi_\{[Rvp]\}'
+use = 'the parts of an invariant error written out (\hat v - E_R v) and (\chi_v, \chi_x, \chi_R) for its logarithm (\eta and \xi are the variations on SO(3) and S^2)'
+math = true
+allow = ['The paper uses']
+
+[[rule]]
+pattern = '\bE_C\b|\bE_\{C\}|`s2_E`|\bE_C\('
+use = '\Pi_C (in code Pi_C) for the projector onto ker C: \Pi is the letter for a projection'
+code = true
+
+[[rule]]
+pattern = '-\s*p\^\\wedge|\(p,\s*0,\s*1\)|\(p\s*-\s*x\)|landmark at (a known position )?\$p\$|- hat\(p\)|\(p - x\)|\+ \\hat x - p\b'
+use = 'x_m for the position of a landmark (p is the discrete momentum)'
+code = true
+
+[[rule]]
+pattern = '\bL_d\b|\bS_d\b|L_\{d\}|S_\{d\}|L\^d\b|\bLd\('
+use = 'L_h, S_h for the discrete Lagrangian and the action sum (the subscript d means desired)'
+code = true
+allow = ['The literature writes $L_d$']
+
+[[rule]]
+pattern = '\bF_k\b|F_\{k\b|\bF_\{k[+-]1\}|\\Upsilon_k\s*=\s*R_\{k\+1\}|F_k = R_k'
+use = '\Upsilon_k = R_k^T R_{k+1} for the step rotation (F is a force)'
+code = true
+allow = ['where the literature writes $F_k$']
+
+[[rule]]
+pattern = '\b(grid|mesh|collocation|shooting|time) nodes?\b|\bnodes? (of|in|on) the (grid|mesh|transcription|horizon|trajectory)|\b(over|with|at|to) \d+ nodes\b|\bnode points?\b|knot points?\b|mesh points?\b'
+use = 'knot for a grid point of a transcription'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'discrete action\b(?! sum)|action sums? S_d|relative rotation F|discrete velocit|leap-?frog|velocity[- ]Verlet|Stormer|St[öo]rmer–Verlet|Hermite–Simpson|Hermite Simpson|trapezoid collocation|trapezoidal-collocation'
+use = 'action sum, step rotation, step velocity, Störmer-Verlet, Hermite-Simpson collocation, trapezoidal collocation'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'variational[- ]integrat(or|ion) on Lie groups?\b|\bLGVIs?\b|Lie-group variational'
+use = 'Lie group variational integrator, spelled out'
+math = false
+allow = ['](http']
+
+[[rule]]
+pattern = '(desired|commanded|reference|target) yaw\b|\byaw (angle )?\$\\psi(_d)?\$|\byaw_d\b|\byawd\b|heading error of yaw'
+use = 'heading for the angle \psi of eq6-Rd (the yaw is the first Euler angle, and equals the heading only when the roll or the pitch is zero)'
+ignore_case = true
+
+[[rule]]
+pattern = 'flat coordinates?\b|flatness output|flat-output\b(?! (collocation|space))|linearizing outputs?|endogenous (feedback|transformation)|min-snap|minimum snap (curve|trajector|spline)|way-points?\b|via[- ]points?\b'
+use = 'flat output, flat map, minimum-snap curve, waypoint'
+ignore_case = true
+math = false
+allow = ['](http']
+
+[[rule]]
+pattern = 'differentially-flat'
+use = 'differentially flat (no hyphen)'
+ignore_case = true
+math = false
+allow = ['a differentially-flat hybrid system']
+
+[[rule]]
+pattern = '\\phi\^\{\(|\\phi\(t\)|flat output\*{0,2} \$\\phi\b|\by\^\{\(k\)\}|\\sigma\^\{\(|x\^\{\[\d\]\}|\\dddot|\\ddddot'
+use = '\varphi for a flat output (\phi is the roll) and x^{(k)} for the k-th derivative'
+math = true
+
+[[rule]]
+pattern = 'ground[- ]truth|true (pose|attitude) and the estimate of it|\bEKFs?\b|\bIEKF\b|\bInEKF\b|\bUKF\b(?!-M)|\bMEKF\b'
+use = 'truth; extended Kalman filter and invariant extended Kalman filter spelled out in chapters and notebooks'
+where = ['chapters', 'notebooks', 'figures']
+math = false
+allow = ['](http', 'ECC2019_VariationEKF', 'The skills abbreviate it']
+
+[[rule]]
+pattern = '\bIEKF\b|\bRIEKF\b|\bLIEKF\b|R-InEKF|ground[- ]truth'
+use = 'InEKF (skills only), truth'
+where = ['skills', 'case_studies']
+code = true
+
+[[rule]]
+pattern = '\baccel\b|\bgyro[- ]bias|proper acceleration|measurement sample|\bIMUs\b|inertial sensor\b'
+use = 'accelerometer, bias of the gyroscope, specific force, reading, IMU'
+where = ['chapters', 'skills', 'notebooks', 'case_studies']
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = 'P_\{?k\s*\|\s*k|\\Sigma_\{?k\s*\|\s*k|P\^[-+]\s|P_k\^[-+]|\bK_k\b|H_k\b|H\\,P\\,H|H\s*P\s*H\\T|\\mathcal\{K\}|Q_k\b|\bR_k\s*=\s*\\operatorname\{cov|\\operatorname\{cov\}|\\mathrm\{cov\}|\\mathrm\{Cov\}'
+use = '\Sigma for a covariance, \Sigma_n and \Sigma_y for the noise, \tilde K for the Kalman gain, C_y for the measurement matrix (P, Q, K, H are taken)'
+where = ['chapters', 'notebooks', 'skills']
+math = true
+
+[[rule]]
+pattern = '\by_tilde\b|\bK_tilde\b|\b[RXxvq]_hat\b|\bomega_hat\b|\bOmega_hat\b|\bJ_bar\b|\bp_bar\b|\b(R|X|q)_est\b|\b(R|X|q)_true\b(?!\()'
+use = 'a hat, tilde or bar appended without an underscore in code names: Rhat, Xhat, qhat, omegahat, ytilde, Ktilde, Jbar, pbar'
+where = ['notebooks', 'skills', 'figures', 'case_studies']
+code = true
+
+[[rule]]
+pattern = 'point[- ]mass payload|payload throw|payload on (a|one|its) cable|cable-suspended payload'
+use = 'cable-suspended load for a point mass on a cable (a payload is a rigid body carried by several quadrotors)'
+ignore_case = true
+math = false
+
+[[rule]]
+pattern = '\d ?deg\b(?!/)|\bdegs\b'
+use = 'the ° sign'
+where = ['chapters', 'skills', 'case_studies']
+math = false
+code = true
+
+[[rule]]
+pattern = "\\b[Rq]'\\s?[RJeq]|\\be3'|e_i'|q_i'"
+use = "R^T (or R.T in code) for a transpose in a docstring or a code-style formula, never a prime"
+where = ['case_studies', 'skills']
+code = true
+
+[[rule]]
+pattern = '(?<![A-Za-z_])(thirteen|13|fourteen|14)[- ](degrees of freedom|DOF)[^.\n]{0,80}Reaction Mass Biped(?![^.\n]*(stance|swing))'
+use = 'Reaction Mass Biped: a configuration manifold of dimension fourteen, stance dynamics of thirteen (say which)'
+math = false
+
+[[rule]]
+pattern = '\bChapters? \d+\b'
+use = 'a cross-reference [](#ch-...) or, better, a section or equation label'
+where = ['chapters']
+math = false
+allow = ['Chapter 5 of his thesis', 'summary:']
+
+[[rule]]
+pattern = '\([A-Z][^()0-9\n$]*[a-z.] [12]\d{3}[,)]'
+use = 'a comma before the year of a citation in parentheses: (Teng et al., 2026)'
+where = ['chapters']
+math = false

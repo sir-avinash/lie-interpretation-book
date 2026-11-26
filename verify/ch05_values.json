@@ -1,0 +1,68 @@
+{
+  "geomech_version": "1.1.0",
+  "pendulum_stage_nodes": {
+    "dL": 31,
+    "dW": 3,
+    "dS": 34,
+    "manifold_rules": 46,
+    "simplify": 27,
+    "ibp.prepare": 27,
+    "ibp.collect[\\frac{d}{dt}(\\xi_{q})]": 27,
+    "ibp.integrate[\\frac{d}{dt}(\\xi_{q})]": 29,
+    "ibp.simplify[\\frac{d}{dt}(\\xi_{q})]": 29,
+    "ibp": 29,
+    "expand": 29,
+    "raw[\\xi_{q}]": 27,
+    "equation[\\xi_{q}]": 23
+  },
+  "pendulum_rule_firings": 44,
+  "pendulum_check_eom": 1.9090929052101823e-08,
+  "quadload_check_eom": 4.059809332153562e-08,
+  "quadload_check_eom_20_seeds": [
+    1.3665423480875025e-08,
+    8.992269807586331e-08
+  ],
+  "hand_equation_sign_-1_20_seeds": [
+    1.3665423480875025e-08,
+    8.992269807586331e-08
+  ],
+  "hand_equation_sign_+1_20_seeds": [
+    0.2968163055421533,
+    2.767089609032899
+  ],
+  "planted_sign_error_check_eom": 1.9027858460945652,
+  "sign_error_force_at_2radps_N": 12.000000000000002,
+  "sign_error_accel_at_2radps": 6.666666666666668,
+  "load_weight_N": 2.943,
+  "generated_module_lines": 311,
+  "free_energy_drift": 1.0380974234981515e-12,
+  "free_constraint_drift": 2.3669954885008337e-13,
+  "free_initial_energy_J": 10.598961151611743,
+  "forced_energy_range_J": 0.7534965790828263,
+  "forced_modified_energy_drift_J": 7.0112804451127886e-12,
+  "forced_com_line_error_m": 1.327954413099519e-10,
+  "forced_quad_wobble_m": 0.1666666666666675,
+  "forced_load_radius_m": 0.8333333333333367,
+  "energy_drift_vs_dt": {
+    "0.04": 1.0360576642953057e-08,
+    "0.02": 6.474694412236907e-10,
+    "0.01": 4.050322963138494e-11
+  },
+  "wu_comparison_max_diff": 2.4868995751603507e-14,
+  "sign_flight_split_at_3p3s_m": 1.9011481157675119,
+  "sign_flight_wrong_load_height_at_3p3s_m": -2.0637562164949936,
+  "sign_flight_peak_invented_force_N": 7.642594950746056,
+  "chain_check_eom": {
+    "1": 6.2314291732746e-09,
+    "2": 4.9374584443931414e-08,
+    "3": 3.203552817684851e-08,
+    "4": 6.362833548612062e-08,
+    "5": 1.037956189378504e-07,
+    "6": 1.1306899280509194e-07
+  },
+  "chain4_energy_drift": 2.594571918423938e-08,
+  "chain4_constraint_drift": 6.439293542825908e-15,
+  "multi_quad_rigid_check_eom": 8.978153941974191e-08,
+  "multi_quad_rigid_equations": 8,
+  "catalog_size": 30
+}

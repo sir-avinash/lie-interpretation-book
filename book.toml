@@ -1,0 +1,79 @@
+title = "A Manifold Introduction to Robotics and Control"
+subtitle = "Coordinate-free modeling, control, estimation and optimization"
+repo = "sir-avinash/lie-interpretation-book"
+index = "chapters/index.md"
+
+[macros]
+"\\R" = "\\mathbb{R}"
+"\\SO" = "\\mathrm{SO}"
+"\\so" = "\\mathfrak{so}"
+"\\SE" = "\\mathrm{SE}"
+"\\se" = "\\mathfrak{se}"
+"\\T" = "^{\\top}"
+"\\tr" = "\\operatorname{tr}"
+"\\quat" = "\\mathfrak{q}"
+"\\Ad" = "\\operatorname{Ad}"
+"\\ad" = "\\operatorname{ad}"
+"\\dd" = "\\mathrm{d}"
+"\\ddt" = "\\frac{\\mathrm{d}}{\\mathrm{d}t}"
+
+[[part]]
+title = "I. Foundations"
+chapter = [
+  { num = 1, file = "chapters/ch01_why_coordinate_free.md", title = "Why coordinate-free?" },
+  { num = 2, file = "chapters/ch02_core_manifolds.md", title = "The manifolds robots live on" },
+  { num = 3, file = "chapters/ch03_variations_errors_transport.md", title = "Variations, errors and transport" },
+]
+
+[[part]]
+title = "II. Modeling"
+chapter = [
+  { num = 4, file = "chapters/ch04_coordinate_free_dynamics.md", title = "Dynamics without coordinates" },
+  { num = 5, file = "chapters/ch05_symbolic_derivation_geomech.md", title = "Symbolic derivation" },
+]
+
+[[part]]
+title = "III. Geometric control"
+chapter = [
+  { num = 6, file = "chapters/ch06_tracking_control.md", title = "Tracking control and almost-global stability" },
+  { num = 7, file = "chapters/ch07_variation_linearization_lqr.md", title = "Variation-based linearization and LQR" },
+  { num = 8, file = "chapters/ch08_robust_adaptive_safe.md", title = "Robust, adaptive and safety-critical control" },
+]
+
+[[part]]
+title = "IV. Reduction"
+chapter = [
+  { num = 9, title = "Symmetry, fiber bundles and connections" },
+  { num = 10, id = "ch-flatness", file = "chapters/ch10_differential_flatness.md", title = "Differential flatness" },
+  { num = 11, title = "Hybrid zero dynamics on manifolds" },
+]
+
+[[part]]
+title = "V. Trajectory optimization"
+chapter = [
+  { num = 12, file = "chapters/ch12_variational_integrators.md", title = "Variational integrators and collocation" },
+  { num = 13, file = "chapters/ch13_error_state_mpc.md", title = "Error-state MPC and on-manifold solvers" },
+]
+
+[[part]]
+title = "VI. Estimation and learning"
+chapter = [
+  { num = 14, file = "chapters/ch14_filtering_lie_groups.md", title = "Filtering on Lie groups" },
+  { num = 15, title = "Equivariant learning and residual control" },
+]
+
+[[part]]
+title = "VII. Case studies"
+chapter = [
+  { num = 16, file = "chapters/ch16_case_studies.md", title = "How it all comes together" },
+  { num = 17, id = "ch-case-quadrotor", file = "chapters/ch17_case_quadrotor.md", title = "Case study: a quadrotor, end to end" },
+  { num = 18, id = "ch-case-load", file = "chapters/ch18_case_load.md", title = "Case study: a quadrotor with a cable-suspended load" },
+  { num = 19, id = "ch-case-transport", file = "chapters/ch19_case_transport.md", title = "Case study: carrying a payload together" },
+  { num = 20, id = "ch-case-legged", file = "chapters/ch20_case_legged.md", title = "Case study: legged robots" },
+]
+
+[[part]]
+title = "Reference"
+chapter = [
+  { num = "A", file = "chapters/appA_notation.md", title = "Notation and glossary" },
+]

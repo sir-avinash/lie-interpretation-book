@@ -1,0 +1,312 @@
+{
+  "vehicle": {
+    "m": 4.34,
+    "J_diag": [
+      0.082,
+      0.0845,
+      0.1377
+    ],
+    "k_R": 8.81,
+    "k_Omega": 2.54,
+    "k_x": 69.44,
+    "k_v": 24.304
+  },
+  "poles_per_axis": [
+    [
+      -26.995761931768946,
+      -3.9798478243286155
+    ],
+    [
+      -26.058098584065668,
+      -4.001073013567468
+    ],
+    [
+      -13.81458343733226,
+      -4.631313439937165
+    ]
+  ],
+  "natural_freq_per_axis": [
+    10.365279754557708,
+    10.210796003720072,
+    7.998729020316307
+  ],
+  "damping_ratio_per_axis": [
+    1.4942003732449818,
+    1.4719308654624847,
+    1.1530517429967888
+  ],
+  "slowest_pole_real": -3.9798478243286155,
+  "autonomy_gap": 3.246827251501827e-10,
+  "example_att": {
+    "angle0_deg": 150.0,
+    "Psi0": 1.8660254037844388,
+    "V0_0": 16.464752307340905,
+    "two_kR": 17.62,
+    "Psi_max": 1.8688708634893194,
+    "c_max": 6.172497747812144,
+    "c_best": 0.4567648333380987,
+    "gamma_guaranteed": 0.033991584235136936,
+    "gamma_measured": 8.032950754968917,
+    "overshoot_factor": 1647.7830041277512,
+    "c_lim_W1": 6.172497747812144,
+    "c_lim_W3": 7.918296894202023
+  },
+  "gamma_vs_Psi_max": {
+    "0.1": 0.4924993074391067,
+    "1": 0.2592189353935797,
+    "1.9": 0.02592222313069644,
+    "1.99": 0.002592222640328489,
+    "1.999": 0.0002592222643598468
+  },
+  "half_turn_growth_rates": [
+    3.148480275670977,
+    3.140411568095032,
+    2.9853456208219455
+  ],
+  "half_turn_decade_cost_s": [
+    0.7313322274198903,
+    0.7332112505211505,
+    0.771295985608555
+  ],
+  "weighted_D": [
+    0.75,
+    0.5,
+    0.25
+  ],
+  "weighted_heights": [
+    1.5,
+    2.0,
+    2.5
+  ],
+  "dense_n": 240,
+  "dense_settle_s": {
+    "90deg_max": 0.865,
+    "below_150_max": 1.24,
+    "max": 4.5600000000000005
+  },
+  "linger_e1": {
+    "times_s": [
+      2.34,
+      3.0700000000000003,
+      3.8000000000000003,
+      4.535
+    ],
+    "lambda": 3.148480275670977,
+    "decade_s": 0.7313322274198903
+  },
+  "linger_e3": {
+    "times_s": [
+      2.37,
+      3.14,
+      3.91,
+      4.68
+    ],
+    "lambda": 2.9853456208219455,
+    "decade_s": 0.771295985608555
+  },
+  "linger_log_e1_s": [
+    0.9400000000000001,
+    0.9450000000000001,
+    0.9450000000000001,
+    0.9450000000000001
+  ],
+  "s2_params": {
+    "m": 1.0,
+    "l": 1.0,
+    "k_q": 16.0,
+    "k_omega": 5.6
+  },
+  "s2_omega_d_bound": 0.6882917236212551,
+  "s2_example": {
+    "Psi_max": 1.984807753012208,
+    "gamma_guaranteed": 0.004204329603019214,
+    "c_max": 3.461376821614069
+  },
+  "s2_time_to_5deg_s": {
+    "60": 0.745,
+    "170": 1.965,
+    "179.9": 4.155
+  },
+  "s2_antipode_rate": 2.0826222462934814,
+  "cascade_triangular_gap": 1.133507450297444e-07,
+  "inverted": {
+    "tilt0_deg": 178.00000000000006,
+    "Psi_R0": 1.5526394489680206,
+    "t_Psi_below_1_s": 0.264,
+    "t_tilt_below_90_s": 0.301,
+    "max_drop_m": 0.9357500913268206,
+    "max_e_x_m": 1.5479014128918889,
+    "t_e_x_below_5cm_s": 1.937,
+    "max_thrust_N": 143.91038555996764,
+    "hover_thrust_N": 42.5754,
+    "max_torque_Nm": 18.394051357030342,
+    "e_x_0_m": 0.8774964387392122,
+    "thrust_zero_until_s": 0.202
+  },
+  "feedforward_study": {
+    "1": {
+      "diverged": true,
+      "t_end_s": 14.58,
+      "max_e_x_last_5s_m": null
+    },
+    "0.5": {
+      "diverged": false,
+      "t_end_s": 20.0,
+      "max_e_x_last_5s_m": 0.014046149335536058
+    },
+    "0.25": {
+      "diverged": false,
+      "t_end_s": 20.0,
+      "max_e_x_last_5s_m": 0.0069933912325035805
+    },
+    "exact_1": {
+      "diverged": false,
+      "max_e_x_last_5s_m": 2.8242651444535627e-11
+    }
+  },
+  "slow_inner_exact_e_x_20s": 4.631476978337554e-10,
+  "loop_rates": {
+    "position_wn": 4.0,
+    "position_zeta": 0.7,
+    "attitude_slowest_pole": 3.9798478243286155
+  },
+  "load_params": {
+    "m_Q": 4.34,
+    "m_L": 0.5,
+    "l": 1.0,
+    "k_x": 19.36,
+    "k_v": 13.552,
+    "k_q": 25.0,
+    "k_omega": 7.0
+  },
+  "load_study": {
+    "1": {
+      "converged": false,
+      "t_end_s": 7.365,
+      "e_x_end_m": 19.944929936309116,
+      "swing_end_deg": 84.45652616329068,
+      "t_e_x_below_5cm_s": null,
+      "max_swing_deg": 121.68755782172032,
+      "min_tension_N": 3.5316762319667903
+    },
+    "0.5": {
+      "converged": true,
+      "t_end_s": 12.0,
+      "e_x_end_m": 0.0010563081935702644,
+      "swing_end_deg": 0.09090493801479678,
+      "t_e_x_below_5cm_s": 5.285,
+      "max_swing_deg": 43.68655596576401,
+      "min_tension_N": 4.171443804779525
+    }
+  },
+  "load_loop_rates": {
+    "position_wn": 2.0,
+    "cable_wn": 5.0,
+    "attitude_slowest_pole_eps1": 3.9798478243286155,
+    "attitude_slowest_pole_eps05": 7.959695648657231
+  },
+  "fl_params": {
+    "m": 1.0,
+    "J_diag": [
+      0.1625,
+      0.1625,
+      0.01
+    ],
+    "rho": [
+      0.0,
+      0.0,
+      -0.5
+    ],
+    "k_p": 100.0,
+    "k_d": 20.0
+  },
+  "fl_grid": {
+    "labels": 729,
+    "attitudes": 208,
+    "half_turns": 29,
+    "singular": 16,
+    "rest": {
+      "geo_converged": 179,
+      "euler_converged": 192,
+      "euler_undefined": 16,
+      "geo_stuck_are_half_turns": true,
+      "geo_peak_median": 7.541820490435427,
+      "euler_peak_median": 28.67320344627234,
+      "geo_peak_max": 11.345,
+      "euler_peak_max": 88.67572384078056,
+      "effort_ratio_median": 4.291333358824166,
+      "geo_t5_median": 0.678,
+      "euler_t5_median": 0.518,
+      "geo_t5_max": 0.972,
+      "euler_t5_max": 0.588,
+      "n_both": 164
+    },
+    "moving": {
+      "geo_converged": 205,
+      "euler_converged": 192,
+      "euler_undefined": 16,
+      "geo_stuck_are_half_turns": null,
+      "geo_peak_median": 7.590133038142178,
+      "euler_peak_median": 32.19731797522884,
+      "geo_peak_max": 15.943907335509008,
+      "euler_peak_max": 85.68165419896181,
+      "effort_ratio_median": 4.0991242674932815,
+      "geo_t5_median": 0.728,
+      "euler_t5_median": 0.522,
+      "geo_t5_max": 1.742,
+      "euler_t5_max": 0.588,
+      "n_both": 189
+    }
+  },
+  "fl_late": 3,
+  "fl_near_singularity": {
+    "0": {
+      "euler_Nm": 7.3186617934511835,
+      "geo_Nm": 7.295326331716013,
+      "yaw_rate": 0.6598162824642665
+    },
+    "60": {
+      "euler_Nm": 10.848770194652342,
+      "geo_Nm": 8.544569366754308,
+      "yaw_rate": 1.3196325649285325
+    },
+    "89.9": {
+      "euler_Nm": 69.23402097569716,
+      "geo_Nm": 9.365139354411228,
+      "yaw_rate": 378.047074324228
+    },
+    "89.99": {
+      "euler_Nm": 829.7259804611958,
+      "geo_Nm": 9.364274961473969,
+      "yaw_rate": 3780.4688496739004
+    }
+  },
+  "fl_error_ranges": {
+    "max_norm_e_R": 1.0,
+    "max_norm_Theta": 4.71238898038469
+  },
+  "leg_step": {
+    "step_s": 0.35,
+    "angle_left_deg": {
+      "10": 1.3599177915189573,
+      "60": 11.31650306611363,
+      "150": 99.90795005594917
+    },
+    "wn": 7.385489458759964,
+    "peak_torque_150_Nm": 60.0,
+    "peak_torque_10_Nm": 10.418890660015819
+  },
+  "saturation_settle_s": {
+    "inf": 1.2475,
+    "1": 1.2725,
+    "0.2": 2.99
+  },
+  "trace_vs_log_150deg_s": {
+    "trace": 1.2475,
+    "log": 0.8825000000000001
+  },
+  "peak_torque_demand": {
+    "trace_max_Nm": 8.81,
+    "log_at_179deg_Nm": 27.52366777102538
+  }
+}

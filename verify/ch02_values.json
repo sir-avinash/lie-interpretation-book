@@ -1,0 +1,42 @@
+{
+  "puzzle_cable_length": 1.2213539160508173,
+  "puzzle_steps": 1000,
+  "example_tangent_speed": 0.5,
+  "example_exp_matrix": [
+    [
+      0.5,
+      0.5,
+      0.7071
+    ],
+    [
+      0.5,
+      0.5,
+      -0.7071
+    ],
+    [
+      -0.7071,
+      0.7071,
+      0.0
+    ]
+  ],
+  "book_orders_differ_deg": 119.99999999999999,
+  "commutator_angle_eps_0p1": 0.009991679834633003,
+  "commutator_angle_eps_0p01": 9.999916667986083e-05,
+  "commutator_angle_deg_eps_0p1": 0.5724810847704433,
+  "example_quad_velocity": [
+    1.0,
+    -0.5,
+    0.0
+  ],
+  "drift_euler_orthogonality_10s": 0.15710996780036648,
+  "drift_euler_det_10s": 1.1317088167182114,
+  "drift_exp_orthogonality_10s": 9.197324346366963e-15,
+  "exp_step_attitude_error_deg_h0p01": 0.28684431152615664,
+  "exp_midpoint_attitude_error_deg_h0p01": 0.0011555352411850258,
+  "figure_puzzle_cable_length": 1.2213431551485145,
+  "figure_book_axis": [
+    0.5773502691896257,
+    -0.5773502691896258,
+    -0.5773502691896257
+  ]
+}
