@@ -6,10 +6,10 @@
 # stance leg, a torso with three pairs of sliding reaction masses, and a swing leg.
 #
 # This notebook is self-contained: NumPy, SciPy and Matplotlib only. Everything about the biped is
-# copied from the robot model library (`case_studies/robots`): the stance dynamics from
-# `reaction_mass_biped.py`, the integration step from `core.py`, and the impact map, the motion
-# primitive, the tracking laws and the walking loop from `biped_walking.py`. `verify/robots.py` and
-# `verify/ch20.py`, the script that checks the chapter, check the originals.
+# copied from the book's robot model library: the stance dynamics from its module
+# `reaction_mass_biped`, the integration step from `core`, and the impact map, the motion
+# primitive, the tracking laws and the walking loop from `biped_walking`. The book's verification
+# scripts check the originals.
 #
 # Notation. $R$ maps body to world, $\dot R = R\,\Omega^\wedge$, $e_3$ points up and gravity acts
 # along $-e_3$. The attitudes of stance leg, torso and swing leg are `R1`, `RP`, `R2`, the length of
@@ -83,7 +83,7 @@ def e_R(R, Rd):
 # ## 1. The pendulum, with a deadline
 #
 # A leg of fixed length is a 3D pendulum. The two feedback-linearizing laws of Chapter 6 (copied
-# from `verify/ch06.py`) are run from rest, from a rotation by a given angle about a random axis,
+# from the verification script of Chapter 6) are run from rest, from a rotation by a given angle about a random axis,
 # and stopped at 0.35 s. At walking angles the two are hard to tell apart.
 
 
@@ -159,7 +159,7 @@ for angle in (10, 30, 60, 120):
 # %% [markdown]
 # ## 2. A robot made of three attitudes
 #
-# The stance dynamics, copied from `case_studies/robots/reaction_mass_biped.py`. With
+# The stance dynamics, copied from the library module `reaction_mass_biped`. With
 # $J(l) = J_0 + m l^2\Pi$ and $J_P(r) = J_P(0) + 2 m_r\sum_i r_i^2\Pi_i$:
 #
 # $$m\ddot l = m l\,\Omega_1\cdot\Pi\Omega_1 - m g\,e_3\cdot R_1 e_3 + f,$$
@@ -256,9 +256,9 @@ def _dexpinv(x, y):
     return y + 0.5 * np.cross(x, y) + np.cross(x, np.cross(x, y)) / 12.0
 
 def fast_step(state, u, h, p=PRM):
-    """The step of the library (robots/core.py, Robot.step) written out for the biped:
+    """The step of the library (Robot.step in its module core) written out for the biped:
     classical Runge-Kutta stages on one increment per factor, exponential update.
-    verify/ch20.py checks that it gives the same states as the library's step."""
+    The verification script of Chapter 20 checks that it gives the same states."""
     S = biped.State
     R1, RP, R2 = state.R1, state.RP, state.R2
     z = np.zeros(3)
@@ -342,7 +342,7 @@ plt.tight_layout(); plt.show()
 # $$J(l_0)\,\Omega_2^+ = J_0\,\Omega_2^- + m\,l_0\; e_3\times R_2^\top v_P^{-},\qquad
 # v_P^{+} = l_0 R_2(\Omega_2^+\times e_3),\qquad p_c = m\,(v_P^{+} - v_P^{-}).$$
 #
-# Then the legs trade names. The functions are copied from `case_studies/robots/biped_walking.py`.
+# Then the legs trade names. The functions are copied from the library module `biped_walking`.
 # The cell checks the conservation law behind the first equation: the angular momentum about the
 # landing foot, summed mass by mass.
 
@@ -415,7 +415,7 @@ print("energy lost               ", biped.energy(st) - biped.energy(new), "J")
 # The motion primitive of one step, the tracking law of the thesis (its eqs. 5.61 to 5.65, with
 # gravity along $-e_3$ and its gains of Table 5.3), and the hybrid loop: integrate the stance
 # dynamics, detect the touchdown of the swing foot, apply the impact map, start the next step.
-# The code is copied from `case_studies/robots/biped_walking.py`, with the library's step written
+# The code is copied from the library module `biped_walking`, with the library's step written
 # out as `fast_step`.
 
 
@@ -758,9 +758,9 @@ for name, law in (("thesis law", thesis_law), ("scalar gains", book_law)):
 # ## 6. The rest of the recipe
 #
 # The linearization of the stance dynamics along a primitive and the thesis's explicit update are
-# in the library (`linearize_stance` and `explicit_update` in `case_studies/robots/biped_walking.py`),
-# and the time-varying LQR and the energy test of the explicit update in `verify/ch20.py`
-# (`lqr_gains`). The estimator for a legged robot is the contact-aided invariant filter of
+# in the library (`linearize_stance` and `explicit_update` in its module `biped_walking`), and the
+# time-varying LQR and the energy test of the explicit update in the verification script of
+# Chapter 20. The estimator for a legged robot is the contact-aided invariant filter of
 # Chapter 14. Cassie is not simulated in this book.
 #
 # ## Starting points for the exercises

@@ -602,7 +602,7 @@ def explicit_update(state, u, h, p=None):
     term on the slides corrected. Inputs are held.
 
     Chapter 20 (sec20-recipe) shows that its energy error grows in proportion to h,
-    where ReactionMassBiped.step keeps it at rounding level. Kept to reproduce that
+    where ReactionMassBiped.step keeps it below 1e-9 J at h = 1 ms. Kept to reproduce that
     comparison; simulate with ReactionMassBiped.step."""
     p = _params(p)
     f, tau_1, tau_P, tau_2, f_s = u

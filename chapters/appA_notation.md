@@ -458,6 +458,9 @@ The modules of `case_studies/robots` name their parameters, states and inputs af
 | `slide`, `slide_dot` | Distance of each of the three pairs of reaction masses from the hip, and its rate | `reaction_mass_biped` |
 | `m_leg`, `m_r`, `J_0`, `J_P` | Mass of one leg, one reaction mass, inertia of a leg, inertia of the torso | `reaction_mass_biped` |
 | `tau_1`, `tau_P`, `tau_2`, `f`, `f_s` | Ankle torque, hip torque between stance leg and torso, hip torque between torso and swing leg, leg force, forces on the three pairs of reaction masses | `reaction_mass_biped` |
+| `l_0`, `l_bar`, `r_0`, `r_bar`, `t_s`, `theta_s`, `lean`, `roll` | Fields of `Gait`, the motion primitive [](#eq20-primitive): length of the swing leg and extension of the stance leg in mid-step, nominal slide and its excursion, duration of a step, swing angle of the legs, forward pitch and roll of the torso | `biped_walking` |
+| `d` | The desired state of a primitive: a dict keyed by the names of the stance state and of their accelerations, `l_ddot`, `Omega1_dot`, ... | `biped_walking` |
+| `k_l`, `k_ldot`, `k_r`, `k_rdot`, `D` | $k_l$, $k_{\dot l}$, $k_r$, $k_{\dot r}$, and the weights $d_i$ of [](#eq20-right) | `biped_walking` |
 | `R_r`, `R_l`, `Omega_r`, `Omega_l`, `l_r`, `l_l` | Attitude, body angular velocity and length of the right and the left leg | `cassie` |
 | `m_b`, `m_h`, `m_k`, `J_b`, `J_leg`, `d` | Masses of the pelvis, of a hip and of a knee, inertias of the pelvis and of a leg, half the hip width | `cassie` |
 | `tau_r`, `f_r`, `tau_l`, `f_l` | Hip torque and leg force of the right and the left leg | `cassie` |
