@@ -269,15 +269,27 @@ def solve_qp(Q, c, A, b, tol=1e-9):
     """min 0.5 z'Qz + c'z  subject to  A z <= b, for a handful of constraints.
 
     Tries every active set, smallest first, and returns the first KKT point.
-    Returns None when the constraints cannot all be met.
+    Returns None when the constraints cannot all be met. Q must be positive definite.
+
+    An active set whose rows are dependent (a repeated row, a multiple of another, a
+    row that is numerically zero, more rows than unknowns) makes the KKT matrix
+    singular, and its solve can return a huge point. Such sets are skipped: when the
+    optimum has dependent active constraints, an independent subset of them carries
+    nonnegative multipliers and gives the same point, and it is tried earlier. The
+    test of a candidate uses tolerances scaled by the data, never by the candidate.
     """
     from itertools import combinations
     n, m = len(c), len(b)
-    for size in range(m + 1):
+    sA = max(1.0, np.abs(A).max()) if m else 1.0                  # scale of the constraints
+    sQ = max(1.0, np.abs(Q).max(), np.abs(c).max() if n else 0.0)
+    bound = 1e9 * (1.0 + np.abs(np.linalg.solve(Q, -c)).max() + (np.abs(b).max() if m else 0.0) / sA)
+    for size in range(min(m, n) + 1):
         for act in combinations(range(m), size):
             act = list(act)
             if act:
                 Aa = A[act]
+                if np.linalg.svd(Aa, compute_uv=False)[-1] <= 1e-9 * sA:
+                    continue                                       # dependent rows: singular KKT matrix
                 K = np.block([[Q, Aa.T], [Aa, np.zeros((size, size))]])
                 try:
                     sol = np.linalg.solve(K, np.concatenate([-c, b[act]]))
@@ -285,8 +297,14 @@ def solve_qp(Q, c, A, b, tol=1e-9):
                     continue
                 z, lam = sol[:n], sol[n:]
             else:
+                Aa = A[:0]
                 z, lam = np.linalg.solve(Q, -c), np.zeros(0)
-            if np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol):
+            if not (np.all(np.isfinite(z)) and np.all(np.isfinite(lam)) and np.abs(z).max(initial=0.0) <= bound):
+                continue
+            stat = np.abs(Q @ z + c + Aa.T @ lam).max(initial=0.0)
+            prim = np.abs(Aa @ z - b[act]).max(initial=0.0)
+            if (np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol)
+                    and stat <= 1e-6 * sQ * (1.0 + bound / 1e9) and prim <= 1e-6 * sA * (1.0 + bound / 1e9)):
                 return z
     return None
 
@@ -788,6 +806,113 @@ def geomech_checks(ck, rng):
     ck.record("geomech_check_eom", errs)
 
 
+def qp_checks(ck):
+    """solve_qp on degenerate problems (against scipy), against its first version on
+    well-posed ones, and on the problem of Chapter 19 where that first version failed."""
+    from itertools import combinations
+    from scipy.optimize import minimize
+
+    def solve_qp_v1(Q, c, A, b, tol=1e-9):
+        """The first version of solve_qp, without the guard on dependent active sets."""
+        n, m = len(c), len(b)
+        for size in range(m + 1):
+            for act in combinations(range(m), size):
+                act = list(act)
+                if act:
+                    Aa = A[act]
+                    K = np.block([[Q, Aa.T], [Aa, np.zeros((size, size))]])
+                    try:
+                        sol = np.linalg.solve(K, np.concatenate([-c, b[act]]))
+                    except np.linalg.LinAlgError:
+                        continue
+                    z, lam = sol[:n], sol[n:]
+                else:
+                    z, lam = np.linalg.solve(Q, -c), np.zeros(0)
+                if np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol):
+                    return z
+        return None
+
+    def scipy_qp(Q, c, A, b):
+        r = minimize(lambda z: 0.5 * z @ Q @ z + c @ z, np.zeros(len(c)), jac=lambda z: Q @ z + c,
+                     constraints=[dict(type="ineq", fun=lambda z: b - A @ z, jac=lambda z: -A)],
+                     method="SLSQP", options=dict(ftol=1e-14, maxiter=500))
+        return r.x
+
+    rng = np.random.default_rng(80)
+    I2 = np.eye(2)
+    cases = {
+        "a repeated constraint": (I2, np.array([1.0, 1.0]), np.array([[1.0, 0], [1, 0], [0, 1]]),
+                                  np.array([-2.0, -2, -3]), [-2.0, -3.0]),
+        "a constraint that is 3 times another": (I2, np.array([1.0, 1.0]), np.array([[1.0, 0], [3, 0], [0, 1]]),
+                                                 np.array([-2.0, -6, -3]), [-2.0, -3.0]),
+        "four active constraints in the plane": (I2, np.array([-2.0, -2.0]),
+                                                 np.array([[1.0, 0], [0, 1], [1, 1], [2, 1]]), np.zeros(4), [0.0, 0.0]),
+        "a numerically zero row with b >= 0": (I2, np.array([1.0, 1.0]), np.array([[1e-17, -2e-16], [1, 0]]),
+                                               np.array([0.5, -2.0]), [-2.0, -1.0]),
+    }
+    for name, (Q, c, A, b, want) in cases.items():
+        z = solve_qp(Q, c, A, b)
+        ck.true(f"solve_qp with {name}: the optimum, as scipy finds it", z is not None
+                and np.abs(z - want).max() < 1e-12 and np.abs(z - scipy_qp(Q, c, A, b)).max() < 1e-6)
+    ck.true("solve_qp with a numerically zero row and b < 0: infeasible",
+            solve_qp(I2, np.array([1.0, 1.0]), np.array([[1e-17, -2e-16], [1, 0]]), np.array([-0.5, -2.0])) is None)
+    # random degenerate problems: up to 3 n constraints through one vertex, with repeats and multiples
+    worst, count = 0.0, 0
+    for _ in range(100):
+        n = int(rng.integers(2, 5))
+        L = rng.normal(size=(n, n))
+        Q = L @ L.T + 0.5 * np.eye(n)
+        A0 = rng.normal(size=(int(rng.integers(n, 2 * n + 1)), n))
+        A = np.vstack([A0, A0[rng.integers(0, len(A0), size=n)] * rng.uniform(0.5, 3.0, size=(n, 1))])
+        v = rng.normal(size=n)
+        b = A @ v
+        c = -Q @ v - A[:n].T @ rng.uniform(0.1, 1.0, size=n)       # v is optimal, pushed against rows 0..n-1
+        z = solve_qp(Q, c, A, b)
+        count += 1
+        worst = max(worst, np.inf if z is None else max(np.abs(z - v).max(), np.abs(z - scipy_qp(Q, c, A, b)).max()))
+    ck.close(f"solve_qp on {count} random degenerate problems: the optimum, and scipy's", worst, 0, tol=1e-6)
+    # well-posed problems: the guard changes nothing
+    worst, agree = 0.0, 0
+    for k in range(200):
+        n, m = (4, 3) if k < 100 else (int(rng.integers(1, 5)), int(rng.integers(1, 7)))
+        L = rng.normal(size=(n, n))
+        Q = np.eye(n) if k < 100 else L @ L.T + 0.5 * np.eye(n)
+        A, b, c = rng.normal(size=(m, n)), rng.normal(size=m) + 0.5, rng.normal(size=n)
+        z, z1 = solve_qp(Q, c, A, b), solve_qp_v1(Q, c, A, b)
+        if (z is None) != (z1 is None):
+            worst = np.inf
+        elif z is not None:
+            worst = max(worst, np.abs(z - z1).max())
+        agree += 1
+    ck.close(f"solve_qp equals its first version on {agree} well-posed problems", worst, 0, tol=0.0)
+    # Chapter 19: tension distribution in the internal forces at a random wrench near hover
+    # (verify/ch19.py, rng 19, wrench 32 of 200). Rows 0-2 vanish up to rounding, and row 2 asks 0 <= -0.17.
+    A19 = np.array([[6.9388939039072284e-18, -2.2204460492503131e-16, -2.8711432569932071e-16],
+                    [1.8151096149288602e-17, 3.9529527174536276e-17, 1.0147774787647661e-16],
+                    [2.4789013472352254e-17, 3.3282543414328419e-17, 1.3498700122968328e-16],
+                    [9.3498725951001310e-02, 5.4858198132057126e-02, 1.0148878010379525e+00],
+                    [1.0822648269901898e+00, 4.1368995676980519e-01, 8.9997586024893883e-02],
+                    [-4.9971996909325807e-02, 1.2205095210313250e+00, 2.4159535142179658e-01]])
+    b19 = np.array([0.6452437718544444, 0.40974417909006156, -0.17116565676053686,
+                    -0.1678412818041436, -0.43936173594442063, -0.25864228238646225])
+    z1 = solve_qp_v1(np.eye(3), np.zeros(3), A19, b19)
+    ck.true("Chapter 19's problem: the first version returns a huge point", z1 is not None and np.abs(z1).max() > 1e12,
+            f"|z| {np.abs(z1).max():.1e}")
+    ck.true("... and solve_qp reports it infeasible", solve_qp(np.eye(3), np.zeros(3), A19, b19) is None)
+    # the same kind at random: n - 1 rows that vanish up to rounding, one of them with b < 0
+    v1_bad, none = 0, 0
+    for _ in range(100):
+        n = int(rng.integers(2, 5))
+        A, b, c = rng.normal(size=(int(rng.integers(n, 2 * n + 1)), n)), rng.normal(size=2 * n), rng.normal(size=n)
+        A[:n - 1] *= 1e-16
+        b = b[:len(A)]
+        b[0] = -abs(b[0]) - 0.1
+        v1_bad += int(solve_qp_v1(np.eye(n), c, A, b) is not None)
+        none += int(solve_qp(np.eye(n), c, A, b) is None)
+    ck.true("100 such problems at random: solve_qp reports every one infeasible, the first version returns a point on some",
+            none == 100 and v1_bad > 0, f"{none} of 100; the first version on {v1_bad}")
+
+
 # =====================================================================
 def main():
     ck = Checker("ch08")
@@ -797,6 +922,7 @@ def main():
     deg = np.degrees
 
     geomech_checks(ck, rng)
+    qp_checks(ck)
 
     # ------------------------------------------------------------------
     # 1. How uncertainty enters: J0 e_Omega_dot = tau_fb + Delta

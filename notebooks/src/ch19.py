@@ -664,27 +664,47 @@ def spread_direction(r):
     return np.concatenate([ri / np.linalg.norm(ri) for ri in r])
 
 
+# ---- copied from the verification script of Chapter 8: a small quadratic program
 def solve_qp(Q, c, A, b, tol=1e-9):
-    """min 0.5 z'Qz + c'z subject to A z <= b: the active-set enumeration of
-    verify/ch08.py with two guards. An active set larger than the number of unknowns,
-    or one whose constraints are dependent, makes the KKT matrix singular, and the
-    original can then return a huge point that passes its own test. Such sets are
-    skipped here. On well-posed problems the two solvers agree (checked below)."""
+    """min 0.5 z'Qz + c'z  subject to  A z <= b, for a handful of constraints.
+
+    Tries every active set, smallest first, and returns the first KKT point.
+    Returns None when the constraints cannot all be met. Q must be positive definite.
+
+    An active set whose rows are dependent (a repeated row, a multiple of another, a
+    row that is numerically zero, more rows than unknowns) makes the KKT matrix
+    singular, and its solve can return a huge point. Such sets are skipped: when the
+    optimum has dependent active constraints, an independent subset of them carries
+    nonnegative multipliers and gives the same point, and it is tried earlier. The
+    test of a candidate uses tolerances scaled by the data, never by the candidate.
+    """
     from itertools import combinations
     n, m = len(c), len(b)
+    sA = max(1.0, np.abs(A).max()) if m else 1.0                  # scale of the constraints
+    sQ = max(1.0, np.abs(Q).max(), np.abs(c).max() if n else 0.0)
+    bound = 1e9 * (1.0 + np.abs(np.linalg.solve(Q, -c)).max() + (np.abs(b).max() if m else 0.0) / sA)
     for size in range(min(m, n) + 1):
         for act in combinations(range(m), size):
             act = list(act)
             if act:
                 Aa = A[act]
-                if np.linalg.matrix_rank(Aa, tol=1e-9) < size:
-                    continue
+                if np.linalg.svd(Aa, compute_uv=False)[-1] <= 1e-9 * sA:
+                    continue                                       # dependent rows: singular KKT matrix
                 K = np.block([[Q, Aa.T], [Aa, np.zeros((size, size))]])
-                sol = np.linalg.solve(K, np.concatenate([-c, b[act]]))
+                try:
+                    sol = np.linalg.solve(K, np.concatenate([-c, b[act]]))
+                except np.linalg.LinAlgError:
+                    continue
                 z, lam = sol[:n], sol[n:]
             else:
+                Aa = A[:0]
                 z, lam = np.linalg.solve(Q, -c), np.zeros(0)
-            if np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol):
+            if not (np.all(np.isfinite(z)) and np.all(np.isfinite(lam)) and np.abs(z).max(initial=0.0) <= bound):
+                continue
+            stat = np.abs(Q @ z + c + Aa.T @ lam).max(initial=0.0)
+            prim = np.abs(Aa @ z - b[act]).max(initial=0.0)
+            if (np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol)
+                    and stat <= 1e-6 * sQ * (1.0 + bound / 1e9) and prim <= 1e-6 * sA * (1.0 + bound / 1e9)):
                 return z
     return None
 

@@ -4,7 +4,7 @@ The mission is assembled from blocks that the earlier chapters verified:
 
 * the team, the cable and their step: the robot model library (case_studies/robots);
 * jets, the attitude part of the flat map and the chain recursion: verify/ch10.py (imported);
-* the small QP solver: verify/ch08.py (imported), with a guarded copy checked against it;
+* the small QP solver: verify/ch08.py (imported);
 * the attitude law eq6-law: robots.core.attitude_tracking_torque;
 * the sphere law eq6-law-s2: written here and checked against verify/ch06.py;
 * the variation-based linearization: written here for any robot of the library,
@@ -231,31 +231,6 @@ def spread_direction(r):
     return np.concatenate([ri / np.linalg.norm(ri) for ri in r])
 
 
-def solve_qp(Q, c, A, b, tol=1e-9):
-    """min 0.5 z'Qz + c'z subject to A z <= b: the active-set enumeration of
-    verify/ch08.py with two guards. An active set larger than the number of unknowns,
-    or one whose constraints are dependent, makes the KKT matrix singular, and the
-    original can then return a huge point that passes its own test. Such sets are
-    skipped here. On well-posed problems the two solvers agree (checked below)."""
-    from itertools import combinations
-    n, m = len(c), len(b)
-    for size in range(min(m, n) + 1):
-        for act in combinations(range(m), size):
-            act = list(act)
-            if act:
-                Aa = A[act]
-                if np.linalg.matrix_rank(Aa, tol=1e-9) < size:
-                    continue
-                K = np.block([[Q, Aa.T], [Aa, np.zeros((size, size))]])
-                sol = np.linalg.solve(K, np.concatenate([-c, b[act]]))
-                z, lam = sol[:n], sol[n:]
-            else:
-                z, lam = np.linalg.solve(Q, -c), np.zeros(0)
-            if np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol):
-                return z
-    return None
-
-
 def distribute(r, wrench, base=None, l=None, d_min=None, t_min=None, solver=None):
     """Forces lam (n, 3) of the cables on the payload, payload frame, with
     G_L lam = wrench, closest to `base` (minimum norm when base is None), subject to
@@ -294,7 +269,7 @@ def distribute(r, wrench, base=None, l=None, d_min=None, t_min=None, solver=None
     if np.all(A @ lam0 <= b + 1e-12) or N.shape[1] == 0:
         return lam0.reshape(n, 3), 0
     AN, bN = A @ N, b - A @ lam0
-    c = (solver or solve_qp)(np.eye(N.shape[1]), np.zeros(N.shape[1]), AN, bN)
+    c = (solver or ch08.solve_qp)(np.eye(N.shape[1]), np.zeros(N.shape[1]), AN, bN)
     if c is None:
         return None, -1
     return (lam0 + N @ c).reshape(n, 3), int(np.sum(np.abs(AN @ c - bN) < 1e-7))
@@ -481,7 +456,7 @@ def safety_filter(robot, state, Fd, params, r_min=R_MIN, t_min=T_MIN, a1=ALPHA1,
     z0 = Fd.ravel()
     if np.all(A @ z0 <= b):
         return Fd, info
-    z = solve_qp(np.eye(3 * n), -z0, A, b)
+    z = ch08.solve_qp(np.eye(3 * n), -z0, A, b)
     info["active"] = True
     if z is None:
         info["feasible"] = False
@@ -1285,6 +1260,29 @@ def geomech_agreement(rb, mod, layout, state, u):
 # =====================================================================
 # 10. The checks
 # =====================================================================
+def _solve_qp_v1(Q, c, A, b, tol=1e-9):
+    """The first version of solve_qp in verify/ch08.py, kept here only to show what its
+    guard on dependent active sets changed (see the checks of verify/ch08.py)."""
+    from itertools import combinations
+    n, m = len(c), len(b)
+    for size in range(m + 1):
+        for act in combinations(range(m), size):
+            act = list(act)
+            if act:
+                Aa = A[act]
+                K = np.block([[Q, Aa.T], [Aa, np.zeros((size, size))]])
+                try:
+                    sol = np.linalg.solve(K, np.concatenate([-c, b[act]]))
+                except np.linalg.LinAlgError:
+                    continue
+                z, lam = sol[:n], sol[n:]
+            else:
+                z, lam = np.linalg.solve(Q, -c), np.zeros(0)
+            if np.all(A @ z <= b + tol * (1 + np.abs(b))) and np.all(lam >= -tol):
+                return z
+    return None
+
+
 def main():
     ck = Checker("ch19")
     rng = np.random.default_rng(19)
@@ -1420,14 +1418,23 @@ def main():
     ck.true("QP at 200 random wrenches: every cable pulls with at least T_MIN", worst_T >= T_MIN - 1e-8,
             f"{feas} feasible, smallest {worst_T:.3f} N")
     ck.record("qp_random_feasible", feas)
-    # the unguarded solver of verify/ch08.py on the same kind of problem
-    huge = 0
+    # the first version of the solver of verify/ch08.py, without its guard, on the same kind of problem
+    huge, huge_now, caught, same = 0, 0, 0, 0
     rng2 = np.random.default_rng(19)
     for _ in range(200):
         W = W_hover + np.r_[rng2.normal(size=3) * 2.0, rng2.normal(size=3) * 0.15]
-        lm, act = distribute(p.r, W, l=p.l, d_min=D_PLAN, t_min=T_MIN, solver=ch08.solve_qp)
-        huge += int(lm is not None and np.abs(lm).max() > 1e6)
-    ck.true("the unguarded solver returns a huge point on some of the same 200 wrenches", huge > 0, f"{huge} of 200")
+        lm1, _ = distribute(p.r, W, l=p.l, d_min=D_PLAN, t_min=T_MIN, solver=_solve_qp_v1)
+        lm, _ = distribute(p.r, W, l=p.l, d_min=D_PLAN, t_min=T_MIN)
+        bad = lm1 is not None and np.abs(lm1).max() > 1e6
+        huge += int(bad)
+        huge_now += int(lm is not None and np.abs(lm).max() > 1e6)
+        caught += int(bad and lm is None)
+        same += int(not bad and ((lm is None and lm1 is None)
+                                 or (lm is not None and lm1 is not None and np.array_equal(lm, lm1))))
+    ck.true("the unguarded first version returns a huge point on some of the same 200 wrenches", huge > 0,
+            f"{huge} of 200")
+    ck.true("... the solver of verify/ch08.py reports those infeasible, and equals the first version on the rest",
+            huge_now == 0 and caught == huge and same == 200 - huge, f"{caught} infeasible, {same} equal")
     ck.record("qp_unguarded_huge", huge)
 
     # ---------------------------------------------------------------- the plan (flat map)
@@ -1515,18 +1522,18 @@ def main():
     ck.close("barrier: the model's second derivative of H_ij equals a difference along the library's flow",
              (H_of(sp) - 2 * H_of(st_al) + H_of(sm)) / hh ** 2, H_ddot, tol=1e-4)
 
-    # the guarded QP solver against the original, on well-posed problems
+    # the QP solver of verify/ch08.py against its unguarded first version, on well-posed problems
     worst = 0.0
     for _ in range(200):
         nv, mc = 4, 3
         Aq, bq = rng.normal(size=(mc, nv)), rng.normal(size=mc) + 0.5
         cq = rng.normal(size=nv)
-        z1, z2 = solve_qp(np.eye(nv), cq, Aq, bq), ch08.solve_qp(np.eye(nv), cq, Aq, bq)
+        z1, z2 = _solve_qp_v1(np.eye(nv), cq, Aq, bq), ch08.solve_qp(np.eye(nv), cq, Aq, bq)
         worst = max(worst, np.abs(z1 - z2).max())
-    ck.close("the guarded QP solver equals verify/ch08.py on 200 well-posed problems", worst, 0, tol=1e-9)
+    ck.close("the QP solver equals its unguarded first version on 200 well-posed problems", worst, 0, tol=1e-9)
     Aq = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-    zq = solve_qp(np.eye(2), np.array([1.0, 1.0]), Aq, np.array([-2.0, -2.0, -3.0]))
-    ck.close("guarded solver with a repeated constraint: the right point", zq, [-2.0, -3.0], tol=1e-12)
+    zq = ch08.solve_qp(np.eye(2), np.array([1.0, 1.0]), Aq, np.array([-2.0, -2.0, -3.0]))
+    ck.close("QP solver with a repeated constraint: the right point", zq, [-2.0, -3.0], tol=1e-12)
 
     # ---------------------------------------------------------------- loop speeds
     order = {k: {q: S[k][q] for q in ("rms", "peak", "final", "att_max", "f_max", "T_min", "done")}

@@ -102,7 +102,7 @@ The first constraint keeps every cable pulling upward in the payload frame. The 
 
 In hover the program adds an internal force of 0.21 N per cable. The cables lean 4.5° outward, the tensions rise from 2.616 to 2.624 N, and the vehicles are 0.83 m apart. The price of 14 cm of separation is 8 mN of tension. The cruise formation spends more, 0.98 N of internal force per cable for 1.30 m, because distance from a neighbor's downwash is worth something that this model does not price.
 
-One finding belongs here. That solver returns the first active set that passes its test. When the active constraints are dependent, its linear system is singular, and it can return a point of size $10^{14}$ that passes. With three unknowns and six constraints this happens: on 2 of 200 random wrenches near hover. We skip dependent active sets, and check that the guarded solver agrees with the original on 200 well-posed problems.
+One finding belongs here. That solver returns the first active set that passes its test. Projecting the tension constraints onto the internal forces can leave a row that is zero up to rounding. When such a row is active the linear system is nearly singular, and the solver could return a point of size $10^{14}$ that passed its own test. With three unknowns and six constraints this happened on 2 of 200 random wrenches near hover. Both of those problems are in fact infeasible. The solver of [](#ch-robust) now skips nearly dependent active sets and judges a candidate by tolerances scaled to the data, so it reports them infeasible. On well-posed problems its answers are unchanged, bit for bit.
 
 ## A plan in flat outputs {#sec19-plan}
 
